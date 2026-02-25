@@ -116,6 +116,15 @@
     <div class="action-panel" id="actionPanel">
       <div class="action-info">
         <span id="actionText">等待行动...</span>
+        <div class="action-timer" id="actionTimer">
+          <div class="timer-ring">
+            <svg viewBox="0 0 36 36">
+              <circle class="timer-bg" cx="18" cy="18" r="16"/>
+              <circle class="timer-progress" cx="18" cy="18" r="16"/>
+            </svg>
+            <span class="timer-text" id="timerText">10</span>
+          </div>
+        </div>
       </div>
       <div class="action-buttons">
         <button class="btn btn-danger" id="foldBtn" disabled>弃牌</button>
