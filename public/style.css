@@ -162,6 +162,10 @@ body {
   margin-top: 15px;
 }
 
+#confirmJoinBtn {
+  margin-top: 6px;
+}
+
 /* 游戏房间样式 */
 .game-header {
   position: fixed;
