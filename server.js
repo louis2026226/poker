@@ -643,6 +643,7 @@ io.on('connection', (socket) => {
 
     const player = room.addPlayer(socket.id, nickname);
     socket.join(roomCode);
+    socket.roomCode = roomCode; // 设置玩家所在的房间
 
     callback({ success: true, roomCode, player: { ...player, isHost: true } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
@@ -669,6 +670,8 @@ io.on('connection', (socket) => {
     }
 
     socket.join(roomCode);
+    socket.roomCode = roomCode; // 设置玩家所在的房间
+
     callback({ success: true, roomCode, player: { ...player, isHost: false } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
 
