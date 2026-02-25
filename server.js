@@ -1,6 +1,8 @@
 const express = require('express');
 const http = require('http');
+const express = require('express');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
@@ -25,11 +27,14 @@ const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 // 房间存储
 const rooms = {};
 
-// 生成房间代码
+// 生成房间代码 - 使用crypto安全随机
 function generateRoomCode() {
   let code;
   do {
-    code = Math.floor(10000 + Math.random() * 90000).toString();
+    // 使用crypto生成5位数字房间代码
+    const randomBuffer = crypto.randomBytes(3);
+    const randomNumber = randomBuffer.readUIntBE(0, 3);
+    code = (randomNumber % 90000 + 10000).toString();
   } while (rooms[code]);
   return code;
 }
@@ -45,13 +50,17 @@ function createDeck() {
   return shuffleDeck(deck);
 }
 
-// 洗牌
+// 洗牌 - 使用Fisher-Yates算法和crypto安全随机
 function shuffleDeck(deck) {
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+  const shuffled = [...deck];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    // 使用crypto生成密码学安全的随机索引
+    const randomBuffer = crypto.randomBytes(4);
+    const randomNumber = randomBuffer.readUInt32BE(0);
+    const j = randomNumber % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return deck;
+  return shuffled;
 }
 
 // 获取牌的值
@@ -160,40 +169,64 @@ function findBestHand(cards) {
   return { type: 'high-card', value: topCards[0], kickers: topCards.slice(1), cards: [] };
 }
 
-// 找顺子
+// 找顺子 - 支持A高顺子(10-J-Q-K-A)和低顺子(A-2-3-4-5)
 function findStraight(values) {
-  if (values.includes(14) && values.includes(2) && values.includes(3) && values.includes(4) && values.includes(5)) {
-    return 5; // A-2-3-4-5
+  // 去重并排序
+  const uniqueValues = [...new Set(values)].sort((a, b) => b - a);
+  
+  // 检查A-2-3-4-5 低顺子 (轮子)
+  if (uniqueValues.includes(14) && uniqueValues.includes(2) && uniqueValues.includes(3) && uniqueValues.includes(4) && uniqueValues.includes(5)) {
+    return 5; // A-2-3-4-5 返回5作为顺子值
   }
-  for (let i = 0; i <= values.length - 5; i++) {
+  
+  // 检查普通顺子
+  for (let i = 0; i <= uniqueValues.length - 5; i++) {
     let isStraight = true;
     for (let j = 0; j < 4; j++) {
-      if (values[i + j] !== values[i + j + 1] + 1) {
+      if (uniqueValues[i + j] !== uniqueValues[i + j + 1] + 1) {
         isStraight = false;
         break;
       }
     }
-    if (isStraight) return values[i];
+    if (isStraight) return uniqueValues[i]; // 返回顺子最高牌的值
   }
+  
+  // 检查10-J-Q-K-A (A高顺子)
+  if ([14, 13, 12, 11, 10].every(v => uniqueValues.includes(v))) {
+    return 14; // A高顺子
+  }
+  
   return null;
 }
 
-// 比较牌型
+// 比较牌型 - 完善踢脚牌比较逻辑
 function compareHands(hand1, hand2) {
   const typeOrder = ['royal-flush', 'straight-flush', 'four-of-a-kind', 'full-house', 'flush', 'straight', 'three-of-a-kind', 'two-pairs', 'one-pair', 'high-card'];
   const t1 = typeOrder.indexOf(hand1.type);
   const t2 = typeOrder.indexOf(hand2.type);
+  
+  // 首先比较牌型
   if (t1 !== t2) return t1 < t2 ? 1 : -1;
+  
+  // 牌型相同，比较主牌值
   if (hand1.value !== hand2.value) return hand1.value > hand2.value ? 1 : -1;
+  
+  // 比较第二牌值 (葫芦的三条、两对)
   if (hand1.secondValue !== hand2.secondValue) return hand1.secondValue > hand2.secondValue ? 1 : -1;
-  if (hand1.kicker !== hand2.kicker) return hand1.kicker > hand2.kicker ? 1 : -1;
-  if (hand1.kickers && hand2.kickers) {
-    for (let i = 0; i < hand1.kickers.length; i++) {
-      if (hand1.kickers[i] !== hand2.kickers[i]) {
-        return hand1.kickers[i] > hand2.kickers[i] ? 1 : -1;
-      }
-    }
+  
+  // 比较踢脚牌 - 支持数组形式的多个踢脚牌
+  const kickers1 = Array.isArray(hand1.kickers) ? hand1.kickers : [hand1.kicker].filter(x => x !== undefined);
+  const kickers2 = Array.isArray(hand2.kickers) ? hand2.kickers : [hand2.kicker].filter(x => x !== undefined);
+  
+  // 从大到小比较每个踢脚牌
+  const maxKickers = Math.max(kickers1.length, kickers2.length);
+  for (let i = 0; i < maxKickers; i++) {
+    const k1 = kickers1[i] || 0;
+    const k2 = kickers2[i] || 0;
+    if (k1 !== k2) return k1 > k2 ? 1 : -1;
   }
+  
+  // 完全相同，平局
   return 0;
 }
 
@@ -444,52 +477,73 @@ class PokerRoom {
       return;
     }
 
-    // 检查是否只剩一个玩家
+    // 检查是否只剩一个玩家（提前获胜）
     if (activePlayers.length === 1) {
       this.awardPot([activePlayers[0]]);
       return;
     }
 
-    // 检查是否所有活跃玩家都已下注相同
-    const allBets = Object.values(this.playerBets);
-    const maxBet = Math.max(...allBets);
-    const minBet = Math.min(...allBets.filter(b => b > 0 || this.players[Object.keys(this.playerBets).find(sid => this.playerBets[sid] === b)]?.folded === false));
-    
-    // 如果所有玩家都已行动且下注相同，进入下一轮
+    // 获取所有参与下注的玩家
+    const bettingPlayers = Object.keys(this.playerBets);
+    if (bettingPlayers.length === 0) {
+      this.nextStreet();
+      return;
+    }
+
+    // 检查是否所有活跃玩家都已行动
     let allActed = true;
+    let hasUnactedPlayer = false;
+    
     for (const socketId in this.players) {
       const p = this.players[socketId];
-      if (!p.folded && p.chips > 0 && !this.playerActions[socketId]) {
-        allActed = false;
-        break;
+      // 只检查未弃牌、有筹码且不是all-in的玩家
+      if (!p.folded && p.chips > 0 && !p.allIn) {
+        if (!this.playerActions[socketId]) {
+          allActed = false;
+          hasUnactedPlayer = true;
+          break;
+        }
       }
     }
 
     if (allActed) {
-      // 检查是否需要开牌（所有下注相等）
+      // 检查下注是否相等（所有玩家要么已跟注要么全下）
+      const allBets = Object.values(this.playerBets);
       const betsEqual = allBets.every(b => b === this.currentBet);
+      
       if (betsEqual) {
         this.nextStreet();
         return;
+      } else {
+        // 下注不相等，检查是否所有人都已行动（有些可能选择不跟注）
+        if (!hasUnactedPlayer) {
+          this.nextStreet();
+          return;
+        }
       }
     }
 
-    // 找到下一个行动的玩家
+    // 找到下一个行动的玩家（跳过已弃牌、无筹码、已行动、已all-in的玩家）
     let nextSeat = (this.currentPlayerSeat + 1) % 5;
     let attempts = 0;
+    let foundNext = false;
+    
     while (attempts < 5) {
       const nextPlayer = this.getPlayerBySeat(nextSeat);
-      if (nextPlayer && !nextPlayer.folded && nextPlayer.chips > 0) {
+      if (nextPlayer && !nextPlayer.folded && nextPlayer.chips > 0 && !this.playerActions[nextPlayer.socketId]) {
         this.currentPlayerSeat = nextSeat;
         io.to(this.roomCode).emit('gameState', this.getGameState());
-        return;
+        foundNext = true;
+        break;
       }
       nextSeat = (nextSeat + 1) % 5;
       attempts++;
     }
 
-    // 如果没有更多玩家可以行动，进入下一轮
-    this.nextStreet();
+    // 如果没有找到下一个玩家，进入下一轮
+    if (!foundNext) {
+      this.nextStreet();
+    }
   }
 
   nextStreet() {
@@ -574,12 +628,21 @@ class PokerRoom {
   }
 
   awardPot(winners) {
+    // 计算总底池（包括所有边池）
     const totalPot = this.pot + Object.values(this.playerBets).reduce((a, b) => a + b, 0);
-    const winAmount = Math.floor(totalPot / winners.length);
-
-    winners.forEach(winner => {
-      winner.chips += winAmount;
-    });
+    
+    // 如果只有一个赢家，直接分配
+    if (winners.length === 1) {
+      winners[0].chips += totalPot;
+    } else {
+      // 多个赢家：平分底池
+      const winAmount = Math.floor(totalPot / winners.length);
+      const remainder = totalPot % winners.length; // 奇数筹码
+      
+      winners.forEach((winner, index) => {
+        winner.chips += winAmount + (index < remainder ? 1 : 0);
+      });
+    }
 
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
