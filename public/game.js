@@ -428,7 +428,15 @@ function setupEmojiButtons() {
         popupPanel.style.display = 'none';
         
         // 发送表情给自己
-        const myPlayer = currentGameState?.players?.find(p => p.socketId === mySocketId);
+        var myPlayer = null;
+        if (currentGameState && currentGameState.players) {
+          for (var i = 0; i < currentGameState.players.length; i++) {
+            if (currentGameState.players[i].socketId === mySocketId) {
+              myPlayer = currentGameState.players[i];
+              break;
+            }
+          }
+        }
         if (myPlayer) {
           showEmoji(myPlayer.seat, emoji);
         }
@@ -572,7 +580,8 @@ function renderSeats(gameState) {
     }
 
     // 状态
-    if (player.socketId === mySocketId && currentGameState?.gameState !== 'waiting') {
+    var gameStateValue = (currentGameState && currentGameState.gameState) ? currentGameState.gameState : 'waiting';
+    if (player.socketId === mySocketId && gameStateValue !== 'waiting') {
       if (player.action) {
         statusEl.textContent = getActionText(player.action);
       }
