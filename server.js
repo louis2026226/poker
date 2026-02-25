@@ -400,7 +400,12 @@ class PokerRoom {
     if (bbPlayer.chips === 0) bbPlayer.allIn = true;
 
     this.lastRaiseSeat = bbPlayer.seat;
-    this.currentPlayerSeat = players[players.length > 2 ? 2 : 0].seat;
+    // 3人以上从UTG开始，2人从BB(小盲下家)开始
+    if (players.length > 2) {
+      this.currentPlayerSeat = players[2].seat;
+    } else {
+      this.currentPlayerSeat = players[1].seat;
+    }
 
     this.gameState = 'preflop';
     io.to(this.roomCode).emit('gameState', this.getGameState());
