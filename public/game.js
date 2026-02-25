@@ -1,8 +1,89 @@
 // 游戏前端逻辑
 const socket = io();
 
-// 本地存储昵称
+// 本地存储键
 const STORAGE_KEY = 'poker_nickname';
+const STATS_KEY = 'poker_player_stats';
+
+// 玩家数据结构
+let playerStats = {
+  nickname: '',
+  chips: 1000,
+  gamesPlayed: 0,
+  gamesWon: 0,
+  winRate: 0
+};
+
+// 从本地存储读取昵称和数据
+function loadNickname() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && nicknameInput) {
+    nicknameInput.value = saved;
+    playerStats.nickname = saved;
+  }
+  
+  // 加载玩家数据
+  const savedStats = localStorage.getItem(STATS_KEY);
+  if (savedStats) {
+    try {
+      playerStats = JSON.parse(savedStats);
+      updatePlayerStatsDisplay();
+    } catch (e) {
+      console.log('Failed to load stats');
+    }
+  }
+}
+
+// 保存昵称到本地存储
+function saveNickname(nickname) {
+  localStorage.setItem(STORAGE_KEY, nickname);
+  playerStats.nickname = nickname;
+  updatePlayerStatsDisplay();
+}
+
+// 保存玩家数据
+function savePlayerStats() {
+  localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
+}
+
+// 更新玩家数据显示
+function updatePlayerStatsDisplay() {
+  const statsPanel = document.getElementById('playerStats');
+  const nicknameEl = document.getElementById('statNickname');
+  const chipsEl = document.getElementById('statChips');
+  const winRateEl = document.getElementById('statWinRate');
+  const gamesEl = document.getElementById('statGames');
+  
+  if (statsPanel && playerStats.nickname) {
+    statsPanel.classList.remove('hidden');
+    if (nicknameEl) nicknameEl.textContent = playerStats.nickname;
+    if (chipsEl) chipsEl.textContent = playerStats.chips;
+    if (winRateEl) winRateEl.textContent = playerStats.winRate + '%';
+    if (gamesEl) gamesEl.textContent = playerStats.gamesPlayed;
+  }
+}
+
+// 更新玩家金币
+function updatePlayerChips(chips) {
+  playerStats.chips = chips;
+  savePlayerStats();
+  updatePlayerStatsDisplay();
+}
+
+// 玩家完成一局游戏
+function finishGame(won, finalChips) {
+  playerStats.gamesPlayed++;
+  if (won) {
+    playerStats.gamesWon++;
+  }
+  playerStats.chips = finalChips;
+  // 计算胜率
+  playerStats.winRate = playerStats.gamesPlayed >= 10 
+    ? Math.round((playerStats.gamesWon / playerStats.gamesPlayed) * 100) 
+    : 0;
+  savePlayerStats();
+  updatePlayerStatsDisplay();
+}
 
 // DOM 元素
 const lobbyPage = document.getElementById('lobby');
@@ -468,6 +549,11 @@ socket.on('gameOver', (data) => {
       item.classList.add('winner');
     } else if (result.netChange < 0) {
       item.classList.add('loser');
+    }
+    
+    // 如果是我，统计战绩
+    if (result.nickname === playerStats.nickname) {
+      finishGame(result.netChange > 0, result.finalChips);
     }
     
     const netText = result.netChange > 0 ? `+${result.netChange}` : result.netChange;
