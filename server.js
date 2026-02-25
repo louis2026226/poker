@@ -444,20 +444,31 @@ class PokerRoom {
       return;
     }
 
-    // 检查是否所有玩家都已行动
+    // 检查是否只剩一个玩家
+    if (activePlayers.length === 1) {
+      this.awardPot([activePlayers[0]]);
+      return;
+    }
+
+    // 检查是否所有活跃玩家都已下注相同
+    const allBets = Object.values(this.playerBets);
+    const maxBet = Math.max(...allBets);
+    const minBet = Math.min(...allBets.filter(b => b > 0 || this.players[Object.keys(this.playerBets).find(sid => this.playerBets[sid] === b)]?.folded === false));
+    
+    // 如果所有玩家都已行动且下注相同，进入下一轮
     let allActed = true;
     for (const socketId in this.players) {
-      if (!this.players[socketId].folded && this.players[socketId].chips > 0 && !this.playerActions[socketId]) {
+      const p = this.players[socketId];
+      if (!p.folded && p.chips > 0 && !this.playerActions[socketId]) {
         allActed = false;
         break;
       }
     }
 
     if (allActed) {
-      // 检查是否需要开牌
-      const betsEqual = Object.values(this.playerBets).every(b => b === this.currentBet || this.players[Object.keys(this.playerBets).find(sid => this.playerBets[sid] === b)]?.folded);
-      
-      if (betsEqual || activePlayers.length === 1) {
+      // 检查是否需要开牌（所有下注相等）
+      const betsEqual = allBets.every(b => b === this.currentBet);
+      if (betsEqual) {
         this.nextStreet();
         return;
       }
@@ -468,7 +479,7 @@ class PokerRoom {
     let attempts = 0;
     while (attempts < 5) {
       const nextPlayer = this.getPlayerBySeat(nextSeat);
-      if (nextPlayer && !nextPlayer.folded && nextPlayer.chips > 0 && !this.playerActions[nextPlayer.socketId]) {
+      if (nextPlayer && !nextPlayer.folded && nextPlayer.chips > 0) {
         this.currentPlayerSeat = nextSeat;
         io.to(this.roomCode).emit('gameState', this.getGameState());
         return;
@@ -477,7 +488,7 @@ class PokerRoom {
       attempts++;
     }
 
-    // 如果没有玩家可以行动，进入下一轮
+    // 如果没有更多玩家可以行动，进入下一轮
     this.nextStreet();
   }
 
@@ -737,7 +748,7 @@ io.on('connection', (socket) => {
   socket.roomCode = null;
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
