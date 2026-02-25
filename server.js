@@ -27,6 +27,17 @@ const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 // 房间存储
 const rooms = {};
 
+// 表情冷却（玩家ID -> 上次发送时间）
+const emoteCooldowns = {};
+
+// 玩家最后活跃时间（用于心跳）
+const playerLastActive = {};
+
+// 心跳配置
+const HEARTBEAT_INTERVAL = 5000;  // 5秒
+const DISCONNECT_TIMEOUT = 20000; // 20秒无响应标记断线
+const ACTION_TIMEOUT = 10000;     // 10秒无行动自动弃牌
+
 // 生成房间代码 - 使用crypto安全随机
 function generateRoomCode() {
   let code;
@@ -249,8 +260,10 @@ function getHandTypeName(type) {
 
 // 房间类
 class PokerRoom {
-  constructor(roomCode) {
+  constructor(roomCode, hostId) {
     this.roomCode = roomCode;
+    this.hostId = hostId;  // 房主ID
+    this.isLocked = false; // 房间是否锁定（满5人）
     this.players = {};
     this.seats = [null, null, null, null, null]; // 5个座位
     this.gameState = 'waiting'; // waiting, preflop, flop, turn, river, showdown, ended
@@ -266,6 +279,33 @@ class PokerRoom {
     this.playerActions = {};
     this.lastRaiseSeat = -1;
     this.gameHistory = [];
+  }
+
+  // 转移房主
+  transferHost() {
+    const playerIds = Object.keys(this.players);
+    if (playerIds.length > 0) {
+      this.hostId = playerIds[0];
+      return this.hostId;
+    }
+    return null;
+  }
+
+  // 检查是否可以加入
+  canJoin() {
+    return !this.isLocked && Object.keys(this.players).length < CONFIG.MAX_SEATS;
+  }
+
+  // 锁定房间
+  lockRoom() {
+    if (Object.keys(this.players).length >= CONFIG.MAX_SEATS) {
+      this.isLocked = true;
+    }
+  }
+
+  // 解锁房间
+  unlockRoom() {
+    this.isLocked = false;
   }
 
   addPlayer(socketId, nickname) {
@@ -697,6 +737,7 @@ class PokerRoom {
 
     return {
       roomCode: this.roomCode,
+      hostId: this.hostId,
       gameState: this.gameState,
       communityCards: this.communityCards,
       pot: this.pot,
@@ -717,7 +758,7 @@ io.on('connection', (socket) => {
   // 创建房间
   socket.on('createRoom', (nickname, callback) => {
     const roomCode = generateRoomCode();
-    const room = new PokerRoom(roomCode);
+    const room = new PokerRoom(roomCode, socket.id);
     rooms[roomCode] = room;
 
     const player = room.addPlayer(socket.id, nickname);
@@ -736,8 +777,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const activeCount = Object.keys(room.players).length;
-    if (activeCount >= CONFIG.MAX_SEATS) {
+    // 检查房间是否锁定
+    if (!room.canJoin()) {
       callback({ success: false, message: '房间已满' });
       return;
     }
@@ -751,7 +792,11 @@ io.on('connection', (socket) => {
     socket.join(roomCode);
     socket.roomCode = roomCode; // 设置玩家所在的房间
 
-    callback({ success: true, roomCode, player: { ...player, isHost: false } });
+    // 检查是否需要锁定房间
+    room.lockRoom();
+
+    const isHost = socket.id === room.hostId;
+    callback({ success: true, roomCode, player: { ...player, isHost } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
 
     // 如果人数>=2且游戏未开始，自动开始
@@ -769,9 +814,22 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const player = room.players[socket.id];
     const success = room.playerAction(socket.id, action, amount);
     if (success) {
       io.to(room.roomCode).emit('gameState', room.getGameState());
+      
+      // All-in时自动发送表情
+      if (action === 'all-in' && player) {
+        io.to(room.roomCode).emit('emote', {
+          playerId: socket.id,
+          nickname: player.nickname,
+          emoji: '🎉',
+          seat: player.seat,
+          autoTrigger: true
+        });
+      }
+      
       room.nextAction();
       callback({ success: true });
     } else {
@@ -788,7 +846,20 @@ io.on('connection', (socket) => {
       const room = rooms[roomCode];
       if (room.players[socket.id]) {
         const player = room.players[socket.id];
+        const wasHost = socket.id === room.hostId;
+        
         room.removePlayer(socket.id);
+        
+        // 如果离开的是房主，转移房主
+        if (wasHost) {
+          const newHostId = room.transferHost();
+          if (newHostId) {
+            io.to(roomCode).emit('hostChanged', { newHostId });
+          }
+        }
+        
+        // 解锁房间（玩家离开后可以加入新玩家）
+        room.unlockRoom();
         
         io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
         
@@ -809,6 +880,52 @@ io.on('connection', (socket) => {
         }
         break;
       }
+    }
+  });
+
+  // 发送表情
+  socket.on('emote', (emoji) => {
+    const room = rooms[socket.roomCode];
+    if (!room) return;
+    
+    const now = Date.now();
+    const lastTime = emoteCooldowns[socket.id] || 0;
+    
+    // 20秒冷却检查
+    if (now - lastTime < 20000) {
+      return; // 冷却中
+    }
+    
+    // 更新冷却时间
+    emoteCooldowns[socket.id] = now;
+    
+    // 获取玩家信息
+    const player = room.players[socket.id];
+    if (!player) return;
+    
+    // 广播表情给所有玩家
+    io.to(room.roomCode).emit('emote', {
+      playerId: socket.id,
+      nickname: player.nickname,
+      emoji: emoji,
+      seat: player.seat
+    });
+  });
+
+  // 心跳ping
+  socket.on('ping', () => {
+    playerLastActive[socket.id] = Date.now();
+    socket.emit('pong');
+  });
+
+  // 重连恢复
+  socket.on('reconnectGame', (callback) => {
+    const room = rooms[socket.roomCode];
+    if (room && room.players[socket.id]) {
+      // 发送完整游戏状态
+      callback({ success: true, gameState: room.getGameState() });
+    } else {
+      callback({ success: false, message: '无法恢复游戏' });
     }
   });
 
