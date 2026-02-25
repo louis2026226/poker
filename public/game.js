@@ -136,8 +136,10 @@ function saveNickname(nickname) {
   localStorage.setItem(STORAGE_KEY, nickname);
 }
 
-// 页面加载时读取昵称
-loadNickname();
+// 页面加载完成后读取昵称
+document.addEventListener('DOMContentLoaded', function() {
+  loadNickname();
+});
 
 // 页面切换
 function showPage(page) {
