@@ -13,6 +13,26 @@
       <h1 class="title">Louis Poker</h1>
       <p class="subtitle">与好友一起畅玩</p>
       
+      <!-- 玩家信息显示 -->
+      <div id="playerStats" class="player-stats hidden">
+        <div class="stat-item">
+          <span class="stat-label">昵称</span>
+          <span id="statNickname" class="stat-value">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">金币</span>
+          <span id="statChips" class="stat-value">1000</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">胜率</span>
+          <span id="statWinRate" class="stat-value">0%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">场次</span>
+          <span id="statGames" class="stat-value">0</span>
+        </div>
+      </div>
+      
       <div class="lobby-form">
         <div class="input-group">
           <input type="text" id="nickname" placeholder="请输入昵称" maxlength="12">
