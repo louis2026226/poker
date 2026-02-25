@@ -434,6 +434,53 @@ body {
 .action-info {
   font-size: 18px;
   color: #ffd700;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* 倒计时样式 */
+.action-timer {
+  display: flex;
+  align-items: center;
+}
+
+.timer-ring {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.timer-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.timer-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 3;
+}
+
+.timer-progress {
+  fill: none;
+  stroke: #ffd700;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.timer-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd700;
 }
 
 .action-buttons {
