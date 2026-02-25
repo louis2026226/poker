@@ -196,6 +196,8 @@ function saveNickname(nickname) {
 // 页面加载完成后读取昵称和数据
 document.addEventListener('DOMContentLoaded', function() {
   loadNickname();
+  setupEmojiButtons();
+  startHeartbeat();
 });
 
 // 页面切换
@@ -329,6 +331,93 @@ socket.on('playerLeft', (data) => {
   gameStatus.textContent = `${data.nickname} 离开了房间`;
 });
 
+// 表情事件
+socket.on('emote', (data) => {
+  showEmoji(data.seat, data.emoji);
+});
+
+// 房主变更事件
+socket.on('hostChanged', (data) => {
+  gameStatus.textContent = '房主已变更';
+  // 刷新游戏状态以更新房主标识
+  if (currentGameState) {
+    renderSeats(currentGameState);
+  }
+});
+
+// 心跳机制
+let heartbeatInterval = null;
+
+function startHeartbeat() {
+  if (heartbeatInterval) return;
+  
+  // 每5秒发送一次ping
+  heartbeatInterval = setInterval(() => {
+    socket.emit('ping');
+  }, 5000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
+
+// 表情显示
+function showEmoji(seat, emoji) {
+  const emojiDisplay = document.getElementById('emojiDisplay');
+  if (!emojiDisplay) return;
+  
+  const seatEl = document.getElementById(`seat-${seat}`);
+  if (!seatEl) return;
+  
+  const rect = seatEl.getBoundingClientRect();
+  const popup = document.createElement('div');
+  popup.className = 'emoji-popup';
+  popup.textContent = emoji;
+  popup.style.left = (rect.left + rect.width / 2 - 24) + 'px';
+  popup.style.top = (rect.top + rect.height / 2 - 24) + 'px';
+  
+  emojiDisplay.appendChild(popup);
+  
+  // 3秒后移除
+  setTimeout(() => {
+    popup.remove();
+  }, 3000);
+}
+
+// 表情冷却
+let emojiLastTime = 0;
+const EMOJI_COOLDOWN = 20000; // 20秒
+
+function setupEmojiButtons() {
+  const emojiBtns = document.querySelectorAll('.emoji-btn');
+  emojiBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - emojiLastTime < EMOJI_COOLDOWN) {
+        return; // 冷却中
+      }
+      
+      const emoji = btn.dataset.emoji;
+      socket.emit('emote', emoji);
+      emojiLastTime = now;
+      
+      // 禁用按钮并显示冷却
+      btn.disabled = true;
+      let cooldownLeft = EMOJI_COOLDOWN / 1000;
+      const cooldownTimer = setInterval(() => {
+        cooldownLeft--;
+        if (cooldownLeft <= 0) {
+          clearInterval(cooldownTimer);
+          btn.disabled = false;
+        }
+      }, 1000);
+    });
+  });
+}
+
 function updateGameState(gameState) {
   currentGameState = gameState;
 
@@ -450,6 +539,12 @@ function renderSeats(gameState) {
     const statusEl = seatEl.querySelector('.player-status');
 
     nameEl.textContent = player.nickname + (player.socketId === mySocketId ? ' (我)' : '');
+    
+    // 如果是房主，显示皇冠标识
+    if (gameState.hostId && player.socketId === gameState.hostId) {
+      nameEl.innerHTML = player.nickname + (player.socketId === mySocketId ? ' (我)' : '') + ' 👑';
+    }
+    
     chipsEl.textContent = `💰 ${player.chips}`;
 
     // 下注
