@@ -308,7 +308,7 @@ class PokerRoom {
     this.isLocked = false;
   }
 
-  addPlayer(socketId, nickname, avatar = 1) {
+  addPlayer(socketId, nickname) {
     // 找到第一个空座位
     const seatIndex = this.seats.findIndex(s => s === null);
     if (seatIndex === -1) return null;
@@ -316,7 +316,6 @@ class PokerRoom {
     const player = {
       socketId,
       nickname,
-      avatar: avatar,
       chips: CONFIG.INITIAL_CHIPS,
       seat: seatIndex,
       folded: false,
@@ -726,7 +725,6 @@ class PokerRoom {
       playersArray.push({
         socketId,
         nickname: p.nickname,
-        avatar: p.avatar || 1,
         chips: p.chips,
         seat: p.seat,
         folded: p.folded,
@@ -763,11 +761,9 @@ io.on('connection', (socket) => {
     const room = new PokerRoom(roomCode, socket.id);
     rooms[roomCode] = room;
 
-    // 解析参数 - 支持对象或字符串
     const playerName = typeof nickname === 'object' ? (nickname?.nickname || '玩家') : (nickname || '玩家');
-    const playerAvatar = typeof nickname === 'object' ? (nickname?.avatar || 1) : 1;
     
-    const player = room.addPlayer(socket.id, playerName, playerAvatar);
+    const player = room.addPlayer(socket.id, playerName);
     socket.join(roomCode);
     socket.roomCode = roomCode; // 设置玩家所在的房间
 
@@ -776,7 +772,7 @@ io.on('connection', (socket) => {
   });
 
   // 加入房间
-  socket.on('joinRoom', (roomCode, nickname, avatar, callback) => {
+  socket.on('joinRoom', (roomCode, nickname, callback) => {
     const room = rooms[roomCode];
     if (!room) {
       callback({ success: false, message: '房间不存在' });
@@ -789,11 +785,9 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 解析参数
     const playerName = typeof nickname === 'string' ? nickname : (nickname?.nickname || '玩家');
-    const playerAvatar = typeof nickname === 'object' ? (nickname?.avatar || 1) : (parseInt(avatar) || 1);
     
-    const player = room.addPlayer(socket.id, playerName, playerAvatar);
+    const player = room.addPlayer(socket.id, playerName);
     if (!player) {
       callback({ success: false, message: '无法加入房间' });
       return;
