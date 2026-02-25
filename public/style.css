@@ -58,38 +58,6 @@ body {
   border-radius: 15px;
 }
 
-/* 头像选择 */
-.avatar-select {
-  margin-bottom: 20px;
-}
-
-.avatar-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.avatar-option {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 3px solid transparent;
-  transition: all 0.2s;
-  object-fit: cover;
-}
-
-.avatar-option:hover {
-  transform: scale(1.1);
-}
-
-.avatar-option.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-}
-
 .stat-item {
   display: flex;
   flex-direction: column;
@@ -894,6 +862,11 @@ body {
 
 /* 手机端牌面不重叠 */
 @media (max-width: 768px) {
+  .poker-table {
+    transform: translateY(-150px);
+    margin-bottom: 150px;
+  }
+  
   .player-cards {
     gap: 2px;
     min-height: 35px;
@@ -916,17 +889,6 @@ body {
     width: 28px;
     height: 40px;
   }
-}
-
-/* 表情面板 */
-.emoji-panel {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
 }
 
 .emoji-btn {
@@ -998,4 +960,23 @@ body {
   top: -10px;
   right: -10px;
   font-size: 16px;
+}
+
+/* 表情弹窗面板 */
+.emoji-popup-panel {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  z-index: 100;
+}
+
+.emoji-popup-panel .emoji-btn {
+  font-size: 18px;
+  padding: 5px;
 }
