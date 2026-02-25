@@ -1,4 +1,45 @@
 // 游戏前端逻辑
+// 音效系统
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  try {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (type === 'card') {
+      // 发牌音效 - 清脆的提示音
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'bet') {
+      // 下注音效 - 更低的提示音
+      oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'action') {
+      // 操作确认音效
+      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime + 0.05);
+      gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+  } catch (e) {
+    console.log('Audio not supported');
+  }
+}
+
 const socket = io();
 
 // 本地存储键
@@ -231,27 +272,32 @@ function stopTimerBeforeAction() {
 
 foldBtn.addEventListener('click', () => {
   stopTimerBeforeAction();
+  playSound('action'); // 操作音效
   socket.emit('playerAction', 'fold', 0, handleActionResponse);
 });
 
 checkBtn.addEventListener('click', () => {
   stopTimerBeforeAction();
+  playSound('action'); // 操作音效
   socket.emit('playerAction', 'check', 0, handleActionResponse);
 });
 
 callBtn.addEventListener('click', () => {
   stopTimerBeforeAction();
+  playSound('bet'); // 下注音效
   socket.emit('playerAction', 'call', 0, handleActionResponse);
 });
 
 raiseBtn.addEventListener('click', () => {
   stopTimerBeforeAction();
+  playSound('bet'); // 下注音效
   const amount = parseInt(raiseSlider.value);
   socket.emit('playerAction', 'raise', amount, handleActionResponse);
 });
 
 allInBtn.addEventListener('click', () => {
   stopTimerBeforeAction();
+  playSound('bet'); // 下注音效
   socket.emit('playerAction', 'all-in', 0, handleActionResponse);
 });
 
@@ -332,6 +378,9 @@ function updateGameStatus(gameState) {
 }
 
 function renderCommunityCards(cards) {
+  if (cards.length > 0) {
+    playSound('card'); // 发牌音效
+  }
   communityCardsEl.innerHTML = '';
   cards.forEach(card => {
     const cardEl = createCardElement(card);
@@ -526,14 +575,18 @@ function updateActionPanel(gameState) {
   foldBtn.disabled = false;
   
   if (toCall === 0) {
-    // 可以看牌
+    // 可以过牌 - 只显示过牌按钮
     checkBtn.disabled = false;
+    checkBtn.style.display = 'inline-block';
     callBtn.disabled = true;
-    callBtn.textContent = '看牌';
+    callBtn.style.display = 'none';
+    checkBtn.textContent = '过牌';
   } else {
-    // 需要跟注
+    // 需要跟注 - 只显示跟注按钮
     checkBtn.disabled = true;
+    checkBtn.style.display = 'none';
     callBtn.disabled = false;
+    callBtn.style.display = 'inline-block';
     callBtn.textContent = `跟注 ${toCall}`;
   }
 
