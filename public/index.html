@@ -157,8 +157,22 @@
         <input type="range" id="raiseSlider" min="0" max="1000" value="20">
         <span id="raiseAmountDisplay">20</span>
       </div>
+      <!-- 表情栏 -->
+      <div class="emoji-panel" id="emojiPanel">
+        <button class="emoji-btn" data-emoji="👍">👍</button>
+        <button class="emoji-btn" data-emoji="👎">👎</button>
+        <button class="emoji-btn" data-emoji="😄">😄</button>
+        <button class="emoji-btn" data-emoji="😭">😭</button>
+        <button class="emoji-btn" data-emoji="🎉">🎉</button>
+        <button class="emoji-btn" data-emoji="🤔">🤔</button>
+        <button class="emoji-btn" data-emoji="👏">👏</button>
+        <button class="emoji-btn" data-emoji="🙏">🙏</button>
+      </div>
     </div>
   </div>
+
+  <!-- 表情显示区域 -->
+  <div id="emojiDisplay" class="emoji-display"></div>
 
   <!-- 游戏结束弹窗 -->
   <div id="gameOverModal" class="modal hidden">
