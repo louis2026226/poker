@@ -1,6 +1,25 @@
 // 游戏前端逻辑
 const socket = io();
 
+// 本地存储昵称
+const STORAGE_KEY = 'poker_nickname';
+
+// 从本地存储读取昵称
+function loadNickname() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    nicknameInput.value = saved;
+  }
+}
+
+// 保存昵称到本地存储
+function saveNickname(nickname) {
+  localStorage.setItem(STORAGE_KEY, nickname);
+}
+
+// 页面加载时读取昵称
+loadNickname();
+
 // DOM 元素
 const lobbyPage = document.getElementById('lobby');
 const gameRoomPage = document.getElementById('gameRoom');
@@ -55,6 +74,7 @@ createRoomBtn.addEventListener('click', () => {
     alert('请输入昵称');
     return;
   }
+  saveNickname(nickname); // 保存昵称
   socket.emit('createRoom', nickname, (response) => {
     if (response.success) {
       mySocketId = socket.id;
@@ -84,6 +104,8 @@ confirmJoinBtn.addEventListener('click', () => {
     alert('请输入5位房间号');
     return;
   }
+
+  saveNickname(nickname); // 保存昵称
 
   socket.emit('joinRoom', roomCode, nickname, (response) => {
     if (response.success) {
