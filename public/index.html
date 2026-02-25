@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>德州扑克 - 好友对战</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 大厅页面 -->
+  <div id="lobby" class="page">
+    <div class="lobby-container">
+      <h1 class="title">🃏 德州扑克</h1>
+      <p class="subtitle">与好友一起畅玩</p>
+      
+      <div class="lobby-form">
+        <div class="input-group">
+          <input type="text" id="nickname" placeholder="请输入昵称" maxlength="12">
+        </div>
+        
+        <button id="createRoomBtn" class="btn btn-primary">创建房间</button>
+        <button id="joinRoomBtn" class="btn btn-secondary">加入房间</button>
+        
+        <div id="joinForm" class="join-form hidden">
+          <input type="text" id="roomCode" placeholder="请输入5位房间号" maxlength="5">
+          <button id="confirmJoinBtn" class="btn btn-primary">确认加入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏房间页面 -->
+  <div id="gameRoom" class="page hidden">
+    <div class="game-header">
+      <div class="room-info">
+        <span class="room-label">房间号:</span>
+        <span id="displayRoomCode" class="room-code">-----</span>
+      </div>
+      <div class="game-status" id="gameStatus">等待玩家加入...</div>
+      <button id="leaveRoomBtn" class="btn btn-danger btn-small">离开房间</button>
+    </div>
+
+    <div class="poker-table">
+      <!-- 座位位置 -->
+      <div class="seat" id="seat-2" style="top: 20%; left: 15%;">
+        <div class="player-info">
+          <div class="player-avatar">👤</div>
+          <div class="player-name"></div>
+          <div class="player-chips"></div>
+        </div>
+        <div class="player-cards"></div>
+        <div class="player-bet"></div>
+        <div class="player-status"></div>
+      </div>
+
+      <div class="seat" id="seat-3" style="top: 20%; right: 15%;">
+        <div class="player-info">
+          <div class="player-avatar">👤</div>
+          <div class="player-name"></div>
+          <div class="player-chips"></div>
+        </div>
+        <div class="player-cards"></div>
+        <div class="player-bet"></div>
+        <div class="player-status"></div>
+      </div>
+
+      <div class="seat" id="seat-4" style="bottom: 20%; right: 15%;">
+        <div class="player-info">
+          <div class="player-avatar">👤</div>
+          <div class="player-name"></div>
+          <div class="player-chips"></div>
+        </div>
+        <div class="player-cards"></div>
+        <div class="player-bet"></div>
+        <div class="player-status"></div>
+      </div>
+
+      <div class="seat" id="seat-1" style="bottom: 20%; left: 15%;">
+        <div class="player-info">
+          <div class="player-avatar">👤</div>
+          <div class="player-name"></div>
+          <div class="player-chips"></div>
+        </div>
+        <div class="player-cards"></div>
+        <div class="player-bet"></div>
+        <div class="player-status"></div>
+      </div>
+
+      <!-- 玩家自己（底部中间） -->
+      <div class="seat" id="seat-0" style="bottom: 5%; left: 50%; transform: translateX(-50%);">
+        <div class="player-cards" id="myCards"></div>
+        <div class="player-info">
+          <div class="player-avatar">👤</div>
+          <div class="player-name"></div>
+          <div class="player-chips"></div>
+        </div>
+        <div class="player-bet"></div>
+        <div class="player-status"></div>
+      </div>
+
+      <!-- 公共牌区 -->
+      <div class="community-area">
+        <div class="pot-display">
+          <span class="pot-label">底池:</span>
+          <span id="potAmount" class="pot-amount">0</span>
+        </div>
+        <div class="community-cards" id="communityCards"></div>
+        <div class="current-bet" id="currentBetDisplay"></div>
+      </div>
+
+      <!-- 庄家按钮 -->
+      <div class="dealer-button" id="dealerButton" style="display: none;">D </div>
+
+   </div>
+    <!-- 操作面板 -->
+    <div class="action-panel" id="actionPanel">
+      <div class="action-info">
+        <span id="actionText">等待行动...</span>
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-danger" id="foldBtn" disabled>弃牌</button>
+        <button class="btn btn-secondary" id="checkBtn" disabled>看牌</button>
+        <button class="btn btn-primary" id="callBtn" disabled>跟注</button>
+        <button class="btn btn-warning" id="raiseBtn" disabled>加注</button>
+        <button class="btn btn-success" id="allInBtn" disabled">全下</button>
+      </div>
+      <div class="raise-amount" id="raiseAmountPanel">
+        <input type="range" id="raiseSlider" min="0" max="1000" value="20">
+        <span id="raiseAmountDisplay">20</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏结束弹窗 -->
+  <div id="gameOverModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>🎉 游戏结束</h2>
+      <div id="settlementList"></div>
+      <button class="btn btn-primary" id="newGameBtn">再来一局</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
