@@ -45,10 +45,12 @@ const socket = io();
 // 本地存储键
 const STORAGE_KEY = 'poker_nickname';
 const STATS_KEY = 'poker_player_stats';
+const AVATAR_KEY = 'poker_avatar';
 
 // 玩家数据结构
 let playerStats = {
   nickname: '',
+  avatar: 1,
   chips: 1000,
   gamesPlayed: 0,
   gamesWon: 0,
@@ -72,6 +74,13 @@ function loadNickname() {
     } catch (e) {
       console.log('Failed to load stats');
     }
+  }
+  
+  // 加载头像选择
+  const savedAvatar = localStorage.getItem(AVATAR_KEY);
+  if (savedAvatar) {
+    playerStats.avatar = parseInt(savedAvatar);
+    updateAvatarSelection(playerStats.avatar);
   }
 }
 
@@ -198,7 +207,37 @@ document.addEventListener('DOMContentLoaded', function() {
   loadNickname();
   setupEmojiButtons();
   startHeartbeat();
+  setupAvatarSelection();
 });
+
+// 头像选择初始化
+function setupAvatarSelection() {
+  const avatarOptions = document.querySelectorAll('.avatar-option');
+  avatarOptions.forEach(avatar => {
+    avatar.addEventListener('click', () => {
+      // 移除之前的选择
+      avatarOptions.forEach(a => a.classList.remove('selected'));
+      // 选择当前头像
+      avatar.classList.add('selected');
+      // 保存选择
+      const avatarId = avatar.dataset.avatar;
+      playerStats.avatar = parseInt(avatarId);
+      localStorage.setItem(AVATAR_KEY, avatarId);
+    });
+  });
+}
+
+// 更新头像选择显示
+function updateAvatarSelection(avatarId) {
+  const avatarOptions = document.querySelectorAll('.avatar-option');
+  avatarOptions.forEach(avatar => {
+    if (parseInt(avatar.dataset.avatar) === avatarId) {
+      avatar.classList.add('selected');
+    } else {
+      avatar.classList.remove('selected');
+    }
+  });
+}
 
 // 页面切换
 function showPage(page) {
@@ -219,7 +258,8 @@ createRoomBtn.addEventListener('click', () => {
     return;
   }
   saveNickname(nickname); // 保存昵称
-  socket.emit('createRoom', nickname, (response) => {
+  // 发送昵称和头像
+  socket.emit('createRoom', { nickname: nickname, avatar: playerStats.avatar }, (response) => {
     if (response.success) {
       mySocketId = socket.id;
       mySeat = response.player.seat;
@@ -251,7 +291,7 @@ confirmJoinBtn.addEventListener('click', () => {
 
   saveNickname(nickname); // 保存昵称
 
-  socket.emit('joinRoom', roomCode, nickname, (response) => {
+  socket.emit('joinRoom', roomCode, nickname, playerStats.avatar, (response) => {
     if (response.success) {
       mySocketId = socket.id;
       mySeat = response.player.seat;
@@ -532,12 +572,19 @@ function renderSeats(gameState) {
     if (!seatEl) return;
 
     // 玩家信息
+    const avatarEl = seatEl.querySelector('.player-avatar');
     const nameEl = seatEl.querySelector('.player-name');
     const chipsEl = seatEl.querySelector('.player-chips');
     const cardsEl = seatEl.querySelector('.player-cards');
     const betEl = seatEl.querySelector('.player-bet');
     const statusEl = seatEl.querySelector('.player-status');
 
+    // 显示头像
+    if (avatarEl) {
+      const avatarId = player.avatar || 1;
+      avatarEl.innerHTML = `<img src="/avatars/avatar_0_${avatarId}.png" alt="头像" style="width:100%;height:100%;border-radius:50%;">`;
+    }
+    
     nameEl.textContent = player.nickname + (player.socketId === mySocketId ? ' (我)' : '');
     
     // 如果是房主，显示皇冠标识
