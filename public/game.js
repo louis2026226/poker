@@ -123,20 +123,36 @@ let currentGameState = null;
 let actionTimer = null;  // 倒计时
 let actionTimeLeft = 10; // 剩余时间
 
-// 从本地存储读取昵称
+// 从本地存储读取昵称和数据
 function loadNickname() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && nicknameInput) {
     nicknameInput.value = saved;
+    playerStats.nickname = saved;
   }
+  
+  // 加载玩家数据
+  const savedStats = localStorage.getItem(STATS_KEY);
+  if (savedStats) {
+    try {
+      playerStats = JSON.parse(savedStats);
+    } catch (e) {
+      console.log('Failed to load stats');
+    }
+  }
+  
+  // 更新显示
+  updatePlayerStatsDisplay();
 }
 
 // 保存昵称到本地存储
 function saveNickname(nickname) {
   localStorage.setItem(STORAGE_KEY, nickname);
+  playerStats.nickname = nickname;
+  updatePlayerStatsDisplay();
 }
 
-// 页面加载完成后读取昵称
+// 页面加载完成后读取昵称和数据
 document.addEventListener('DOMContentLoaded', function() {
   loadNickname();
 });
@@ -208,25 +224,34 @@ leaveRoomBtn.addEventListener('click', () => {
   window.location.reload();
 });
 
-// 操作按钮
+// 操作按钮 - 每次点击都停止倒计时
+function stopTimerBeforeAction() {
+  stopActionTimer();
+}
+
 foldBtn.addEventListener('click', () => {
+  stopTimerBeforeAction();
   socket.emit('playerAction', 'fold', 0, handleActionResponse);
 });
 
 checkBtn.addEventListener('click', () => {
+  stopTimerBeforeAction();
   socket.emit('playerAction', 'check', 0, handleActionResponse);
 });
 
 callBtn.addEventListener('click', () => {
+  stopTimerBeforeAction();
   socket.emit('playerAction', 'call', 0, handleActionResponse);
 });
 
 raiseBtn.addEventListener('click', () => {
+  stopTimerBeforeAction();
   const amount = parseInt(raiseSlider.value);
   socket.emit('playerAction', 'raise', amount, handleActionResponse);
 });
 
 allInBtn.addEventListener('click', () => {
+  stopTimerBeforeAction();
   socket.emit('playerAction', 'all-in', 0, handleActionResponse);
 });
 
