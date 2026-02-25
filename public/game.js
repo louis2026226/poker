@@ -4,22 +4,6 @@ const socket = io();
 // 本地存储昵称
 const STORAGE_KEY = 'poker_nickname';
 
-// 从本地存储读取昵称
-function loadNickname() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    nicknameInput.value = saved;
-  }
-}
-
-// 保存昵称到本地存储
-function saveNickname(nickname) {
-  localStorage.setItem(STORAGE_KEY, nickname);
-}
-
-// 页面加载时读取昵称
-loadNickname();
-
 // DOM 元素
 const lobbyPage = document.getElementById('lobby');
 const gameRoomPage = document.getElementById('gameRoom');
@@ -55,6 +39,24 @@ const myCardsEl = document.getElementById('myCards');
 let mySocketId = null;
 let mySeat = -1;
 let currentGameState = null;
+let actionTimer = null;  // 倒计时
+let actionTimeLeft = 10; // 剩余时间
+
+// 从本地存储读取昵称
+function loadNickname() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && nicknameInput) {
+    nicknameInput.value = saved;
+  }
+}
+
+// 保存昵称到本地存储
+function saveNickname(nickname) {
+  localStorage.setItem(STORAGE_KEY, nickname);
+}
+
+// 页面加载时读取昵称
+loadNickname();
 
 // 页面切换
 function showPage(page) {
@@ -379,6 +381,7 @@ function updateActionPanel(gameState) {
 
   if (!myPlayer) {
     actionPanel.classList.add('hidden');
+    stopActionTimer();
     return;
   }
 
@@ -391,14 +394,19 @@ function updateActionPanel(gameState) {
   if (!gameActive) {
     actionText.textContent = gameState.gameState === 'waiting' ? '等待更多玩家...' : '游戏进行中...';
     disableAllButtons();
+    stopActionTimer();
     return;
   }
 
   if (!isMyTurn) {
     actionText.textContent = '等待其他玩家...';
     disableAllButtons();
+    stopActionTimer();
     return;
   }
+
+  // 轮到我行动，启动10秒倒计时
+  startActionTimer();
 
   // 计算需要跟注的金额
   const currentBet = myPlayer.bet || 0;
@@ -474,6 +482,59 @@ socket.on('gameOver', (data) => {
   
   gameOverModal.classList.remove('hidden');
 });
+
+// 倒计时功能
+function startActionTimer() {
+  stopActionTimer(); // 先停止之前的计时器
+  actionTimeLeft = 10;
+  const timerEl = document.getElementById('actionTimer');
+  const timerText = document.getElementById('timerText');
+  const timerProgress = document.querySelector('.timer-progress');
+  
+  if (!timerEl) return;
+  
+  timerEl.classList.remove('hidden');
+  
+  // 更新倒计时显示
+  if (timerText) timerText.textContent = actionTimeLeft;
+  if (timerProgress) {
+    timerProgress.style.strokeDasharray = '100';
+    timerProgress.style.strokeDashoffset = '0';
+  }
+  
+  actionTimer = setInterval(() => {
+    actionTimeLeft--;
+    
+    if (timerText) timerText.textContent = actionTimeLeft;
+    
+    // 更新圆形进度条
+    if (timerProgress) {
+      const progress = (actionTimeLeft / 10) * 100;
+      timerProgress.style.strokeDashoffset = (100 - progress).toString();
+    }
+    
+    if (actionTimeLeft <= 0) {
+      // 时间到，自动弃牌
+      stopActionTimer();
+      socket.emit('playerAction', 'fold', 0, (response) => {
+        if (!response.success) {
+          console.log('自动弃牌:', response.message);
+        }
+      });
+    }
+  }, 1000);
+}
+
+function stopActionTimer() {
+  if (actionTimer) {
+    clearInterval(actionTimer);
+    actionTimer = null;
+  }
+  const timerEl = document.getElementById('actionTimer');
+  if (timerEl) {
+    timerEl.classList.add('hidden');
+  }
+}
 
 // 初始状态
 showPage('lobby');
