@@ -524,38 +524,210 @@ body {
   color: #e74c3c;
 }
 
-/* 响应式 */
+/* 响应式 - 手机端 */
 @media (max-width: 768px) {
   .lobby-container {
-    padding: 40px;
-    margin: 20px;
+    padding: 30px 20px;
+    margin: 15px;
+    width: 90%;
+    max-width: 400px;
   }
 
   .title {
-    font-size: 32px;
+    font-size: 28px;
   }
 
-  .poker-table {
-    border-radius: 100px;
+  .subtitle {
+    font-size: 14px;
+    margin-bottom: 25px;
   }
 
-  .seat {
-    min-width: 80px;
+  .input-group input,
+  .join-form input {
+    padding: 12px 15px;
+    font-size: 14px;
   }
 
-  .player-info {
-    padding: 5px 10px;
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
   }
 
-  .card {
-    width: 35px;
-    height: 50px;
+  .game-header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .room-code {
     font-size: 18px;
   }
 
-  .action-buttons .btn {
-    min-width: 80px;
-    padding: 12px 20px;
+  .game-status {
+    font-size: 12px;
+    order: 3;
+    width: 100%;
+    text-align: center;
+  }
+
+  .poker-table {
+    height: calc(100vh - 280px);
+    margin-top: 100px;
+    border-width: 8px;
+    border-radius: 120px;
+  }
+
+  .seat {
+    min-width: 70px;
+  }
+
+  .seat-0 {
+    bottom: 8% !important;
+  }
+
+  .seat-1 {
+    bottom: 25% !important;
+    left: 8% !important;
+  }
+
+  .seat-2 {
+    top: 8% !important;
+    left: 8% !important;
+  }
+
+  .seat-3 {
+    top: 8% !important;
+    right: 8% !important;
+  }
+
+  .seat-4 {
+    bottom: 25% !important;
+    right: 8% !important;
+  }
+
+  .player-info {
+    padding: 5px 8px;
+  }
+
+  .player-avatar {
+    font-size: 20px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .player-name {
+    font-size: 11px;
+  }
+
+  .player-chips {
+    font-size: 10px;
+  }
+
+  .card {
+    width: 28px;
+    height: 40px;
     font-size: 14px;
+  }
+
+  .card .rank {
+    font-size: 10px;
+  }
+
+  .card .suit {
+    font-size: 10px;
+  }
+
+  .pot-display {
+    padding: 8px 15px;
+  }
+
+  .pot-label {
+    font-size: 12px;
+  }
+
+  .pot-amount {
+    font-size: 18px;
+  }
+
+  .action-panel {
+    padding: 12px 8px;
+    gap: 10px;
+  }
+
+  .action-info {
+    font-size: 14px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+
+  .action-buttons .btn {
+    min-width: 60px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .raise-amount {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .raise-amount input[type="range"] {
+    width: 150px;
+  }
+
+  #raiseAmountDisplay {
+    font-size: 16px;
+  }
+
+  .modal-content {
+    padding: 25px 20px;
+    width: 90%;
+    max-width: 350px;
+  }
+
+  .modal-content h2 {
+    font-size: 24px;
+  }
+
+  .settlement-item {
+    min-width: auto;
+    padding: 10px 15px;
+  }
+
+  .settlement-nickname {
+    font-size: 14px;
+  }
+
+  .settlement-amount {
+    font-size: 16px;
+  }
+
+  #leaveRoomBtn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+/* 更小屏幕 */
+@media (max-width: 400px) {
+  .title {
+    font-size: 24px;
+  }
+
+  .poker-table {
+    border-radius: 80px;
+  }
+
+  .card {
+    width: 24px;
+    height: 35px;
+  }
+
+  .action-buttons .btn {
+    min-width: 55px;
+    padding: 8px 10px;
+    font-size: 11px;
   }
 }
