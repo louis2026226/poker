@@ -1,4 +1,3 @@
-const express = require('express');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
@@ -761,7 +760,7 @@ io.on('connection', (socket) => {
     const room = new PokerRoom(roomCode, socket.id);
     rooms[roomCode] = room;
 
-    const playerName = typeof nickname === 'object' ? (nickname?.nickname || '玩家') : (nickname || '玩家');
+    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
     
     const player = room.addPlayer(socket.id, playerName);
     socket.join(roomCode);
@@ -785,7 +784,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const playerName = typeof nickname === 'string' ? nickname : (nickname?.nickname || '玩家');
+    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
     
     const player = room.addPlayer(socket.id, playerName);
     if (!player) {
