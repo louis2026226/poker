@@ -178,6 +178,10 @@
         <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
         <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
         <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
+        <button id="ai-assist-btn" disabled aria-label="AI建议" tabindex="25">
+          <span class="ai-icon">🤖</span>
+          <span>AI建议</span>
+        </button>
       </div>
       <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
         <label for="raiseSlider" class="sr-only">加注金额滑块</label>
@@ -191,6 +195,20 @@
 
   <!-- 表情显示区域 -->
   <div id="emojiDisplay" class="emoji-display"></div>
+
+  <!-- AI建议面板 -->
+  <div id="ai-suggestion-panel" class="hidden" role="dialog" aria-label="AI建议">
+    <div class="ai-suggestion-header">
+      <h3>🤖 AI 智能建议</h3>
+      <button class="ai-close-btn" onclick="closeAISuggestion()" aria-label="关闭建议面板">&times;</button>
+    </div>
+    <div id="ai-suggestion-content">
+      <div class="ai-loading">
+        <div class="ai-spinner"></div>
+        <span class="ai-loading-text">AI正在分析牌面...</span>
+      </div>
+    </div>
+  </div>
 
   <!-- 游戏结束弹窗 -->
   <div id="gameOverModal" class="modal hidden">
