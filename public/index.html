@@ -54,7 +54,8 @@
     <div class="game-header">
       <div class="room-info">
         <span class="room-label">房间号:</span>
-        <span id="displayRoomCode" class="room-code">-----</span>
+        <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" title="点击复制房间号" style="cursor: pointer;">-----</span>
+        <button class="btn btn-small btn-copy" onclick="copyRoomCode()" title="复制房间号">📋</button>
       </div>
       <div class="game-status" id="gameStatus">等待玩家加入...</div>
       <button id="leaveRoomBtn" class="btn btn-danger btn-small">离开房间</button>
@@ -167,6 +168,8 @@
       <div class="raise-amount" id="raiseAmountPanel">
         <input type="range" id="raiseSlider" min="0" max="1000" value="20">
         <span id="raiseAmountDisplay">20</span>
+        <button class="btn btn-small btn-info" id="previewBtn" onclick="showBetPreview()">预览</button>
+        <span id="previewChips" class="preview-chips"></span>
       </div>
     </div>
   </div>
