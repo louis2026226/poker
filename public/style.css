@@ -1055,3 +1055,47 @@ body {
 .seat.empty.in-game {
   opacity: 0.4;
 }
+
+/* 可访问性 - 屏幕阅读器专用 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 键盘导航焦点样式 */
+*:focus {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
+
+/* 按钮焦点动画 */
+.btn:focus-visible {
+  animation: focusPulse 0.5s ease-in-out;
+}
+
+@keyframes focusPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #ffd700; }
+  50% { box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.5); }
+}
+
+/* 输入框焦点样式 */
+input:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
