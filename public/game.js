@@ -534,7 +534,8 @@ function renderSeats(gameState) {
   for (let i = 0; i < 5; i++) {
     const seatEl = document.getElementById(`seat-${i}`);
     if (seatEl) {
-      seatEl.classList.remove('active', 'folded', 'all-in', 'winner');
+      seatEl.classList.remove('active', 'folded', 'all-in', 'winner', 'my-seat', 'other-seat', 'in-game');
+      seatEl.classList.add('empty'); // 默认是空座位
       const playerInfo = seatEl.querySelector('.player-info');
       const playerCards = seatEl.querySelector('.player-cards');
       const playerBet = seatEl.querySelector('.player-bet');
@@ -548,6 +549,16 @@ function renderSeats(gameState) {
     }
   }
 
+  // 如果游戏进行中（非waiting），添加in-game类使空座位半透明
+  if (gameState.gameState !== 'waiting' && gameState.gameState !== 'ended') {
+    for (let i = 0; i < 5; i++) {
+      const seatEl = document.getElementById(`seat-${i}`);
+      if (seatEl) {
+        seatEl.classList.add('in-game');
+      }
+    }
+  }
+
   // 重新渲染座位（按照视角调整：玩家永远在底部）
   const myPlayer = gameState.players.find(p => p.socketId === mySocketId);
   const mySeatIndex = myPlayer ? myPlayer.seat : 0;
@@ -557,6 +568,16 @@ function renderSeats(gameState) {
     let displaySeat = (player.seat - mySeatIndex + 5) % 5;
     const seatEl = document.getElementById(`seat-${displaySeat}`);
     if (!seatEl) return;
+
+    // 移除empty标记，因为这个座位有玩家
+    seatEl.classList.remove('empty');
+
+    // 添加自己/其他玩家高亮
+    if (player.socketId === mySocketId) {
+      seatEl.classList.add('my-seat');
+    } else {
+      seatEl.classList.add('other-seat');
+    }
 
     // 玩家信息
     const nameEl = seatEl.querySelector('.player-name');
@@ -827,3 +848,91 @@ function stopActionTimer() {
 
 // 初始状态
 showPage('lobby');
+
+// 加注时自动聚焦滑块
+const raiseSlider = document.getElementById('raiseSlider');
+if (raiseSlider) {
+  raiseSlider.addEventListener('focus', function() {
+    // 聚焦时显示预览
+    showBetPreview();
+  });
+}
+
+// 预览下注金额
+function showBetPreview() {
+  const slider = document.getElementById('raiseSlider');
+  const previewChips = document.getElementById('previewChips');
+  const myPlayer = currentGameState ? currentGameState.players.find(p => p.socketId === mySocketId) : null;
+  
+  if (!slider || !previewChips || !myPlayer) return;
+  
+  const betAmount = parseInt(slider.value);
+  const currentBet = myPlayer.bet || 0;
+  const callAmount = currentGameState ? currentGameState.currentBet - currentBet : 0;
+  const totalBet = callAmount + betAmount;
+  const remainingChips = myPlayer.chips - totalBet;
+  
+  // 显示预览信息
+  previewChips.innerHTML = `下注后剩余: <span class="${remainingChips < 0 ? 'text-danger' : 'text-success'}">${remainingChips}</span> 筹码`;
+}
+
+// 复制房间号
+function copyRoomCode() {
+  const roomCode = document.getElementById('displayRoomCode').textContent;
+  if (roomCode && roomCode !== '-----') {
+    navigator.clipboard.writeText(roomCode).then(() => {
+      alert('房间号已复制: ' + roomCode);
+    }).catch(() => {
+      // 兼容不支持clipboard的浏览器
+      const input = document.createElement('input');
+      input.value = roomCode;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      alert('房间号已复制: ' + roomCode);
+    });
+  }
+}
+
+// 金额验证提示
+function validateBetAmount(amount) {
+  const myPlayer = currentGameState ? currentGameState.players.find(p => p.socketId === mySocketId) : null;
+  if (!myPlayer || !currentGameState) return { valid: false, message: '' };
+  
+  const currentBet = myPlayer.bet || 0;
+  const callAmount = currentGameState.currentBet - currentBet;
+  const totalBet = callAmount + amount;
+  
+  if (totalBet > myPlayer.chips) {
+    return { valid: false, message: '超过持有筹码！' };
+  }
+  
+  const minRaise = Math.max(currentGameState.currentBet * 2, currentGameState.config.BIG_BLIND);
+  if (amount < minRaise && amount > 0) {
+    return { valid: false, message: `最小加注额: ${minRaise}` };
+  }
+  
+  return { valid: true, message: '' };
+}
+
+// 更新游戏状态显示（带高亮）
+function updateGameStateDisplay(gameState) {
+  const statusEl = document.getElementById('gameStatus');
+  if (!statusEl) return;
+  
+  const statusMap = {
+    'waiting': { text: '等待玩家加入...', color: '#4a90d9' },
+    'preflop': { text: '翻牌前', color: '#ff9800' },
+    'flop': { text: '翻牌圈', color: '#4caf50' },
+    'turn': { text: '转牌圈', color: '#2196f3' },
+    'river': { text: '河牌圈', color: '#9c27b0' },
+    'showdown': { text: '摊牌', color: '#e91e63' },
+    'ended': { text: '游戏结束', color: '#607d8b' }
+  };
+  
+  const status = statusMap[gameState.gameState] || { text: gameState.gameState, color: '#fff' };
+  statusEl.textContent = status.text;
+  statusEl.style.color = status.color;
+  statusEl.style.fontWeight = 'bold';
+}
