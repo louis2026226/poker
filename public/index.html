@@ -3,141 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Louis Poker - 与好友一起在线玩德州扑克">
   <title>Louis Poker</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- 大厅页面 -->
-  <div id="lobby" class="page">
-    <div class="lobby-container">
-      <h1 class="title">Louis Poker</h1>
+  <div id="lobby" class="page" role="main" aria-label="游戏大厅">
+    <div class="lobby-container" role="form" aria-labelledby="lobby-title">
+      <h1 id="lobby-title" class="title">Louis Poker</h1>
       <p class="subtitle">与好友一起畅玩</p>
       
       <!-- 玩家信息显示 -->
-      <div id="playerStats" class="player-stats hidden">
+      <div id="playerStats" class="player-stats hidden" role="region" aria-label="玩家统计信息">
         <div class="stat-item">
           <span class="stat-label">昵称</span>
-          <span id="statNickname" class="stat-value">-</span>
+          <span id="statNickname" class="stat-value" aria-label="玩家昵称">-</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">金币</span>
-          <span id="statChips" class="stat-value">1000</span>
+          <span id="statChips" class="stat-value" aria-label="当前金币">1000</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">胜率</span>
-          <span id="statWinRate" class="stat-value">0%</span>
+          <span id="statWinRate" class="stat-value" aria-label="胜率">0%</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">场次</span>
-          <span id="statGames" class="stat-value">0</span>
+          <span id="statGames" class="stat-value" aria-label="游戏场次">0</span>
         </div>
       </div>
       
-      <div class="lobby-form">
+      <div class="lobby-form" role="group" aria-label="登录表单">
         <div class="input-group">
-          <input type="text" id="nickname" placeholder="请输入昵称" maxlength="12">
+          <input type="text" id="nickname" placeholder="请输入昵称" maxlength="12" 
+                 aria-required="true" aria-label="请输入昵称" 
+                 autocomplete="off" tabindex="1">
         </div>
         
-        <button id="createRoomBtn" class="btn btn-primary">创建房间</button>
-        <button id="joinRoomBtn" class="btn btn-secondary">加入房间</button>
+        <button id="createRoomBtn" class="btn btn-primary" tabindex="2" 
+                aria-label="创建新房间">创建房间</button>
+        <button id="joinRoomBtn" class="btn btn-secondary" tabindex="3" 
+                aria-label="加入已有房间">加入房间</button>
         
-        <div id="joinForm" class="join-form hidden">
-          <input type="text" id="roomCode" placeholder="请输入5位房间号" maxlength="5">
-          <button id="confirmJoinBtn" class="btn btn-primary">确认加入</button>
+        <div id="joinForm" class="join-form hidden" role="group" aria-label="加入房间表单">
+          <input type="text" id="roomCode" placeholder="请输入5位房间号" maxlength="5" 
+                 aria-required="true" aria-label="请输入5位房间号"
+                 autocomplete="off" tabindex="4">
+          <button id="confirmJoinBtn" class="btn btn-primary" tabindex="5" 
+                  aria-label="确认加入房间">确认加入</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- 游戏房间页面 -->
-  <div id="gameRoom" class="page hidden">
-    <div class="game-header">
+  <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
+    <div class="game-header" role="banner" aria-label="游戏头部信息">
       <div class="room-info">
-        <span class="room-label">房间号:</span>
-        <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" title="点击复制房间号" style="cursor: pointer;">-----</span>
-        <button class="btn btn-small btn-copy" onclick="copyRoomCode()" title="复制房间号">📋</button>
+        <span class="room-label" id="roomLabel">房间号:</span>
+        <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
+              title="点击复制房间号" style="cursor: pointer;" 
+              role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
+        <button class="btn btn-small btn-copy" onclick="copyRoomCode()" 
+                title="复制房间号" aria-label="复制房间号" tabindex="11">📋</button>
       </div>
-      <div class="game-status" id="gameStatus">等待玩家加入...</div>
-      <button id="leaveRoomBtn" class="btn btn-danger btn-small">离开房间</button>
+      <div class="game-status" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
+      <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
+              tabindex="12" aria-label="离开当前房间">离开房间</button>
     </div>
 
-    <div class="poker-table">
+    <div class="poker-table" role="region" aria-label="扑克牌桌">
       <!-- 座位位置 -->
-      <div class="seat" id="seat-2" style="top: 20%; left: 15%;">
+      <div class="seat" id="seat-2" style="top: 20%; left: 15%;" role="article" aria-label="座位2 - 左侧玩家">
         <div class="player-info">
-          <div class="player-avatar">👤</div>
+          <div class="player-avatar" aria-hidden="true">👤</div>
           <div class="player-name"></div>
           <div class="player-chips"></div>
         </div>
-        <div class="player-cards"></div>
+        <div class="player-cards" aria-label="玩家手牌"></div>
         <div class="player-bet"></div>
         <div class="player-status"></div>
       </div>
 
-      <div class="seat" id="seat-3" style="top: 20%; right: 15%;">
+      <div class="seat" id="seat-3" style="top: 20%; right: 15%;" role="article" aria-label="座位3 - 右侧玩家">
         <div class="player-info">
-          <div class="player-avatar">👤</div>
+          <div class="player-avatar" aria-hidden="true">👤</div>
           <div class="player-name"></div>
           <div class="player-chips"></div>
         </div>
-        <div class="player-cards"></div>
+        <div class="player-cards" aria-label="玩家手牌"></div>
         <div class="player-bet"></div>
         <div class="player-status"></div>
       </div>
 
-      <div class="seat" id="seat-4" style="bottom: 20%; right: 15%;">
+      <div class="seat" id="seat-4" style="bottom: 20%; right: 15%;" role="article" aria-label="座位4 - 右侧玩家">
         <div class="player-info">
-          <div class="player-avatar">👤</div>
+          <div class="player-avatar" aria-hidden="true">👤</div>
           <div class="player-name"></div>
           <div class="player-chips"></div>
         </div>
-        <div class="player-cards"></div>
+        <div class="player-cards" aria-label="玩家手牌"></div>
         <div class="player-bet"></div>
         <div class="player-status"></div>
       </div>
 
-      <div class="seat" id="seat-1" style="bottom: 20%; left: 15%;">
+      <div class="seat" id="seat-1" style="bottom: 20%; left: 15%;" role="article" aria-label="座位1 - 左侧玩家">
         <div class="player-info">
-          <div class="player-avatar">👤</div>
+          <div class="player-avatar" aria-hidden="true">👤</div>
           <div class="player-name"></div>
           <div class="player-chips"></div>
         </div>
-        <div class="player-cards"></div>
+        <div class="player-cards" aria-label="玩家手牌"></div>
         <div class="player-bet"></div>
         <div class="player-status"></div>
       </div>
 
       <!-- 玩家自己（底部中间） -->
-      <div class="seat" id="seat-0" style="bottom: 5%; left: 50%; transform: translateX(-50%);" onclick="toggleEmojiPanel()">
-        <div class="player-cards" id="myCards"></div>
+      <div class="seat" id="seat-0" style="bottom: 5%; left: 50%; transform: translateX(-50%);" 
+           onclick="toggleEmojiPanel()" role="article" aria-label="你的座位">
+        <div class="player-cards" id="myCards" aria-label="你的手牌"></div>
         <div class="player-info">
-          <div class="player-avatar">👤</div>
+          <div class="player-avatar" aria-hidden="true">👤</div>
           <div class="player-name"></div>
           <div class="player-chips"></div>
         </div>
         <div class="player-bet"></div>
         <div class="player-status"></div>
         <!-- 表情面板（点击自己头像时显示） -->
-        <div class="emoji-popup-panel" id="emojiPopupPanel" style="display: none;">
-          <button class="emoji-btn" data-emoji="👍">👍</button>
-          <button class="emoji-btn" data-emoji="👎">👎</button>
-          <button class="emoji-btn" data-emoji="😄">😄</button>
-          <button class="emoji-btn" data-emoji="😭">😭</button>
-          <button class="emoji-btn" data-emoji="🎉">🎉</button>
-          <button class="emoji-btn" data-emoji="🤔">🤔</button>
-          <button class="emoji-btn" data-emoji="👏">👏</button>
-          <button class="emoji-btn" data-emoji="🙏">🙏</button>
+        <div class="emoji-popup-panel" id="emojiPopupPanel" style="display: none;" 
+             role="dialog" aria-label="发送表情">
+          <button class="emoji-btn" data-emoji="👍" aria-label="点赞">👍</button>
+          <button class="emoji-btn" data-emoji="👎" aria-label="反对">👎</button>
+          <button class="emoji-btn" data-emoji="😄" aria-label="开心">😄</button>
+          <button class="emoji-btn" data-emoji="😭" aria-label="哭泣">😭</button>
+          <button class="emoji-btn" data-emoji="🎉" aria-label="庆祝">🎉</button>
+          <button class="emoji-btn" data-emoji="🤔" aria-label="思考">🤔</button>
+          <button class="emoji-btn" data-emoji="👏" aria-label="鼓掌">👏</button>
+          <button class="emoji-btn" data-emoji="🙏" aria-label="感谢">🙏</button>
         </div>
       </div>
 
       <!-- 公共牌区 -->
-      <div class="community-area">
+      <div class="community-area" role="region" aria-label="公共牌区和底池">
         <div class="pot-display">
           <span class="pot-label">底池:</span>
-          <span id="potAmount" class="pot-amount">0</span>
+          <span id="potAmount" class="pot-amount" aria-label="底池金额">0</span>
         </div>
-        <div class="community-cards" id="communityCards"></div>
-        <div class="current-bet" id="currentBetDisplay"></div>
+        <div class="community-cards" id="communityCards" aria-label="公共牌"></div>
+        <div class="current-bet" id="currentBetDisplay" aria-label="当前下注"></div>
       </div>
 
       <!-- 庄家按钮 -->
@@ -145,31 +159,32 @@
 
    </div>
     <!-- 操作面板 -->
-    <div class="action-panel" id="actionPanel">
+    <div class="action-panel" id="actionPanel" role="region" aria-label="游戏操作面板">
       <div class="action-info">
-        <span id="actionText">等待行动...</span>
-        <div class="action-timer" id="actionTimer">
-          <div class="timer-ring">
-            <svg viewBox="0 0 36 36">
+        <span id="actionText" aria-live="polite">等待行动...</span>
+        <div class="action-timer" id="actionTimer" aria-live="polite" aria-label="倒计时">
+          <div class="timer-ring" role="timer" aria-live="off">
+            <svg viewBox="0 0 36 36" aria-hidden="true">
               <circle class="timer-bg" cx="18" cy="18" r="16"/>
               <circle class="timer-progress" cx="18" cy="18" r="16"/>
             </svg>
-            <span class="timer-text" id="timerText">10</span>
+            <span class="timer-text" id="timerText" aria-label="剩余时间">10</span>
           </div>
         </div>
       </div>
-      <div class="action-buttons">
-        <button class="btn btn-danger" id="foldBtn" disabled>弃牌</button>
-        <button class="btn btn-secondary" id="checkBtn" disabled>过牌</button>
-        <button class="btn btn-primary" id="callBtn" disabled>跟注</button>
-        <button class="btn btn-warning" id="raiseBtn" disabled>加注</button>
-        <button class="btn btn-success" id="allInBtn" disabled">全下</button>
+      <div class="action-buttons" role="group" aria-label="操作按钮">
+        <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
+        <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
+        <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
+        <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
+        <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
       </div>
-      <div class="raise-amount" id="raiseAmountPanel">
-        <input type="range" id="raiseSlider" min="0" max="1000" value="20">
-        <span id="raiseAmountDisplay">20</span>
-        <button class="btn btn-small btn-info" id="previewBtn" onclick="showBetPreview()">预览</button>
-        <span id="previewChips" class="preview-chips"></span>
+      <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
+        <label for="raiseSlider" class="sr-only">加注金额滑块</label>
+        <input type="range" id="raiseSlider" min="0" max="1000" value="20" aria-label="加注金额" tabindex="25">
+        <span id="raiseAmountDisplay" aria-live="polite">20</span>
+        <button class="btn btn-small btn-info" id="previewBtn" onclick="showBetPreview()" aria-label="预览下注后筹码" tabindex="26">预览</button>
+        <span id="previewChips" class="preview-chips" aria-live="polite"></span>
       </div>
     </div>
   </div>
