@@ -257,13 +257,25 @@ class PokerRoom {
 
     const seats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     this.dealerSeat = seats[0];
-    this.smallBlindSeat = seats[(1) % seats.length];
-    this.bigBlindSeat = seats[(2) % seats.length];
-
-    this.playerBet(this.players[Object.keys(this.players).find(id => this.players[id].seat === this.smallBlindSeat)], CONFIG.SMALL_BLIND);
-    this.playerBet(this.players[Object.keys(this.players).find(id => this.players[id].seat === this.bigBlindSeat)], CONFIG.BIG_BLIND);
-
-    this.currentPlayerSeat = seats[(3) % seats.length] || this.smallBlindSeat;
+    
+    // 2人游戏：庄家是小盲，大盲是其他玩家
+    // 3+人游戏：庄家右边第一个是小盲，再右边是大盲
+    if (seats.length === 2) {
+      this.smallBlindSeat = seats[0];  // 庄家也是小盲
+      this.bigBlindSeat = seats[1];   // 另一家是大盲
+      this.currentPlayerSeat = seats[1]; // 大盲先行
+    } else {
+      this.smallBlindSeat = seats[(1) % seats.length];
+      this.bigBlindSeat = seats[(2) % seats.length];
+      this.currentPlayerSeat = seats[(3) % seats.length] || this.smallBlindSeat;
+    }
+    
+    // 执行大小盲下注
+    const smallBlindPlayer = Object.values(this.players).find(p => p.seat === this.smallBlindSeat);
+    const bigBlindPlayer = Object.values(this.players).find(p => p.seat === this.bigBlindSeat);
+    if (smallBlindPlayer) this.playerBet(smallBlindPlayer, CONFIG.SMALL_BLIND);
+    if (bigBlindPlayer) this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
+    
     io.to(this.roomCode).emit('gameState', this.getGameState());
   }
 
@@ -317,8 +329,22 @@ class PokerRoom {
 
   nextAction() {
     const activePlayers = Object.values(this.players).filter(p => !p.folded && !p.allIn);
+    // 如果只剩1个玩家，直接判定该玩家获胜
     if (activePlayers.length <= 1) {
-      this.endHand();
+      if (activePlayers.length === 1) {
+        // 唯一未弃牌的玩家获胜
+        activePlayers[0].chips += this.pot;
+      }
+      this.gameState = 'ended';
+      io.to(this.roomCode).emit('gameState', this.getGameState());
+      
+      // 5秒后开始新局
+      setTimeout(() => {
+        const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
+        if (playersWithChips.length >= 2) {
+          this.startNewHand();
+        }
+      }, 5000);
       return;
     }
 
