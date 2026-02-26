@@ -77,6 +77,7 @@ let createRoomBtn, joinRoomBtn, confirmJoinBtn, joinForm;
 let displayRoomCode, gameStatus, leaveRoomBtn;
 let potAmount, communityCardsEl, currentBetDisplay, dealerButton;
 let actionPanel, actionText, foldBtn, checkBtn, callBtn, raiseBtn, allInBtn;
+let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent;
 let raiseSlider, raiseAmountPanel, raiseAmountDisplay;
 let gameOverModal, settlementList, newGameBtn, myCardsEl;
 
@@ -104,6 +105,9 @@ function initDOMElements() {
   callBtn = document.getElementById('callBtn');
   raiseBtn = document.getElementById('raiseBtn');
   allInBtn = document.getElementById('allInBtn');
+  aiAssistBtn = document.getElementById('ai-assist-btn');
+  aiSuggestionPanel = document.getElementById('ai-suggestion-panel');
+  aiSuggestionContent = document.getElementById('ai-suggestion-content');
   raiseSlider = document.getElementById('raiseSlider');
   raiseAmountPanel = document.getElementById('raiseAmountPanel');
   raiseAmountDisplay = document.getElementById('raiseAmountDisplay');
@@ -310,6 +314,13 @@ function setupEventListeners() {
       socket.emit('playerAction', 'all-in', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
+    });
+  }
+  
+  // AI建议按钮
+  if (aiAssistBtn) {
+    aiAssistBtn.addEventListener('click', function() {
+      requestAISuggestion();
     });
   }
   
@@ -645,6 +656,11 @@ function updateActionPanel(gameState) {
   raiseBtn.disabled = myPlayer.chips < minRaise;
   allInBtn.disabled = false;
   
+  // 启用AI建议按钮（仅在自己回合时）
+  if (aiAssistBtn && isMyTurn) {
+    aiAssistBtn.disabled = false;
+  }
+  
   if (toCall > 0 && currentBet === gameState.currentBet) {
     raiseBtn.disabled = true;
   }
@@ -656,6 +672,9 @@ function disableAllButtons() {
   callBtn.disabled = true;
   raiseBtn.disabled = true;
   allInBtn.disabled = true;
+  if (aiAssistBtn) {
+    aiAssistBtn.disabled = true;
+  }
 }
 
 // ============ 倒计时 ============
@@ -813,6 +832,134 @@ function copyRoomCode() {
       alert('房间号已复制: ' + roomCode);
     });
   }
+}
+
+// ============ AI建议功能 ============
+function requestAISuggestion() {
+  if (!aiAssistBtn || !aiSuggestionPanel || !aiSuggestionContent) {
+    console.log('AI elements not found');
+    return;
+  }
+  
+  // 显示加载状态
+  aiAssistBtn.disabled = true;
+  aiAssistBtn.classList.add('loading');
+  aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>分析中...</span>';
+  
+  aiSuggestionPanel.classList.remove('hidden');
+  aiSuggestionContent.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><span class="ai-loading-text">AI正在分析牌面...</span></div>';
+  
+  // 请求AI建议
+  socket.emit('getAISuggestion', function(response) {
+    aiAssistBtn.disabled = false;
+    aiAssistBtn.classList.remove('loading');
+    aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>AI建议</span>';
+    
+    if (response && response.success && response.decision) {
+      displayAISuggestion(response.decision);
+    } else {
+      showAIError(response?.message || '获取建议失败');
+    }
+  });
+}
+
+function displayAISuggestion(decision) {
+  var actionText = '';
+  var actionClass = '';
+  
+  switch (decision.action) {
+    case 'fold':
+      actionText = '弃牌 (Fold)';
+      actionClass = 'fold';
+      break;
+    case 'check':
+      actionText = '过牌 (Check)';
+      actionClass = 'check';
+      break;
+    case 'call':
+      actionText = '跟注 (Call)';
+      actionClass = 'call';
+      break;
+    case 'raise':
+      actionText = '加注 (Raise)';
+      actionClass = 'raise';
+      break;
+    case 'all-in':
+      actionText = '全下 (All In)';
+      actionClass = 'all-in';
+      break;
+    default:
+      actionText = decision.action || '过牌';
+      actionClass = 'check';
+  }
+  
+  var reasoning = decision.reasoning || 'AI基于当前牌面分析得出的建议';
+  
+  var html = '<div class="ai-action-result">' +
+    '<div class="ai-action-label">建议动作</div>' +
+    '<div class="ai-action-value ' + actionClass + '">' + actionText + '</div>' +
+    '</div>' +
+    '<div class="ai-reasoning">' + reasoning + '</div>' +
+    '<div style="text-align: center; margin-top: 10px;">' +
+    '<button class="btn btn-primary" onclick="applyAISuggestion(\'' + decision.action + '\')">采用建议</button>' +
+    '</div>';
+  
+  if (aiSuggestionContent) {
+    aiSuggestionContent.innerHTML = html;
+  }
+}
+
+function applyAISuggestion(action) {
+  console.log('Applying AI suggestion:', action);
+  
+  // 关闭建议面板
+  closeAISuggestion();
+  
+  // 根据建议执行动作
+  switch (action) {
+    case 'fold':
+      if (foldBtn && !foldBtn.disabled) {
+        foldBtn.click();
+      }
+      break;
+    case 'check':
+      if (checkBtn && !checkBtn.disabled) {
+        checkBtn.click();
+      }
+      break;
+    case 'call':
+      if (callBtn && !callBtn.disabled) {
+        callBtn.click();
+      }
+      break;
+    case 'raise':
+      if (raiseBtn && !raiseBtn.disabled) {
+        raiseBtn.click();
+      }
+      break;
+    case 'all-in':
+      if (allInBtn && !allInBtn.disabled) {
+        allInBtn.click();
+      }
+      break;
+  }
+}
+
+function closeAISuggestion() {
+  if (aiSuggestionPanel) {
+    aiSuggestionPanel.classList.add('hidden');
+  }
+}
+
+function showAIError(message) {
+  if (aiSuggestionContent) {
+    aiSuggestionContent.innerHTML = '<div class="ai-error">' + message + '</div>';
+  }
+  
+  // 3秒后自动关闭
+  setTimeout(function() {
+    closeAISuggestion();
+  }, 3000);
 }
 
 // ============ 启动 ============
