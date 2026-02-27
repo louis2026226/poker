@@ -539,8 +539,8 @@ socket.on('gameOver', function(data) {
     console.log('play win sound error', e);
   }
 
-  // 结算界面弹出后，暂停后续动画：不再在头像上飘筹码变化
-  // showRoundResultFloats(results);
+  // 赢得筹码的玩家头上飘：筹码图 + 赢得数量
+  showRoundResultFloats(results);
   gameOverModal.classList.remove('hidden');
 });
 
@@ -556,7 +556,7 @@ function formatDuration(totalSeconds) {
   return pad(m) + ':' + pad(s);
 }
 
-// 每局结束后在头像上飘出筹码变化文字
+// 每局结束后，赢得筹码的玩家头上飘：筹码图 + 赢得数量（如 筹码图+300）
 function showRoundResultFloats(results) {
   try {
     if (!results || !results.length) return;
@@ -568,16 +568,12 @@ function showRoundResultFloats(results) {
     var myPlayer = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = myPlayer ? myPlayer.seat : 0;
 
-    // 先按筹码变化从大到小排序，保证筹码飞行从最大赢家优先
-    var sorted = results.slice().sort(function(a, b) {
-      var da = typeof a.netChange === 'number' ? a.netChange : 0;
-      var db = typeof b.netChange === 'number' ? b.netChange : 0;
-      return db - da;
-    });
+    // 只处理赢家（netChange > 0），按赢得多少从大到小
+    var winners = results.filter(function(r) { return typeof r.netChange === 'number' && r.netChange > 0; });
+    var sorted = winners.slice().sort(function(a, b) { return b.netChange - a.netChange; });
 
     sorted.forEach(function(result, idx) {
-      var delta = typeof result.netChange === 'number' ? result.netChange : 0;
-      // 按昵称匹配到当前局内的玩家
+      var delta = result.netChange;
       var player = currentGameState.players.find(function(p) { return p.nickname === result.nickname; });
       if (!player) return;
 
@@ -589,47 +585,19 @@ function showRoundResultFloats(results) {
       var rect = avatarEl.getBoundingClientRect();
       var tableRect = tableEl.getBoundingClientRect();
 
-      // 从桌面中央飞向赢家头像
-      var chipEl = document.createElement('div');
-      chipEl.className = 'chip-fly';
-
-      var centerLeft = tableRect.width / 2 - 10;
-      var centerTop = tableRect.height / 2 - 10;
-      chipEl.style.left = centerLeft + 'px';
-      chipEl.style.top = centerTop + 'px';
-
-      tableEl.appendChild(chipEl);
-
-      // 使用微小延迟区分多名赢家的飞行起点
-      setTimeout(function() {
-        var dx = rect.left - tableRect.left + rect.width / 2 - centerLeft;
-        var dy = rect.top - tableRect.top + rect.height / 2 - centerTop;
-        chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-        chipEl.style.opacity = '0';
-      }, 50 + idx * 80);
-
-      setTimeout(function() {
-        chipEl.remove();
-      }, 700 + idx * 80);
-
-      // 同时保留原来的文字浮动提示
+      // 赢家头上飘：筹码图 + 数量（如 +300）
       var floatEl = document.createElement('div');
       floatEl.className = 'round-result-float';
-
-      var sign = delta > 0 ? '+' : '';
-      floatEl.textContent = '筹码 ' + sign + delta;
-      if (delta < 0) {
-        floatEl.classList.add('negative');
-      }
+      floatEl.innerHTML = '<span class="chip-icon round-float-chip"></span><span class="round-float-amount">+' + delta + '</span>';
 
       floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
-      floatEl.style.top = (rect.top - tableRect.top - 10) + 'px';
+      floatEl.style.top = (rect.top - tableRect.top - 12) + 'px';
 
       tableEl.appendChild(floatEl);
 
       setTimeout(function() {
         floatEl.remove();
-      }, 1900);
+      }, 2000);
     });
   } catch (e) {
     console.log('showRoundResultFloats error', e);

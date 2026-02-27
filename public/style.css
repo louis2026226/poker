@@ -485,10 +485,10 @@ body {
   aspect-ratio: 58 / 85;
 }
 
-/* 发牌飞入：从荷官中心（牌桌上方）飞向各位置 */
+/* 发牌飞入：手牌和底牌都从荷官位置（牌桌上方）飞入 */
 @keyframes cardFlyIn {
   from {
-    transform: translate(0, -160px) scale(0.25);
+    transform: translate(0, -220px) scale(0.2);
     opacity: 0;
   }
   to {
@@ -498,7 +498,8 @@ body {
 }
 
 .card.card-fly-in {
-  animation: cardFlyIn 0.4s ease-out forwards;
+  transform-origin: 50% 150%;
+  animation: cardFlyIn 0.45s ease-out forwards;
 }
 
 .card.red {
@@ -589,14 +590,13 @@ body {
   color: #999;
 }
 
-/* 操作面板 */
+/* 操作面板（无黑色底板） */
 .action-panel {
   position: fixed;
-  bottom: 100px;
+  bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
+  background: transparent;
   padding: 10px 12px 8px;
   display: flex;
   flex-direction: column;
@@ -674,27 +674,36 @@ body {
 @keyframes roundResultFloat {
   0% {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate(-50%, 10px);
   }
   20% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, 0);
   }
   100% {
     opacity: 0;
-    transform: translateY(-30px);
+    transform: translate(-50%, -30px);
   }
 }
 
 .round-result-float {
   position: absolute;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
   font-weight: bold;
   color: #4ade80;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   z-index: 75;
   animation: roundResultFloat 1.8s ease-out forwards;
+}
+
+.round-result-float .round-float-chip {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .round-result-float.negative {
