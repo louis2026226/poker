@@ -331,6 +331,7 @@ function setupEventListeners() {
   
   if (callBtn) {
     callBtn.addEventListener('click', function() {
+      playSound('bet');
       socket.emit('playerAction', 'call', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -339,6 +340,7 @@ function setupEventListeners() {
   
   if (raiseBtn) {
     raiseBtn.addEventListener('click', function() {
+      playSound('bet');
       const amount = parseInt(raiseSlider.value);
       socket.emit('playerAction', 'raise', amount, function(response) {
         if (!response.success) console.log(response.message);
@@ -348,6 +350,7 @@ function setupEventListeners() {
   
   if (allInBtn) {
     allInBtn.addEventListener('click', function() {
+      playSound('bet');
       socket.emit('playerAction', 'all-in', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -358,6 +361,19 @@ function setupEventListeners() {
   if (aiAssistBtn) {
     aiAssistBtn.addEventListener('click', function() {
       socket.emit('addBot');
+    });
+  }
+
+  // 打赏荷官：每次 50 筹码，荷官随机说感谢/祝福
+  var dealerTipBtn = document.getElementById('dealerTipBtn');
+  if (dealerTipBtn) {
+    dealerTipBtn.addEventListener('click', function() {
+      if (dealerTipBtn.disabled) return;
+      dealerTipBtn.disabled = true;
+      socket.emit('dealerTip', function(res) {
+        dealerTipBtn.disabled = false;
+        if (res && !res.success) console.log(res.message);
+      });
     });
   }
 
@@ -449,6 +465,19 @@ socket.on('hostChanged', function(data) {
 socket.on('emote', function(data) {
   showEmoji(data.seat, data.emoji);
 });
+
+socket.on('dealerSay', function(data) {
+  var el = document.getElementById('dealerSpeech');
+  if (!el) return;
+  el.textContent = data.phrase || '';
+  el.classList.add('dealer-speech-visible');
+  clearTimeout(dealerSpeechTimer);
+  dealerSpeechTimer = setTimeout(function() {
+    el.classList.remove('dealer-speech-visible');
+    el.textContent = '';
+  }, 2500);
+});
+var dealerSpeechTimer = null;
 
 socket.on('gameOver', function(data) {
   const results = data.results || [];
@@ -644,8 +673,16 @@ function updateGameState(gameState) {
   showBigHandBadges(gameState);
   updateActionPanel(gameState);
   updateBotButton(gameState);
+  updateDealerTipButton(gameState);
   updateActionTimerPosition(gameState);
   startActionTimer(gameState);
+}
+
+function updateDealerTipButton(gameState) {
+  var btn = document.getElementById('dealerTipBtn');
+  if (!btn) return;
+  var myPlayer = gameState && gameState.players ? gameState.players.find(function(p) { return p.socketId === mySocketId; }) : null;
+  btn.disabled = !myPlayer || myPlayer.chips < 50;
 }
 
 function updateGameStatus(gameState) {
@@ -914,19 +951,23 @@ function animatePotChips(prevState, nextState) {
     if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
     if (nextState.pot <= prevState.pot) return; // 底池没变就不飞筹码
 
-    // 只要本轮底池增加，就播放一次筹码音效
-    playSound('bet');
-
-    var tableEl = document.querySelector('.poker-table');
-    if (!tableEl) return;
-
     // 以 socketId 为键索引上一帧玩家状态
     var prevById = {};
     prevState.players.forEach(function(p) {
-      if (p && p.socketId) {
-        prevById[p.socketId] = p;
-      }
+      if (p && p.socketId) prevById[p.socketId] = p;
     });
+    // 只有当他人在本帧增加下注时才播放音效（自己点跟注/加注时已在点击时播放，避免不同步或重复）
+    var someoneElseBet = false;
+    nextState.players.forEach(function(p) {
+      if (!p || !p.socketId) return;
+      var prev = prevById[p.socketId];
+      if (!prev) return;
+      if ((p.bet > prev.bet || p.chips < prev.chips) && p.socketId !== mySocketId) someoneElseBet = true;
+    });
+    if (someoneElseBet) playSound('bet');
+
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
 
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;

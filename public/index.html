@@ -74,9 +74,13 @@
     <span id="gameStatus" class="sr-only" aria-hidden="true">等待玩家加入...</span>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
-      <!-- 荷官图：牌桌上方，发牌从荷官中心飞向各位置 -->
-      <div class="dealer-image" id="dealerImage" role="img" aria-label="荷官">
-        <img src="girl.png" alt="荷官" />
+      <!-- 荷官图 + 打赏按钮 -->
+      <div class="dealer-wrap">
+        <div class="dealer-image" id="dealerImage" role="img" aria-label="荷官">
+          <img src="girl.png" alt="荷官" />
+        </div>
+        <button type="button" class="dealer-tip-btn" id="dealerTipBtn" aria-label="打赏荷官50筹码">打赏 50</button>
+        <div class="dealer-speech" id="dealerSpeech" aria-live="polite"></div>
       </div>
       <!-- 座位位置 -->
       <div class="seat" id="seat-2" style="top: 20%; left: 5%;" role="article" aria-label="座位2 - 左侧玩家">

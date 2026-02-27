@@ -963,6 +963,38 @@ io.on('connection', (socket) => {
     if (callback) callback({ success: true, gameState: room.getGameState() });
   });
 
+  socket.on('dealerTip', (callback) => {
+    const room = rooms[socket.roomCode];
+    if (!room) {
+      if (callback) callback({ success: false, message: '房间不存在' });
+      return;
+    }
+    const player = room.players[socket.id];
+    if (!player) {
+      if (callback) callback({ success: false, message: '玩家不在房间中' });
+      return;
+    }
+    const TIP_AMOUNT = 50;
+    if (player.chips < TIP_AMOUNT) {
+      if (callback) callback({ success: false, message: '筹码不足' });
+      return;
+    }
+    player.chips -= TIP_AMOUNT;
+    const phrases = [
+      '谢谢老板！',
+      '祝您手气长红！',
+      '多谢打赏，祝您把把好牌！',
+      '感谢打赏，好运连连！',
+      '老板大气！祝您赢大池！',
+      '谢谢～祝您今晚大杀四方！',
+      '感恩打赏，牌运亨通！'
+    ];
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    io.to(room.roomCode).emit('dealerSay', { nickname: player.nickname, phrase });
+    io.to(room.roomCode).emit('gameState', room.getGameState());
+    if (callback) callback({ success: true });
+  });
+
   socket.on('playerAction', (action, amount, callback) => {
     const room = rooms[socket.roomCode];
     if (!room) {
