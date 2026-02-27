@@ -440,11 +440,11 @@ body {
   position: relative;
 }
 
-/* 我的手牌 & 公共牌（当前桌面基础尺寸，高度约 100px） */
+/* 我的手牌 & 公共牌（当前桌面基础尺寸，高度约 80px） */
 .card-my,
 .card-board {
-  width: 70px;
-  height: 100px;
+  width: 60px;
+  height: 80px;
 }
 
 /* 发牌飞入动画 */
@@ -504,7 +504,7 @@ body {
   padding: 3px;
   pointer-events: none;
   background:
-    conic-gradient(#ff9800 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+    conic-gradient(#ffffff var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -512,7 +512,7 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
-  box-shadow: 0 0 18px rgba(255, 152, 0, 0.9);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.95);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
