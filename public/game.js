@@ -840,10 +840,15 @@ function updateDealerButton(gameState) {
   var seatEl = document.getElementById('seat-' + displaySeat);
   if (seatEl) {
     var rect = seatEl.getBoundingClientRect();
+    var avatarEl = seatEl.querySelector('.player-avatar');
+    if (avatarEl) {
+      rect = avatarEl.getBoundingClientRect();
+    }
     var tableRect = document.querySelector('.poker-table').getBoundingClientRect();
     dealerButton.style.display = 'flex';
-    dealerButton.style.left = (rect.left - tableRect.left + rect.width / 2 - 15) + 'px';
-    dealerButton.style.top = (rect.top - tableRect.top - 20) + 'px';
+    // 缩小后的 D 按钮放到头像框内部左侧，避免挡住牌型文字
+    dealerButton.style.left = (rect.left - tableRect.left + 4) + 'px';
+    dealerButton.style.top = (rect.top - tableRect.top + rect.height / 2 - 11) + 'px';
   }
 }
 

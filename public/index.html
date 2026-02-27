@@ -178,6 +178,13 @@
     <div class="action-panel" id="actionPanel" role="region" aria-label="游戏操作面板">
       <div class="action-info">
         <span id="actionText" aria-live="polite"></span>
+      </div>
+      <!-- 将筹码滑动条移动到按钮上方，手机竖屏更好操作 -->
+      <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
+        <label for="raiseSlider" class="sr-only">加注金额滑块</label>
+        <input type="range" id="raiseSlider" min="0" max="1000" value="20" aria-label="加注金额" tabindex="25">
+        <span id="raiseAmountDisplay" aria-live="polite">20</span>
+      </div>
       <div class="action-buttons" role="group" aria-label="操作按钮">
         <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
         <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
@@ -185,11 +192,6 @@
         <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
         <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
         <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
-      </div>
-      <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
-        <label for="raiseSlider" class="sr-only">加注金额滑块</label>
-        <input type="range" id="raiseSlider" min="0" max="1000" value="20" aria-label="加注金额" tabindex="25">
-        <span id="raiseAmountDisplay" aria-live="polite">20</span>
       </div>
     </div>
   </div>
