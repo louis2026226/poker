@@ -915,10 +915,10 @@ body {
     font-size: 14px;
   }
 
-  /* 覆盖小屏下我的手牌与公共牌尺寸，高度略缩小避免重叠 */
+  /* 小屏下我的手牌与公共牌也按基础高度 60px，交给布局控制是否需要再缩小 */
   .card-my,
   .card-board {
-    height: 90px;
+    height: 60px;
     width: auto;
   }
 
@@ -1018,10 +1018,10 @@ body {
     height: 35px;
   }
 
-  /* 更小屏幕下进一步缩小我的手牌与公共牌高度 */
+  /* 更小屏幕下也维持我的手牌与公共牌高度 60px（如有需要再单独调优） */
   .card-my,
   .card-board {
-    height: 80px;
+    height: 60px;
     width: auto;
   }
 
@@ -1110,13 +1110,13 @@ body {
     height: 40px;
   }
 
-  /* 手机端下我的手牌和公共牌使用与上方一致的高度 90px */
+  /* 手机端下我的手牌和公共牌使用与基础高度 60px 保持一致 */
   #myCards .card.card-my {
-    height: 90px;
+    height: 60px;
     width: auto;
   }
   .community-cards .card.card-board {
-    height: 90px;
+    height: 60px;
     width: auto;
   }
 }
