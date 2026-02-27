@@ -193,6 +193,7 @@ class PokerRoom {
     this.bigBlindSeat = -1;
     this.locked = false;
     this.handStartTime = null;
+    this.handActions = [];
   }
 
   canJoin() {
@@ -256,6 +257,7 @@ class PokerRoom {
     this.currentBet = 0;
     this.gameState = 'preflop';
     this.handStartTime = Date.now();
+    this.handActions = [];
 
     const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
     if (activePlayers.length < 2) {
@@ -290,8 +292,14 @@ class PokerRoom {
     // 执行大小盲下注
     const smallBlindPlayer = Object.values(this.players).find(p => p.seat === this.smallBlindSeat);
     const bigBlindPlayer = Object.values(this.players).find(p => p.seat === this.bigBlindSeat);
-    if (smallBlindPlayer) this.playerBet(smallBlindPlayer, CONFIG.SMALL_BLIND);
-    if (bigBlindPlayer) this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
+    if (smallBlindPlayer) {
+      this.playerBet(smallBlindPlayer, CONFIG.SMALL_BLIND);
+      this.logHandAction(smallBlindPlayer, 'small-blind', CONFIG.SMALL_BLIND);
+    }
+    if (bigBlindPlayer) {
+      this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
+      this.logHandAction(bigBlindPlayer, 'big-blind', CONFIG.BIG_BLIND);
+    }
 
     // 记录本手开始时每人筹码，用于结算时计算 netChange
     this.chipsAtStartOfHand = {};
@@ -317,6 +325,16 @@ class PokerRoom {
     }
   }
 
+  logHandAction(player, type, amount) {
+    if (!this.handActions) this.handActions = [];
+    this.handActions.push({
+      nickname: player.nickname,
+      action: type,
+      amount: amount || 0,
+      timestamp: Date.now()
+    });
+  }
+
   playerAction(socketId, action, amount) {
     const player = this.players[socketId];
     if (!player || player.seat !== this.currentPlayerSeat) return false;
@@ -324,24 +342,30 @@ class PokerRoom {
     switch (action) {
       case 'fold':
         player.folded = true;
+        this.logHandAction(player, 'fold', 0);
         break;
       case 'check':
         const currentBet = player.bet;
         if (currentBet < this.currentBet) return false;
+        this.logHandAction(player, 'check', 0);
         break;
       case 'call':
         const toCall = this.currentBet - player.bet;
         this.playerBet(player, toCall);
+        this.logHandAction(player, 'call', toCall);
         playSound('bet');
         break;
       case 'raise':
         const raiseAmount = amount - player.bet;
         if (raiseAmount <= 0 || raiseAmount > player.chips) return false;
         this.playerBet(player, raiseAmount);
+        this.logHandAction(player, 'raise', raiseAmount);
         playSound('bet');
         break;
       case 'all-in':
-        this.playerBet(player, player.chips);
+        const allInAmount = player.chips;
+        this.playerBet(player, allInAmount);
+        this.logHandAction(player, 'all-in', allInAmount);
         playSound('bet');
         break;
     }
@@ -363,7 +387,7 @@ class PokerRoom {
       }
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
-      this.emitGameOver();
+      this.emitGameOverIfBust();
 
       // 1.5秒后开始新局
       setTimeout(() => {
@@ -588,7 +612,7 @@ class PokerRoom {
 
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
-    this.emitGameOver();
+    this.emitGameOverIfBust();
 
     // 1.5秒后发牌开始新局
     setTimeout(() => {
@@ -602,10 +626,21 @@ class PokerRoom {
   endHand() {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
-    this.emitGameOver();
+    this.emitGameOverIfBust();
   }
 
-  emitGameOver() {
+  emitGameOverIfBust() {
+    if (!this.chipsAtStartOfHand) return;
+    const bustedPlayers = Object.values(this.players).filter(p =>
+      this.chipsAtStartOfHand[p.socketId] != null &&
+      this.chipsAtStartOfHand[p.socketId] > 0 &&
+      p.chips === 0
+    );
+    if (bustedPlayers.length === 0) return;
+    this.emitGameOver(bustedPlayers);
+  }
+
+  emitGameOver(bustedPlayers = []) {
     const now = new Date();
     const durationSeconds = this.handStartTime
       ? Math.max(0, Math.floor((Date.now() - this.handStartTime) / 1000))
@@ -617,11 +652,27 @@ class PokerRoom {
       finalChips: p.chips
     }));
 
+    const winners = results.filter(r => r.netChange > 0);
+
+    let actions = Array.isArray(this.handActions) ? this.handActions.slice() : [];
+    winners.forEach(w => {
+      const player = Object.values(this.players).find(p => p.nickname === w.nickname);
+      actions.push({
+        nickname: w.nickname,
+        action: 'win',
+        amount: w.netChange,
+        timestamp: Date.now()
+      });
+    });
+
     io.to(this.roomCode).emit('gameOver', {
       results,
+      actions,
       meta: {
         endedAt: now.toISOString(),
-        durationSeconds
+        durationSeconds,
+        winners: winners.map(w => w.nickname),
+        busted: bustedPlayers.map(p => p.nickname)
       }
     });
   }

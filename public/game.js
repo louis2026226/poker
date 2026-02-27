@@ -404,6 +404,10 @@ socket.on('gameState', function(gameState) {
     animatePotChips(_lastGameStateForPot, gameState);
   }
 
+  // 仅在从 waiting/ended 进入 preflop 时标记为新一手，用于控制发牌动画只播放一次
+  _isNewDealPreflop = gameState.gameState === 'preflop' &&
+    (!prevState || prevState.gameState === 'waiting' || prevState.gameState === 'ended');
+
   currentGameState = gameState;
   updateGameState(gameState);
   _lastGameStateForPot = gameState;
@@ -417,6 +421,8 @@ socket.on('roomUpdate', function(gameState) {
   if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
+  // roomUpdate 不触发新一手发牌动画，避免与 gameState 重复
+  _isNewDealPreflop = false;
   currentGameState = gameState;
   updateGameState(gameState);
 });
@@ -436,6 +442,7 @@ socket.on('emote', function(data) {
 socket.on('gameOver', function(data) {
   const results = data.results || [];
   const meta = data.meta || {};
+  const actions = data.actions || [];
   settlementList.innerHTML = '';
   
   results.forEach(function(result) {
@@ -457,14 +464,28 @@ socket.on('gameOver', function(data) {
     settlementList.appendChild(item);
   });
   
-  // 行为记录：玩家名 + 筹码变动 + 时间 + 耗时
+  // 行为记录：本局所有玩家的行为按时间线记录
   try {
     var logEl = document.getElementById('settlementLog');
     if (logEl) {
-      var lines = results.map(function(r) {
-        var delta = typeof r.netChange === 'number' ? r.netChange : 0;
-        var sign = delta >= 0 ? '+' : '';
-        return r.nickname + '：筹码变动 ' + sign + delta;
+      var lines = [];
+
+      var actionTextMap = {
+        'small-blind': '小盲注',
+        'big-blind': '大盲注',
+        'bet': '下注',
+        'raise': '加注',
+        'call': '跟注',
+        'check': '过牌',
+        'fold': '弃牌',
+        'all-in': '全压',
+        'win': '获胜'
+      };
+
+      actions.forEach(function(a, idx) {
+        var label = actionTextMap[a.action] || a.action;
+        var amt = (typeof a.amount === 'number' && a.amount !== 0) ? (' ' + a.amount) : '';
+        lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt);
       });
 
       var timeStr = '';
@@ -620,6 +641,7 @@ function updateGameStatus(gameState) {
 
 var _lastCommunityCardsLength = 0;
 var _lastGameStateForPot = null;
+var _isNewDealPreflop = false;
 
 function renderCommunityCards(cards) {
   if (cards.length > 0) {
@@ -829,7 +851,7 @@ function renderSeats(gameState) {
       seatEl.classList.add('all-in');
     }
     
-    var handFlyIn = gameState.gameState === 'preflop';
+    var handFlyIn = _isNewDealPreflop && gameState.gameState === 'preflop';
     if (player.hand && player.hand.length > 0) {
       if (player.socketId === mySocketId) {
         player.hand.forEach(function(card, idx) {
