@@ -432,7 +432,8 @@ socket.on('emote', function(data) {
 });
 
 socket.on('gameOver', function(data) {
-  const results = data.results;
+  const results = data.results || [];
+  const meta = data.meta || {};
   settlementList.innerHTML = '';
   
   results.forEach(function(result) {
@@ -454,9 +455,54 @@ socket.on('gameOver', function(data) {
     settlementList.appendChild(item);
   });
   
+  // 行为记录：玩家名 + 筹码变动 + 时间 + 耗时
+  try {
+    var logEl = document.getElementById('settlementLog');
+    if (logEl) {
+      var lines = results.map(function(r) {
+        var delta = typeof r.netChange === 'number' ? r.netChange : 0;
+        var sign = delta >= 0 ? '+' : '';
+        return r.nickname + '：筹码变动 ' + sign + delta;
+      });
+
+      var timeStr = '';
+      if (meta.endedAt) {
+        var endedDate = new Date(meta.endedAt);
+        timeStr = endedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+
+      var durationStr = '';
+      if (typeof meta.durationSeconds === 'number') {
+        durationStr = formatDuration(meta.durationSeconds);
+      }
+
+      var metaParts = [];
+      if (timeStr) metaParts.push('时间：' + timeStr);
+      if (durationStr) metaParts.push('耗时：' + durationStr);
+
+      logEl.innerHTML =
+        '<div>' + lines.join('<br>') + '</div>' +
+        (metaParts.length ? '<div class=\"settlement-log-meta\">' + metaParts.join('　') + '</div>' : '');
+    }
+  } catch (e) {
+    console.log('render settlement log error', e);
+  }
+  
   showRoundResultFloats(results);
   gameOverModal.classList.remove('hidden');
 });
+
+function formatDuration(totalSeconds) {
+  if (!totalSeconds || totalSeconds < 0) totalSeconds = 0;
+  var h = Math.floor(totalSeconds / 3600);
+  var m = Math.floor((totalSeconds % 3600) / 60);
+  var s = totalSeconds % 60;
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  if (h > 0) {
+    return pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+  return pad(m) + ':' + pad(s);
+}
 
 // 每局结束后在头像上飘出筹码变化文字
 function showRoundResultFloats(results) {

@@ -192,6 +192,7 @@ class PokerRoom {
     this.smallBlindSeat = -1;
     this.bigBlindSeat = -1;
     this.locked = false;
+    this.handStartTime = null;
   }
 
   canJoin() {
@@ -254,6 +255,7 @@ class PokerRoom {
     this.playerBets = {};
     this.currentBet = 0;
     this.gameState = 'preflop';
+    this.handStartTime = Date.now();
 
     const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
     if (activePlayers.length < 2) {
@@ -604,12 +606,24 @@ class PokerRoom {
   }
 
   emitGameOver() {
+    const now = new Date();
+    const durationSeconds = this.handStartTime
+      ? Math.max(0, Math.floor((Date.now() - this.handStartTime) / 1000))
+      : 0;
+
     const results = Object.values(this.players).map(p => ({
       nickname: p.nickname,
       netChange: p.chips - (this.chipsAtStartOfHand && this.chipsAtStartOfHand[p.socketId] != null ? this.chipsAtStartOfHand[p.socketId] : p.chips),
       finalChips: p.chips
     }));
-    io.to(this.roomCode).emit('gameOver', { results });
+
+    io.to(this.roomCode).emit('gameOver', {
+      results,
+      meta: {
+        endedAt: now.toISOString(),
+        durationSeconds
+      }
+    });
   }
 
   getGameState() {

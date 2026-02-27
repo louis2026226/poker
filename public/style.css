@@ -240,6 +240,14 @@ body {
   overflow: hidden;
 }
 
+/* 手机竖屏下进一步下移牌桌位置，保留下方操作空间 */
+@media (max-width: 768px) {
+  .poker-table {
+    height: calc(100vh - 300px);
+    margin-top: 170px;
+  }
+}
+
 .poker-table::before {
   content: '';
   position: absolute;
@@ -475,6 +483,20 @@ body {
   color: #1a1a2e;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 55;
+}
+
+/* 结算面板下方的行为记录 */
+.settlement-log {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ccc;
+  text-align: left;
+}
+
+.settlement-log-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
 }
 
 /* 操作面板 */
