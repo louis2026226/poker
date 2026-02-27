@@ -395,8 +395,12 @@ socket.on('gameState', function(gameState) {
   if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
+  if (_lastGameStateForPot) {
+    animatePotChips(_lastGameStateForPot, gameState);
+  }
   currentGameState = gameState;
   updateGameState(gameState);
+  _lastGameStateForPot = gameState;
 });
 
 socket.on('roomUpdate', function(gameState) {
@@ -443,6 +447,7 @@ socket.on('gameOver', function(data) {
     settlementList.appendChild(item);
   });
   
+  showRoundResultFloats(results);
   gameOverModal.classList.remove('hidden');
 });
 
@@ -486,6 +491,7 @@ function updateGameStatus(gameState) {
 }
 
 var _lastCommunityCardsLength = 0;
+var _lastGameStateForPot = null;
 
 function renderCommunityCards(cards) {
   if (cards.length > 0) {
@@ -598,7 +604,7 @@ function renderSeats(gameState) {
       displayName += ' 👑';
     }
     nameEl.innerHTML = displayName;
-    chipsEl.textContent = '💰 ' + player.chips;
+    chipsEl.innerHTML = '<span class=\"chip-icon\"></span>' + player.chips;
     
     if (player.bet > 0) {
       betEl.textContent = '下注: ' + player.bet;

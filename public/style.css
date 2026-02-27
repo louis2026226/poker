@@ -165,6 +165,24 @@ body {
   font-size: 12px;
 }
 
+/* 版本信息标签 */
+.version-label {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* 筹码图标（用于玩家筹码显示） */
+.chip-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  background-image: url('/chip.png'); /* 请将筹码图放到 public/chip.png */
+  background-size: contain;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+}
 .join-form {
   margin-top: 15px;
 }
@@ -529,6 +547,51 @@ body {
   font-size: 12px;
   font-weight: bold;
   color: #e5ffe5;
+}
+
+/* 下注飞筹码动画 */
+.chip-fly {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-image: url('/chip.png'); /* 同样使用筹码图标 */
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 70;
+  transform: translate(0, 0);
+  opacity: 1;
+  transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+}
+
+@keyframes roundResultFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+
+.round-result-float {
+  position: absolute;
+  font-size: 14px;
+  font-weight: bold;
+  color: #4ade80;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 75;
+  animation: roundResultFloat 1.8s ease-out forwards;
+}
+
+.round-result-float.negative {
+  color: #f97373;
 }
 
 .action-buttons {
