@@ -105,74 +105,226 @@ function evaluateHand(holeCards, communityCards) {
   return hand;
 }
 
-// 找到最佳牌型
+// 找到最佳 5 张牌并返回完整牌型信息（支持皇家同花顺/同花顺等）
 function findBestHand(cards) {
   if (cards.length < 5) return null;
-  const suits = {};
-  cards.forEach(card => {
-    if (!suits[card.suit]) suits[card.suit] = [];
-    suits[card.suit].push(card);
-  });
-  for (const suit in suits) {
-    if (suits[suit].length >= 5) {
-      const flushCards = suits[suit].sort((a, b) => getCardValue(b.rank) - getCardValue(a.rank));
-      const straight = checkStraight(flushCards.map(c => getCardValue(c.rank)));
-      if (straight) return { type: 'flush', value: straight, cards: flushCards.slice(0, 5) };
-    }
-  }
-  const ranks = {};
-  cards.forEach(card => {
-    const v = getCardValue(card.rank);
-    if (!ranks[v]) ranks[v] = [];
-    ranks[v].push(card);
-  });
-  const pairs = Object.entries(ranks).sort((a, b) => b[0] - a[0]);
-  if (pairs[0] && pairs[0][1].length === 4) {
-    return { type: 'four-of-a-kind', value: parseInt(pairs[0][0]), cards: pairs[0][1] };
-  }
-  if (pairs[0] && pairs[0][1].length === 3 && pairs[1] && pairs[1][1].length >= 2) {
-    return { type: 'full-house', value: parseInt(pairs[0][0]), cards: [...pairs[0][1], ...pairs[1][1].slice(0, 2)] };
-  }
-  if (pairs[0] && pairs[0][1].length === 3) {
-    return { type: 'three-of-a-kind', value: parseInt(pairs[0][0]), cards: pairs[0][1] };
-  }
-  if (pairs[0] && pairs[0][1].length === 2 && pairs[1] && pairs[1][1].length === 2) {
-    return { type: 'two-pair', value: parseInt(pairs[0][0]), cards: [...pairs[0][1], ...pairs[1][1]] };
-  }
-  if (pairs[0] && pairs[0][1].length === 2) {
-    return { type: 'pair', value: parseInt(pairs[0][0]), cards: pairs[0][1] };
-  }
-  const sorted = cards.sort((a, b) => getCardValue(b.rank) - getCardValue(a.rank));
-  const straight = checkStraight(sorted.map(c => getCardValue(c.rank)));
-  if (straight) return { type: 'straight', value: straight, cards: sorted.slice(0, 5) };
-  return { type: 'high-card', value: getCardValue(sorted[0].rank), cards: sorted.slice(0, 5) };
-}
+  // 7 选 5，枚举所有组合，选择 rank 最优的一手
+  const n = cards.length;
+  let best = null;
 
-function checkStraight(values) {
-  const unique = [...new Set(values)].sort((a, b) => b - a);
-  for (let i = 0; i <= unique.length - 5; i++) {
-    let isStraight = true;
-    for (let j = 0; j < 4; j++) {
-      if (unique[i + j + 1] !== unique[i + j] - 1) {
-        isStraight = false;
-        break;
+  for (let a = 0; a < n - 4; a++) {
+    for (let b = a + 1; b < n - 3; b++) {
+      for (let c = b + 1; c < n - 2; c++) {
+        for (let d = c + 1; d < n - 1; d++) {
+          for (let e = d + 1; e < n; e++) {
+            const five = [cards[a], cards[b], cards[c], cards[d], cards[e]];
+            const hand = evaluateFiveCards(five);
+            if (!best || compareHands(hand, best) > 0) {
+              best = hand;
+            }
+          }
+        }
       }
     }
-    if (isStraight) return unique[i];
   }
-  if (unique.includes(14) && unique.includes(5) && unique.includes(4) && unique.includes(3) && unique.includes(2)) {
-    return 5;
-  }
-  return null;
+  return best;
 }
 
-// 比较牌型
-function compareHands(hand1, hand2) {
-  const typeOrder = { 'high-card': 1, 'pair': 2, 'two-pair': 3, 'three-of-a-kind': 4, 'straight': 5, 'flush': 6, 'full-house': 7, 'four-of-a-kind': 8 };
-  if (typeOrder[hand1.type] !== typeOrder[hand2.type]) {
-    return typeOrder[hand1.type] - typeOrder[hand2.type];
+// 对 5 张牌进行牌型评估，返回 { type, category, ranks[], cards[] }
+// category 越大牌型越强：0 高牌, 1 一对, 2 两对, 3 三条, 4 顺子, 5 同花, 6 葫芦, 7 四条, 8 同花顺, 9 皇家同花顺
+function evaluateFiveCards(cards) {
+  const sorted = cards.slice().sort((a, b) => getCardValue(b.rank) - getCardValue(a.rank));
+  const values = sorted.map(c => getCardValue(c.rank));
+  const suits = sorted.map(c => c.suit);
+
+  const counts = {};
+  values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  const byCountThenValue = Object.keys(counts)
+    .map(v => ({ value: parseInt(v, 10), count: counts[v] }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return b.value - a.value;
+    });
+
+  const isFlush = suits.every(s => s === suits[0]);
+  const uniqueValuesDesc = [...new Set(values)];
+  const uniqueValuesAsc = uniqueValuesDesc.slice().sort((a, b) => a - b);
+
+  let isStraight = false;
+  let straightHigh = 0;
+  // 正常顺子
+  if (uniqueValuesAsc.length >= 5) {
+    for (let i = 0; i <= uniqueValuesAsc.length - 5; i++) {
+      let ok = true;
+      for (let j = 0; j < 4; j++) {
+        if (uniqueValuesAsc[i + j + 1] !== uniqueValuesAsc[i] + j + 1) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        isStraight = true;
+        straightHigh = uniqueValuesAsc[i + 4];
+      }
+    }
   }
-  return hand1.value - hand2.value;
+  // 处理 A-5 顺子
+  if (!isStraight && uniqueValuesDesc.includes(14) &&
+      uniqueValuesDesc.includes(5) &&
+      uniqueValuesDesc.includes(4) &&
+      uniqueValuesDesc.includes(3) &&
+      uniqueValuesDesc.includes(2)) {
+    isStraight = true;
+    straightHigh = 5;
+  }
+
+  // 同花顺 / 皇家同花顺
+  if (isFlush && isStraight) {
+    const flushValues = sorted.map(c => getCardValue(c.rank));
+    // 找到同花内部的顺子最高点
+    const flushUniqueAsc = [...new Set(flushValues.slice().sort((a, b) => a - b))];
+    let fh = 0;
+    if (flushUniqueAsc.length >= 5) {
+      for (let i = 0; i <= flushUniqueAsc.length - 5; i++) {
+        let ok = true;
+        for (let j = 0; j < 4; j++) {
+          if (flushUniqueAsc[i + j + 1] !== flushUniqueAsc[i] + j + 1) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) {
+          fh = flushUniqueAsc[i + 4];
+        }
+      }
+    }
+    // A-5 同花顺
+    if (!fh && flushValues.includes(14) &&
+        flushValues.includes(5) &&
+        flushValues.includes(4) &&
+        flushValues.includes(3) &&
+        flushValues.includes(2)) {
+      fh = 5;
+    }
+
+    const isRoyal = fh === 14;
+    return {
+      type: isRoyal ? 'royal-flush' : 'straight-flush',
+      category: isRoyal ? 9 : 8,
+      ranks: [fh],
+      cards: sorted
+    };
+  }
+
+  // 四条
+  if (byCountThenValue[0].count === 4) {
+    const four = byCountThenValue[0].value;
+    const kicker = uniqueValuesDesc.find(v => v !== four) || four;
+    return {
+      type: 'four-of-a-kind',
+      category: 7,
+      ranks: [four, kicker],
+      cards: sorted
+    };
+  }
+
+  // 葫芦
+  if (byCountThenValue[0].count === 3 && byCountThenValue[1] && byCountThenValue[1].count >= 2) {
+    const trip = byCountThenValue[0].value;
+    const pair = byCountThenValue[1].value;
+    return {
+      type: 'full-house',
+      category: 6,
+      ranks: [trip, pair],
+      cards: sorted
+    };
+  }
+
+  // 同花
+  if (isFlush) {
+    return {
+      type: 'flush',
+      category: 5,
+      ranks: uniqueValuesDesc,
+      cards: sorted
+    };
+  }
+
+  // 顺子
+  if (isStraight) {
+    return {
+      type: 'straight',
+      category: 4,
+      ranks: [straightHigh],
+      cards: sorted
+    };
+  }
+
+  // 三条
+  if (byCountThenValue[0].count === 3) {
+    const trip = byCountThenValue[0].value;
+    const kickers = uniqueValuesDesc.filter(v => v !== trip).slice(0, 2);
+    return {
+      type: 'three-of-a-kind',
+      category: 3,
+      ranks: [trip, ...kickers],
+      cards: sorted
+    };
+  }
+
+  // 两对
+  if (byCountThenValue[0].count === 2 && byCountThenValue[1] && byCountThenValue[1].count === 2) {
+    const highPair = Math.max(byCountThenValue[0].value, byCountThenValue[1].value);
+    const lowPair = Math.min(byCountThenValue[0].value, byCountThenValue[1].value);
+    const kicker = uniqueValuesDesc.find(v => v !== highPair && v !== lowPair) || lowPair;
+    return {
+      type: 'two-pair',
+      category: 2,
+      ranks: [highPair, lowPair, kicker],
+      cards: sorted
+    };
+  }
+
+  // 一对
+  if (byCountThenValue[0].count === 2) {
+    const pair = byCountThenValue[0].value;
+    const kickers = uniqueValuesDesc.filter(v => v !== pair).slice(0, 3);
+    return {
+      type: 'pair',
+      category: 1,
+      ranks: [pair, ...kickers],
+      cards: sorted
+    };
+  }
+
+  // 高牌
+  return {
+    type: 'high-card',
+    category: 0,
+    ranks: uniqueValuesDesc.slice(0, 5),
+    cards: sorted
+  };
+}
+
+// 比较牌型（含踢脚牌），>0 hand1 强，<0 hand2 强，0 完全平局
+function compareHands(hand1, hand2) {
+  if (!hand1 && !hand2) return 0;
+  if (!hand1) return -1;
+  if (!hand2) return 1;
+
+  if (hand1.category !== hand2.category) {
+    return hand1.category - hand2.category;
+  }
+
+  const r1 = hand1.ranks || [];
+  const r2 = hand2.ranks || [];
+  const len = Math.max(r1.length, r2.length);
+  for (let i = 0; i < len; i++) {
+    const v1 = r1[i] || 0;
+    const v2 = r2[i] || 0;
+    if (v1 !== v2) return v1 - v2;
+  }
+  return 0;
 }
 
 // PokerRoom 类
@@ -275,18 +427,30 @@ class PokerRoom {
     });
 
     const seats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
-    this.dealerSeat = seats[0];
-    
-    // 2人游戏：庄家是小盲，大盲是其他玩家
-    // 3+人游戏：庄家右边第一个是小盲，再右边是大盲
-    if (seats.length === 2) {
-      this.smallBlindSeat = seats[0];  // 庄家也是小盲
-      this.bigBlindSeat = seats[1];   // 另一家是大盲
-      this.currentPlayerSeat = seats[1]; // 大盲先行
+    // 庄家顺序：第一手用最小座位号，其后从上一手庄家顺时针找下一个仍有筹码的玩家
+    if (this.dealerSeat === -1) {
+      this.dealerSeat = seats[0];
     } else {
-      this.smallBlindSeat = seats[(1) % seats.length];
-      this.bigBlindSeat = seats[(2) % seats.length];
-      this.currentPlayerSeat = seats[(3) % seats.length] || this.smallBlindSeat;
+      const idx = seats.indexOf(this.dealerSeat);
+      const nextIdx = idx === -1 ? 0 : (idx + 1) % seats.length;
+      this.dealerSeat = seats[nextIdx];
+    }
+    
+    // 2人游戏：庄家是小盲，大盲是另一家；3+人游戏：庄家左侧第一个是小盲，再左侧是大盲
+    if (seats.length === 2) {
+      const dealerIndex = seats.indexOf(this.dealerSeat);
+      const otherIndex = (dealerIndex + 1) % 2;
+      this.smallBlindSeat = this.dealerSeat;          // 庄家也是小盲
+      this.bigBlindSeat = seats[otherIndex];          // 另一家是大盲
+      this.currentPlayerSeat = this.bigBlindSeat;     // 大盲先行
+    } else {
+      const dealerIndex = seats.indexOf(this.dealerSeat);
+      const smallIndex = (dealerIndex + 1) % seats.length;
+      const bigIndex = (dealerIndex + 2) % seats.length;
+      const firstIndex = (dealerIndex + 3) % seats.length;
+      this.smallBlindSeat = seats[smallIndex];
+      this.bigBlindSeat = seats[bigIndex];
+      this.currentPlayerSeat = seats[firstIndex];
     }
     
     // 执行大小盲下注

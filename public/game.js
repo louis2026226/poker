@@ -541,7 +541,14 @@ function showRoundResultFloats(results) {
     var myPlayer = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = myPlayer ? myPlayer.seat : 0;
 
-    results.forEach(function(result) {
+    // 先按筹码变化从大到小排序，保证筹码飞行从最大赢家优先
+    var sorted = results.slice().sort(function(a, b) {
+      var da = typeof a.netChange === 'number' ? a.netChange : 0;
+      var db = typeof b.netChange === 'number' ? b.netChange : 0;
+      return db - da;
+    });
+
+    sorted.forEach(function(result, idx) {
       var delta = typeof result.netChange === 'number' ? result.netChange : 0;
       // 按昵称匹配到当前局内的玩家
       var player = currentGameState.players.find(function(p) { return p.nickname === result.nickname; });
@@ -555,6 +562,30 @@ function showRoundResultFloats(results) {
       var rect = avatarEl.getBoundingClientRect();
       var tableRect = tableEl.getBoundingClientRect();
 
+      // 从桌面中央飞向赢家头像
+      var chipEl = document.createElement('div');
+      chipEl.className = 'chip-fly';
+
+      var centerLeft = tableRect.width / 2 - 10;
+      var centerTop = tableRect.height / 2 - 10;
+      chipEl.style.left = centerLeft + 'px';
+      chipEl.style.top = centerTop + 'px';
+
+      tableEl.appendChild(chipEl);
+
+      // 使用微小延迟区分多名赢家的飞行起点
+      setTimeout(function() {
+        var dx = rect.left - tableRect.left + rect.width / 2 - centerLeft;
+        var dy = rect.top - tableRect.top + rect.height / 2 - centerTop;
+        chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        chipEl.style.opacity = '0';
+      }, 50 + idx * 80);
+
+      setTimeout(function() {
+        chipEl.remove();
+      }, 700 + idx * 80);
+
+      // 同时保留原来的文字浮动提示
       var floatEl = document.createElement('div');
       floatEl.className = 'round-result-float';
 
