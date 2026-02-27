@@ -857,7 +857,8 @@ function renderSeats(gameState) {
     var statusEl = seatEl.querySelector('.player-status');
     
     var displayName = player.nickname + (player.socketId === mySocketId ? ' (我)' : '');
-    if (gameState.hostId && player.socketId === gameState.hostId) {
+    // 👑 标记庄家：始终跟随当前 dealerSeat，而不是房主
+    if (typeof gameState.dealerSeat === 'number' && player.seat === gameState.dealerSeat) {
       displayName += ' 👑';
     }
     nameEl.innerHTML = displayName;

@@ -229,6 +229,11 @@ body {
   color: #4a90d9;
 }
 
+.game-header .btn-small {
+  min-width: 110px;
+  text-align: center;
+}
+
 .poker-table {
   position: relative;
   width: 100%;
@@ -519,6 +524,9 @@ body {
   font-size: 13px;
   color: #ccc;
   text-align: left;
+  max-height: 7.5em; /* 约 5 行高度 */
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .settlement-log-meta {
