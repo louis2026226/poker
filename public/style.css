@@ -903,6 +903,13 @@ body {
     font-size: 14px;
   }
 
+  /* 覆盖小屏下我的手牌与公共牌尺寸 */
+  .card-my,
+  .card-board {
+    width: 100px;
+    height: 150px;
+  }
+
   .card .rank {
     font-size: 10px;
   }
@@ -999,6 +1006,13 @@ body {
     height: 35px;
   }
 
+  /* 更小屏幕下仍保持我的手牌与公共牌为 100x150 */
+  .card-my,
+  .card-board {
+    width: 100px;
+    height: 150px;
+  }
+
   .action-buttons .btn {
     min-width: 55px;
     padding: 8px 10px;
@@ -1082,6 +1096,16 @@ body {
   #myCards .card {
     width: 28px;
     height: 40px;
+  }
+
+  /* 强制我的手牌和公共牌在手机上依旧是 100x150 */
+  #myCards .card.card-my {
+    width: 100px;
+    height: 150px;
+  }
+  .community-cards .card.card-board {
+    width: 100px;
+    height: 150px;
   }
 }
 
