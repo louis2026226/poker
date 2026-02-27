@@ -191,29 +191,56 @@ body {
   margin-top: 6px;
 }
 
-/* 游戏房间：顶部黑色底板已去掉，仅保留离开房间按钮左上角 */
-.leave-room-fixed {
+/* 游戏房间：左上角房号 + 离开房间按钮 */
+.game-room-top {
   position: fixed;
   top: 12px;
   left: 12px;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-code-fixed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  color: #aaa;
+}
+
+.room-code-fixed .room-code-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.room-code-fixed .room-code-value:hover {
+  color: #fff;
+}
+
+.leave-room-fixed {
   min-width: 100px;
   padding: 8px 16px;
 }
 
-/* 荷官图：牌桌上方居中，发牌从该区域飞入 */
+/* 荷官图：牌桌上方居中，放大30%，绿色外框+外发光 */
 .dealer-image {
   position: absolute;
   top: -8%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  width: 120px;
-  height: 120px;
+  width: 156px;
+  height: 156px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid rgba(255, 215, 0, 0.6);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(46, 204, 113, 0.9);
+  box-shadow: 0 0 24px rgba(46, 204, 113, 0.85), 0 4px 20px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 
@@ -272,8 +299,8 @@ body {
     margin-top: 270px;
   }
   .dealer-image {
-    width: 90px;
-    height: 90px;
+    width: 117px;
+    height: 117px;
     top: -6%;
   }
 }

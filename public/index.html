@@ -62,11 +62,16 @@
 
   <!-- 游戏房间页面 -->
   <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
-    <!-- 仅保留离开房间按钮在左上角，房间号与状态由 JS 更新但不再显示 -->
-    <span id="displayRoomCode" class="sr-only" aria-hidden="true">-----</span>
+    <!-- 左上角：房号 + 离开房间 -->
+    <div class="game-room-top">
+      <div class="room-code-fixed">
+        <span class="room-code-label">房号:</span>
+        <span id="displayRoomCode" class="room-code-value" onclick="copyRoomCode()" title="点击复制" role="button" tabindex="10">-----</span>
+      </div>
+      <button id="leaveRoomBtn" class="btn btn-danger btn-small leave-room-fixed" 
+              tabindex="13" aria-label="离开当前房间">离开房间</button>
+    </div>
     <span id="gameStatus" class="sr-only" aria-hidden="true">等待玩家加入...</span>
-    <button id="leaveRoomBtn" class="btn btn-danger btn-small leave-room-fixed" 
-            tabindex="13" aria-label="离开当前房间">离开房间</button>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
       <!-- 荷官图：牌桌上方，发牌从荷官中心飞向各位置 -->
