@@ -440,11 +440,12 @@ body {
   position: relative;
 }
 
-/* 我的手牌 & 公共牌（当前桌面基础尺寸，高度约 80px） */
+/* 我的手牌 & 公共牌（桌面基础尺寸，高度约 100px） */
 .card-my,
 .card-board {
-  width: 60px;
-  height: 80px;
+  height: 100px;
+  width: auto;
+  aspect-ratio: 58 / 85;
 }
 
 /* 发牌飞入动画 */
@@ -903,11 +904,11 @@ body {
     font-size: 14px;
   }
 
-  /* 覆盖小屏下我的手牌与公共牌尺寸 */
+  /* 覆盖小屏下我的手牌与公共牌尺寸，高度略缩小避免重叠 */
   .card-my,
   .card-board {
-    width: 100px;
-    height: 150px;
+    height: 90px;
+    width: auto;
   }
 
   .card .rank {
@@ -1006,11 +1007,11 @@ body {
     height: 35px;
   }
 
-  /* 更小屏幕下仍保持我的手牌与公共牌为 100x150 */
+  /* 更小屏幕下进一步缩小我的手牌与公共牌高度 */
   .card-my,
   .card-board {
-    width: 100px;
-    height: 150px;
+    height: 80px;
+    width: auto;
   }
 
   .action-buttons .btn {
@@ -1098,14 +1099,14 @@ body {
     height: 40px;
   }
 
-  /* 强制我的手牌和公共牌在手机上依旧是 100x150 */
+  /* 手机端下我的手牌和公共牌使用与上方一致的高度 90px */
   #myCards .card.card-my {
-    width: 100px;
-    height: 150px;
+    height: 90px;
+    width: auto;
   }
   .community-cards .card.card-board {
-    width: 100px;
-    height: 150px;
+    height: 90px;
+    width: auto;
   }
 }
 
