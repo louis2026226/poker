@@ -607,11 +607,6 @@ io.on('connection', (socket) => {
     const isHost = socket.id === room.hostId;
     callback({ success: true, roomCode, player: { ...player, isHost } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
-
-    const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
-    if (activePlayers.length >= 2 && room.gameState === 'waiting') {
-      room.startNewHand();
-    }
   });
 
   // 添加机器人玩家（仅房主可用）
@@ -634,11 +629,34 @@ io.on('connection', (socket) => {
     room.addPlayer(botId, botName, true);
 
     io.to(roomCode).emit('roomUpdate', room.getGameState());
+  });
+
+  // 房主手动开始游戏（首局）
+  socket.on('startGame', (callback) => {
+    const room = rooms[socket.roomCode];
+    if (!room) {
+      if (callback) callback({ success: false, message: '房间不存在' });
+      return;
+    }
+
+    if (room.hostId !== socket.id) {
+      if (callback) callback({ success: false, message: '只有房主可以开始游戏' });
+      return;
+    }
 
     const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
-    if (activePlayers.length >= 2 && room.gameState === 'waiting') {
-      room.startNewHand();
+    if (activePlayers.length < 2) {
+      if (callback) callback({ success: false, message: '至少需要两名玩家才能开始游戏' });
+      return;
     }
+
+    if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
+      if (callback) callback({ success: false, message: '游戏已经在进行中' });
+      return;
+    }
+
+    room.startNewHand();
+    if (callback) callback({ success: true, gameState: room.getGameState() });
   });
 
   socket.on('playerAction', (action, amount, callback) => {

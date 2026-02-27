@@ -10,10 +10,10 @@
 
 set -e
 
-BRANCH=${BRANCH:-main}
+TARGET_BRANCH=${BRANCH:-main}
 MSG=${1:-"chore: update poker app"}
 
-echo "当前分支：$BRANCH"
+echo "目标远程分支：$TARGET_BRANCH"
 
 echo "=== Git 状态 ==="
 git status
@@ -25,8 +25,8 @@ git add .
 echo ">>> 提交：$MSG"
 git commit -m "$MSG" || echo "（没有改动需要提交或提交失败）"
 
-echo ">>> 推送到远程 origin/$BRANCH ..."
-git push origin "$BRANCH"
+echo ">>> 推送当前提交到远程 origin/$TARGET_BRANCH ..."
+git push origin HEAD:"$TARGET_BRANCH"
 
 echo
 echo "✅ 已推送到 GitHub，如已在 Railway 绑定该仓库并开启自动部署，稍等片刻即可完成上线。"

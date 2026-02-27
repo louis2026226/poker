@@ -77,7 +77,7 @@ let createRoomBtn, joinRoomBtn, confirmJoinBtn, joinForm;
 let displayRoomCode, gameStatus, leaveRoomBtn;
 let potAmount, communityCardsEl, currentBetDisplay, dealerButton;
 let actionPanel, actionText, foldBtn, checkBtn, callBtn, raiseBtn, allInBtn;
-let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent;
+let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent, startGameBtn;
 let raiseSlider, raiseAmountPanel, raiseAmountDisplay;
 let gameOverModal, settlementList, newGameBtn, myCardsEl;
 
@@ -106,6 +106,7 @@ function initDOMElements() {
   raiseBtn = document.getElementById('raiseBtn');
   allInBtn = document.getElementById('allInBtn');
   aiAssistBtn = document.getElementById('ai-assist-btn');
+  startGameBtn = document.getElementById('startGameBtn');
   aiSuggestionPanel = document.getElementById('ai-suggestion-panel');
   aiSuggestionContent = document.getElementById('ai-suggestion-content');
   raiseSlider = document.getElementById('raiseSlider');
@@ -348,6 +349,20 @@ function setupEventListeners() {
   if (aiAssistBtn) {
     aiAssistBtn.addEventListener('click', function() {
       socket.emit('addBot');
+    });
+  }
+
+  // 开始游戏按钮：仅房主在等待开局且人数足够时可用
+  if (startGameBtn) {
+    startGameBtn.addEventListener('click', function() {
+      startGameBtn.disabled = true;
+      startGameBtn.textContent = '开始中...';
+      socket.emit('startGame', function(response) {
+        startGameBtn.textContent = '开始游戏';
+        if (!response || !response.success) {
+          alert(response && response.message ? response.message : '无法开始游戏，请稍后重试');
+        }
+      });
     });
   }
   
@@ -670,8 +685,19 @@ function updateActionPanel(gameState) {
     }
   }
   
-  if (!myPlayer) return;
-  
+  if (!myPlayer) {
+    disableAllButtons();
+    stopActionTimer();
+    return;
+  }
+
+  // 已弃牌、全下或筹码为 0 时不再显示操作
+  if (myPlayer.folded || myPlayer.chips <= 0 || gameState.gameState === 'ended') {
+    disableAllButtons();
+    stopActionTimer();
+    return;
+  }
+
   var isMyTurn = gameState.currentPlayerSeat === myPlayer.seat;
   
   if (!isMyTurn) {
@@ -734,6 +760,7 @@ function updateBotButton(gameState) {
   const myPlayer = gameState.players.find(function(p) { return p.socketId === mySocketId; });
   if (!myPlayer) {
     aiAssistBtn.disabled = true;
+    if (startGameBtn) startGameBtn.disabled = true;
     return;
   }
 
@@ -747,11 +774,22 @@ function updateBotButton(gameState) {
     totalPlayers < maxSeats;
 
   aiAssistBtn.disabled = !canAddBot;
+
+  // 开始游戏按钮：房主且人数 >= 2 且在 waiting/ended 状态
+  if (startGameBtn) {
+    const activePlayers = gameState.players.filter(function(p) { return p.chips > 0; });
+    const canStart =
+      socket.id === gameState.hostId &&
+      activePlayers.length >= 2 &&
+      (gameState.gameState === 'waiting' || gameState.gameState === 'ended');
+    startGameBtn.disabled = !canStart;
+  }
 }
 
 // ============ 倒计时 ============
 function startActionTimer() {
-  stopActionTimer();
+  // 已经在计时则不重复开启，避免多次重置
+  if (actionTimer) return;
   actionTimeLeft = 10;
   
   var timerEl = document.getElementById('actionTimer');
