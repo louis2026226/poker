@@ -230,8 +230,13 @@ body {
 }
 
 .game-header .btn-small {
-  min-width: 110px;
+  min-width: 120px;
   text-align: center;
+}
+
+#startGameBtn,
+#leaveRoomBtn {
+  min-width: 120px;
 }
 
 .poker-table {
@@ -335,7 +340,7 @@ body {
 }
 
 /* 座位状态 */
-.seat.active .player-info {
+.seat.active:not(.my-seat) .player-info {
   box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
   border: 2px solid #ffd700;
 }

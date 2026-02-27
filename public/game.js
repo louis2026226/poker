@@ -727,6 +727,9 @@ function animatePotChips(prevState, nextState) {
     if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
     if (nextState.pot <= prevState.pot) return; // 底池没变就不飞筹码
 
+    // 只要本轮底池增加，就播放一次筹码音效
+    playSound('bet');
+
     var tableEl = document.querySelector('.poker-table');
     if (!tableEl) return;
 
