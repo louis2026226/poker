@@ -290,7 +290,11 @@ class PokerRoom {
     const bigBlindPlayer = Object.values(this.players).find(p => p.seat === this.bigBlindSeat);
     if (smallBlindPlayer) this.playerBet(smallBlindPlayer, CONFIG.SMALL_BLIND);
     if (bigBlindPlayer) this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
-    
+
+    // 记录本手开始时每人筹码，用于结算时计算 netChange
+    this.chipsAtStartOfHand = {};
+    Object.values(this.players).forEach(p => { this.chipsAtStartOfHand[p.socketId] = p.chips; });
+
     io.to(this.roomCode).emit('gameState', this.getGameState());
 
     // 如果首轮就轮到机器人，自动执行机器人操作
@@ -346,8 +350,9 @@ class PokerRoom {
   }
 
   nextAction() {
-    // 存活玩家（未弃牌且还有筹码），用于判断是否只剩一人
-    const alivePlayers = Object.values(this.players).filter(p => !p.folded && p.chips > 0);
+    // 存活玩家（未弃牌），用于判断是否只剩一人
+    // 注意：这里不能排除已 all-in 或筹码为 0 的玩家，因为他们仍然在本局中有获胜可能
+    const alivePlayers = Object.values(this.players).filter(p => !p.folded);
 
     // 如果只剩1个存活玩家，直接判定该玩家获胜
     if (alivePlayers.length <= 1) {
@@ -356,7 +361,8 @@ class PokerRoom {
       }
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
-      
+      this.emitGameOver();
+
       // 1.5秒后开始新局
       setTimeout(() => {
         const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
@@ -367,10 +373,10 @@ class PokerRoom {
       return;
     }
 
-    // 仍然可以行动的玩家（未弃牌、未全下、还有筹码）
-    const activePlayers = Object.values(this.players).filter(
-      p => !p.folded && !p.allIn && p.chips > 0
-    );
+    // 仍然可以行动的玩家（未弃牌、未全下、还有筹码），按座位顺序以便正确轮转
+    const activePlayers = Object.values(this.players)
+      .filter(p => !p.folded && !p.allIn && p.chips > 0)
+      .sort((a, b) => a.seat - b.seat);
 
     // 若没有任何玩家可以继续行动（都全下或弃牌），自动把公共牌发完并摊牌
     if (activePlayers.length === 0) {
@@ -566,7 +572,8 @@ class PokerRoom {
   }
 
   awardPot(winners) {
-    const totalPot = this.pot + Object.values(this.playerBets).reduce((a, b) => a + b, 0);
+    // 底池：每次下注已在 playerBet() 中累加到 this.pot，不再加 playerBets 避免重复
+    const totalPot = this.pot;
     if (winners.length === 1) {
       winners[0].chips += totalPot;
     } else {
@@ -579,6 +586,7 @@ class PokerRoom {
 
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
+    this.emitGameOver();
 
     // 1.5秒后发牌开始新局
     setTimeout(() => {
@@ -592,6 +600,16 @@ class PokerRoom {
   endHand() {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
+    this.emitGameOver();
+  }
+
+  emitGameOver() {
+    const results = Object.values(this.players).map(p => ({
+      nickname: p.nickname,
+      netChange: p.chips - (this.chipsAtStartOfHand && this.chipsAtStartOfHand[p.socketId] != null ? this.chipsAtStartOfHand[p.socketId] : p.chips),
+      finalChips: p.chips
+    }));
+    io.to(this.roomCode).emit('gameOver', { results });
   }
 
   getGameState() {

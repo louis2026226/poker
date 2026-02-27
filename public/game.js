@@ -771,7 +771,7 @@ function renderSeats(gameState) {
       }
     }
     
-    if (player.socketId === gameState.currentPlayerSeat) {
+    if (player.seat === gameState.currentPlayerSeat) {
       seatEl.classList.add('active');
     }
     if (player.folded) {
