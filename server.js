@@ -1,5 +1,4 @@
 const express = require('express');
-const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
@@ -194,7 +193,7 @@ class PokerRoom {
     this.locked = false;
   }
 
-  addPlayer(socketId, nickname) {
+  addPlayer(socketId, nickname, isBot = false) {
     const seat = this.findEmptySeat();
     if (seat === -1) return null;
     this.players[socketId] = {
@@ -206,7 +205,8 @@ class PokerRoom {
       bet: 0,
       folded: false,
       allIn: false,
-      action: null
+      action: null,
+      isBot
     };
     return this.players[socketId];
   }
@@ -277,6 +277,9 @@ class PokerRoom {
     if (bigBlindPlayer) this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
     
     io.to(this.roomCode).emit('gameState', this.getGameState());
+
+    // 如果首轮就轮到机器人，自动执行机器人操作
+    this.handleBotTurn();
   }
 
   playerBet(player, amount) {
@@ -338,13 +341,13 @@ class PokerRoom {
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
       
-      // 5秒后开始新局
+      // 1.5秒后开始新局
       setTimeout(() => {
         const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
         if (playersWithChips.length >= 2) {
           this.startNewHand();
         }
-      }, 5000);
+      }, 1500);
       return;
     }
 
@@ -363,6 +366,98 @@ class PokerRoom {
     }
 
     io.to(this.roomCode).emit('gameState', this.getGameState());
+
+    // 如果轮到机器人玩家，自动执行机器人操作
+    this.handleBotTurn();
+  }
+
+  handleBotTurn() {
+    // 查找当前行动座位是否为机器人
+    const botPlayer = Object.values(this.players).find(p => 
+      p.isBot &&
+      p.seat === this.currentPlayerSeat &&
+      !p.folded &&
+      !p.allIn &&
+      p.chips > 0
+    );
+
+    if (!botPlayer) return;
+
+    // 模拟思考时间
+    setTimeout(() => {
+      // 再次确认仍然轮到该机器人且游戏仍在进行
+      if (
+        this.gameState === 'waiting' ||
+        this.gameState === 'ended' ||
+        this.currentPlayerSeat !== botPlayer.seat ||
+        botPlayer.folded ||
+        botPlayer.allIn ||
+        botPlayer.chips <= 0
+      ) {
+        return;
+      }
+
+      const gameState = {
+        pot: this.pot,
+        currentBet: this.currentBet,
+        communityCards: this.communityCards,
+        gameState: this.gameState,
+        playerChips: botPlayer.chips,
+        playerPosition: botPlayer.seat
+      };
+
+      // 使用规则决策获得一个基础动作
+      const ruleDecision = pokerAI.getRuleBasedDecision(gameState, botPlayer);
+      let action = ruleDecision.action || 'check';
+      let amount = 0;
+
+      switch (action) {
+        case 'fold':
+          amount = 0;
+          break;
+        case 'check':
+          amount = 0;
+          break;
+        case 'call':
+          // 服务器端会根据当前注自动计算跟注金额，这里填 0 即可
+          amount = 0;
+          break;
+        case 'raise': {
+          // 将规则决策转换为合法的总下注额
+          const minRaiseTotal = Math.max(this.currentBet * 2, CONFIG.BIG_BLIND);
+          const maxTotal = botPlayer.bet + botPlayer.chips;
+          const suggestedTotal = this.currentBet + CONFIG.BIG_BLIND;
+          const targetTotal = Math.min(maxTotal, Math.max(minRaiseTotal, suggestedTotal));
+
+          if (targetTotal <= botPlayer.bet) {
+            // 如果无法满足最小加注要求，退化为跟注或过牌
+            const toCall = this.currentBet - (botPlayer.bet || 0);
+            if (toCall > 0 && toCall <= botPlayer.chips) {
+              action = 'call';
+              amount = 0;
+            } else {
+              action = 'check';
+              amount = 0;
+            }
+          } else {
+            amount = targetTotal;
+          }
+          break;
+        }
+        case 'all-in':
+          amount = (botPlayer.bet || 0) + botPlayer.chips;
+          break;
+        default:
+          action = 'check';
+          amount = 0;
+      }
+
+      const success = this.playerAction(botPlayer.socketId, action, amount);
+      if (success) {
+        io.to(this.roomCode).emit('gameState', this.getGameState());
+        this.nextAction();
+      }
+    }, 1500);
   }
 
   shouldAdvancePhase() {
@@ -434,12 +529,13 @@ class PokerRoom {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
 
+    // 1.5秒后发牌开始新局
     setTimeout(() => {
       const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
       if (activePlayers.length >= 2) {
         this.startNewHand();
       }
-    }, 5000);
+    }, 1500);
   }
 
   endHand() {
@@ -510,6 +606,33 @@ io.on('connection', (socket) => {
 
     const isHost = socket.id === room.hostId;
     callback({ success: true, roomCode, player: { ...player, isHost } });
+    io.to(roomCode).emit('roomUpdate', room.getGameState());
+
+    const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
+    if (activePlayers.length >= 2 && room.gameState === 'waiting') {
+      room.startNewHand();
+    }
+  });
+
+  // 添加机器人玩家（仅房主可用）
+  socket.on('addBot', () => {
+    const room = rooms[socket.roomCode];
+    if (!room) return;
+
+    // 仅房主可以添加机器人，且只能在等待开局时添加
+    if (room.hostId !== socket.id || room.gameState !== 'waiting') return;
+
+    const currentPlayers = Object.values(room.players);
+    if (currentPlayers.length >= CONFIG.MAX_SEATS) return;
+
+    const roomCode = room.roomCode;
+    const botNames = ['AI-小王', 'AI-小李', 'AI-小张', 'AI-小刘', 'AI-小陈'];
+    const existingBots = currentPlayers.filter(p => p.isBot).length;
+    const botName = botNames[existingBots % botNames.length];
+    const botId = `BOT_${roomCode}_${Date.now()}_${existingBots}_${Math.floor(Math.random() * 1000)}`;
+
+    room.addPlayer(botId, botName, true);
+
     io.to(roomCode).emit('roomUpdate', room.getGameState());
 
     const activePlayers = Object.values(room.players).filter(p => p.chips > 0);

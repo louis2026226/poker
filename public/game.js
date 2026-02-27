@@ -196,20 +196,34 @@ function setupEventListeners() {
   if (createRoomBtn) {
     createRoomBtn.addEventListener('click', function() {
       console.log('Create room clicked');
+      if (!socket.connected) {
+        alert('未连接服务器，请刷新页面重试');
+        return;
+      }
       const nickname = nicknameInput.value.trim();
       if (!nickname) {
         alert('请输入昵称');
         return;
       }
       saveNickname(nickname);
+      createRoomBtn.disabled = true;
+      createRoomBtn.textContent = '创建中...';
+      var timeout = setTimeout(function() {
+        createRoomBtn.disabled = false;
+        createRoomBtn.textContent = '创建房间';
+        alert('请求超时，请检查网络后重试');
+      }, 15000);
       socket.emit('createRoom', nickname, function(response) {
-        if (response.success) {
+        clearTimeout(timeout);
+        createRoomBtn.disabled = false;
+        createRoomBtn.textContent = '创建房间';
+        if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert('创建房间失败');
+          alert(response && response.message ? response.message : '创建房间失败');
         }
       });
     });
@@ -227,6 +241,10 @@ function setupEventListeners() {
   if (confirmJoinBtn) {
     confirmJoinBtn.addEventListener('click', function() {
       console.log('Confirm join clicked');
+      if (!socket.connected) {
+        alert('未连接服务器，请刷新页面重试');
+        return;
+      }
       const nickname = nicknameInput.value.trim();
       const roomCode = roomCodeInput.value.trim();
       
@@ -241,15 +259,24 @@ function setupEventListeners() {
       }
       
       saveNickname(nickname);
-      
+      confirmJoinBtn.disabled = true;
+      confirmJoinBtn.textContent = '加入中...';
+      var timeout = setTimeout(function() {
+        confirmJoinBtn.disabled = false;
+        confirmJoinBtn.textContent = '确认加入';
+        alert('请求超时，请检查房间号与网络后重试');
+      }, 15000);
       socket.emit('joinRoom', roomCode, nickname, function(response) {
-        if (response.success) {
+        clearTimeout(timeout);
+        confirmJoinBtn.disabled = false;
+        confirmJoinBtn.textContent = '确认加入';
+        if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert(response.message || '加入房间失败');
+          alert(response && response.message ? response.message : '加入房间失败');
         }
       });
     });
@@ -317,18 +344,17 @@ function setupEventListeners() {
     });
   }
   
-  // AI建议按钮
+  // AI+1 按钮：添加一个机器人玩家
   if (aiAssistBtn) {
     aiAssistBtn.addEventListener('click', function() {
-      requestAISuggestion();
+      socket.emit('addBot');
     });
   }
   
-  // 滑块预览
+  // 滑块数值
   if (raiseSlider) {
     raiseSlider.addEventListener('input', function() {
       raiseAmountDisplay.textContent = this.value;
-      showBetPreview();
     });
   }
 }
@@ -337,15 +363,32 @@ function setupEventListeners() {
 socket.on('connect', function() {
   console.log('Connected to server');
 });
+socket.on('disconnect', function(reason) {
+  console.log('Disconnected:', reason);
+  if (createRoomBtn) createRoomBtn.disabled = false;
+  if (createRoomBtn) createRoomBtn.textContent = '创建房间';
+  if (confirmJoinBtn) confirmJoinBtn.disabled = false;
+  if (confirmJoinBtn) confirmJoinBtn.textContent = '确认加入';
+});
+socket.on('connect_error', function(err) {
+  console.log('Connect error:', err.message);
+  alert('无法连接服务器，请确认地址正确或稍后重试');
+});
 
 socket.on('gameState', function(gameState) {
   console.log('Game state received');
+  if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
+    _lastCommunityCardsLength = 0;
+  }
   currentGameState = gameState;
   updateGameState(gameState);
 });
 
 socket.on('roomUpdate', function(gameState) {
   console.log('Room update received');
+  if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
+    _lastCommunityCardsLength = 0;
+  }
   currentGameState = gameState;
   updateGameState(gameState);
 });
@@ -403,6 +446,7 @@ function updateGameState(gameState) {
   renderSeats(gameState);
   updateDealerButton(gameState);
   updateActionPanel(gameState);
+  updateBotButton(gameState);
 }
 
 function updateGameStatus(gameState) {
@@ -424,21 +468,34 @@ function updateGameStatus(gameState) {
   }
 }
 
+var _lastCommunityCardsLength = 0;
+
 function renderCommunityCards(cards) {
   if (cards.length > 0) {
     playSound('card');
   }
   communityCardsEl.innerHTML = '';
-  
-  cards.forEach(function(card) {
-    const cardEl = createCardElement(card, true);
+  cards.forEach(function(card, index) {
+    var isNewCard = index >= _lastCommunityCardsLength;
+    var cardEl = createCardElement(card, true, {
+      flyIn: isNewCard,
+      flyDelay: isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0
+    });
     communityCardsEl.appendChild(cardEl);
   });
+  _lastCommunityCardsLength = cards.length;
 }
 
-function createCardElement(card, faceUp) {
+function createCardElement(card, faceUp, options) {
+  options = options || {};
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
+  if (options.flyIn) {
+    cardEl.classList.add('card-fly-in');
+    if (options.flyDelay != null) {
+      cardEl.style.animationDelay = (options.flyDelay / 1000) + 's';
+    }
+  }
   
   if (!faceUp || !card.rank) {
     cardEl.classList.add('back');
@@ -544,10 +601,11 @@ function renderSeats(gameState) {
       seatEl.classList.add('all-in');
     }
     
+    var handFlyIn = gameState.gameState === 'preflop';
     if (player.hand && player.hand.length > 0) {
       if (player.socketId === mySocketId) {
-        player.hand.forEach(function(card) {
-          cardsEl.appendChild(createCardElement(card, true));
+        player.hand.forEach(function(card, idx) {
+          cardsEl.appendChild(createCardElement(card, true, { flyIn: handFlyIn, flyDelay: idx * 60 }));
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
         player.hand.forEach(function(card) {
@@ -555,12 +613,12 @@ function renderSeats(gameState) {
         });
       } else {
         for (var i = 0; i < 2; i++) {
-          cardsEl.appendChild(createCardElement({}, false));
+          cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: i * 60 }));
         }
       }
     } else if (gameState.gameState !== 'waiting') {
       for (var i = 0; i < 2; i++) {
-        cardsEl.appendChild(createCardElement({}, false));
+        cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: i * 60 }));
       }
     }
   });
@@ -656,11 +714,6 @@ function updateActionPanel(gameState) {
   raiseBtn.disabled = myPlayer.chips < minRaise;
   allInBtn.disabled = false;
   
-  // 启用AI建议按钮（仅在自己回合时）
-  if (aiAssistBtn && isMyTurn) {
-    aiAssistBtn.disabled = false;
-  }
-  
   if (toCall > 0 && currentBet === gameState.currentBet) {
     raiseBtn.disabled = true;
   }
@@ -672,9 +725,28 @@ function disableAllButtons() {
   callBtn.disabled = true;
   raiseBtn.disabled = true;
   allInBtn.disabled = true;
-  if (aiAssistBtn) {
+}
+
+// 更新 AI+1 按钮（仅房主在等待开局时可用）
+function updateBotButton(gameState) {
+  if (!aiAssistBtn) return;
+
+  const myPlayer = gameState.players.find(function(p) { return p.socketId === mySocketId; });
+  if (!myPlayer) {
     aiAssistBtn.disabled = true;
+    return;
   }
+
+  const maxSeats = gameState.config && gameState.config.MAX_SEATS ? gameState.config.MAX_SEATS : 5;
+  const totalPlayers = gameState.players.length;
+
+  // 只有房主、房间未开始且座位未满时可以添加机器人
+  const canAddBot =
+    socket.id === gameState.hostId &&
+    gameState.gameState === 'waiting' &&
+    totalPlayers < maxSeats;
+
+  aiAssistBtn.disabled = !canAddBot;
 }
 
 // ============ 倒计时 ============
