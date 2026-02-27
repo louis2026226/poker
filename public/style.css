@@ -509,7 +509,7 @@ body {
   padding: 2px;
   pointer-events: none;
   background:
-    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+    conic-gradient(#ff9800 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -517,6 +517,7 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
+  box-shadow: 0 0 18px rgba(255, 152, 0, 0.9);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
