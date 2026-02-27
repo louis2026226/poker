@@ -484,8 +484,8 @@ body {
 /* 倒计时样式 */
 .action-timer {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -495,8 +495,8 @@ body {
 
 .timer-ring {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
 }
 
 .timer-ring svg {
@@ -507,13 +507,13 @@ body {
 
 .timer-bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.2);
-  stroke-width: 3;
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 2;
 }
 
 .timer-progress {
   fill: none;
-  stroke: #ffd700;
+  stroke: #4ade80; /* 亮绿色 */
   stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 100;
@@ -526,9 +526,9 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 16px;
+  font-size: 12px;
   font-weight: bold;
-  color: #ffd700;
+  color: #e5ffe5;
 }
 
 .action-buttons {

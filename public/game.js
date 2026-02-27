@@ -715,10 +715,14 @@ function updateActionTimerPosition(gameState) {
   }
 
   var rect = seatEl.getBoundingClientRect();
+  var avatarEl = seatEl.querySelector('.player-avatar');
+  if (avatarEl) {
+    rect = avatarEl.getBoundingClientRect();
+  }
   var tableRect = tableEl.getBoundingClientRect();
 
-  timerEl.style.left = (rect.left - tableRect.left + rect.width / 2 - 20) + 'px';
-  timerEl.style.top = (rect.top - tableRect.top - 26) + 'px';
+  timerEl.style.left = (rect.left - tableRect.left + rect.width / 2 - 16) + 'px';
+  timerEl.style.top = (rect.top - tableRect.top + rect.height / 2 - 16) + 'px';
 }
 
 function updateActionPanel(gameState) {
