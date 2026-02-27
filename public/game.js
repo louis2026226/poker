@@ -712,7 +712,8 @@ function renderCommunityCards(cards) {
     var isNewCard = index >= _lastCommunityCardsLength;
     var cardEl = createCardElement(card, true, {
       flyIn: isNewCard,
-      flyDelay: isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0
+      flyDelay: isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0,
+      extraClass: 'card-board'
     });
     communityCardsEl.appendChild(cardEl);
   });
@@ -911,6 +912,9 @@ function createCardElement(card, faceUp, options) {
   options = options || {};
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
+  if (options.extraClass) {
+    cardEl.classList.add(options.extraClass);
+  }
   if (options.flyIn) {
     cardEl.classList.add('card-fly-in');
     if (options.flyDelay != null) {
@@ -1108,7 +1112,11 @@ function renderSeats(gameState) {
       if (player.socketId === mySocketId) {
         player.hand.forEach(function(card, idx) {
           var delay = handFlyIn ? dealIndex * 120 : 0;
-          cardsEl.appendChild(createCardElement(card, true, { flyIn: handFlyIn, flyDelay: delay }));
+          cardsEl.appendChild(createCardElement(card, true, {
+            flyIn: handFlyIn,
+            flyDelay: delay,
+            extraClass: 'card-my'
+          }));
           dealIndex++;
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {

@@ -440,6 +440,13 @@ body {
   position: relative;
 }
 
+/* 我的手牌 & 公共牌放大约 30%（其他玩家盖着的牌保持默认大小） */
+.card-my,
+.card-board {
+  width: 75px;
+  height: 110px;
+}
+
 /* 发牌飞入动画 */
 @keyframes cardFlyIn {
   from {
