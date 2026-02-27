@@ -516,7 +516,7 @@ body {
   padding: 3px;
   pointer-events: none;
   background:
-    conic-gradient(#ffffff var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -524,7 +524,7 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.95);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
@@ -915,14 +915,21 @@ body {
     font-size: 14px;
   }
 
-  /* 小屏下我的手牌与公共牌也按基础高度 60px，交给布局控制是否需要再缩小 */
+  .card .rank {
+    font-size: 10px;
+  }
+
+  .card .suit {
+    font-size: 10px;
+  }
+
+  /* 小屏下我的手牌与公共牌也按基础高度 60px，并强制内部字号为 20px */
   .card-my,
   .card-board {
     height: 60px;
     width: auto;
   }
 
-  /* 覆盖小屏内对 rank/suit 的缩小，保持我的手牌和公共牌内部字号为 20px */
   .card-my .suit,
   .card-board .suit {
     font-size: 20px;
@@ -931,14 +938,6 @@ body {
   .card-my .rank,
   .card-board .rank {
     font-size: 20px;
-  }
-
-  .card .rank {
-    font-size: 10px;
-  }
-
-  .card .suit {
-    font-size: 10px;
   }
 
   .pot-display {
