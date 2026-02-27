@@ -440,10 +440,10 @@ body {
   position: relative;
 }
 
-/* 我的手牌 & 公共牌（桌面基础尺寸，高度约 100px） */
+/* 我的手牌 & 公共牌（桌面基础尺寸，高度约 60px） */
 .card-my,
 .card-board {
-  height: 100px;
+  height: 60px;
   width: auto;
   aspect-ratio: 58 / 85;
 }
@@ -495,6 +495,17 @@ body {
 
 .card .rank {
   font-size: 20px;
+}
+
+/* 我的手牌与公共牌中牌面符号等比缩放 */
+.card-my .suit,
+.card-board .suit {
+  font-size: 16px;
+}
+
+.card-my .rank,
+.card-board .rank {
+  font-size: 14px;
 }
 
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
