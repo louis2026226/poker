@@ -978,7 +978,7 @@ io.on('connection', (socket) => {
         io.to(room.roomCode).emit('emote', {
           playerId: socket.id,
           nickname: player.nickname,
-          emoji: '🎉',
+          emoji: 'ALL IN !!!',
           seat: player.seat,
           autoTrigger: true
         });

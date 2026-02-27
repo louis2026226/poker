@@ -5,7 +5,9 @@
 let audioCache = {
   card: null,
   bet: null,
-  action: null
+  action: null,
+  win: null,
+  over: null
 };
 let audioCtx = null;
 let mySocketId = null;
@@ -39,6 +41,12 @@ function initAudio() {
   }
   if (!audioCache.action) {
     loadAudio('action', '/chip.mp3');
+  }
+  if (!audioCache.win) {
+    loadAudio('win', '/win.mp3');
+  }
+  if (!audioCache.over) {
+    loadAudio('over', '/over.mp3');
   }
 }
 
@@ -515,8 +523,24 @@ socket.on('gameOver', function(data) {
   } catch (e) {
     console.log('render settlement log error', e);
   }
-  
-  showRoundResultFloats(results);
+
+  // 结算弹窗音效
+  playSound('over');
+
+  // 如果自己本局赢了筹码，播放胜利音效（只播一次）
+  try {
+    var meWin = results.some(function(r) {
+      return r && r.nickname === playerStats.nickname && typeof r.netChange === 'number' && r.netChange > 0;
+    });
+    if (meWin) {
+      playSound('win');
+    }
+  } catch (e) {
+    console.log('play win sound error', e);
+  }
+
+  // 结算界面弹出后，暂停后续动画：不再在头像上飘筹码变化
+  // showRoundResultFloats(results);
   gameOverModal.classList.remove('hidden');
 });
 
