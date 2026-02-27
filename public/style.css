@@ -236,15 +236,20 @@ body {
   background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 70%, #0d330d 100%);
   border: 15px solid #5d4037;
   border-radius: 200px;
-  margin-top: 140px; /* 手机竖版整体下移，避免太贴近顶部 */
+  margin-top: 140px;
   overflow: hidden;
+}
+
+/* 单独针对游戏房间里的牌桌，整体再往下挪一段距离，避免贴在屏幕上半部分 */
+#gameRoom .poker-table {
+  margin-top: 240px; /* 额外下移约 100 像素 */
 }
 
 /* 手机竖屏下进一步下移牌桌位置，保留下方操作空间 */
 @media (max-width: 768px) {
-  .poker-table {
-    height: calc(100vh - 300px);
-    margin-top: 170px;
+  #gameRoom .poker-table {
+    height: calc(100vh - 320px);
+    margin-top: 270px; /* 竖屏再向下挪，约比现在多 150+ 像素 */
   }
 }
 
