@@ -1660,11 +1660,20 @@ function loadVersionLabel() {
     fetch('/version')
       .then(function(res) { return res.json(); })
       .then(function(data) {
-        if (data && data.version) {
-          el.textContent = '当前版本：' + data.version;
+        var text = '版本标签：';
+        if (data && data.sha) {
+          text += data.sha.substring(0, 7);
+        } else if (data && data.version) {
+          text += data.version;
+        } else {
+          text += '加载中...';
         }
+        el.textContent = text;
       })
-      .catch(function() {});
+      .catch(function() {
+        var el2 = document.getElementById('versionLabel');
+        if (el2) el2.textContent = '版本标签：--';
+      });
   } catch (e) {}
 }
 
