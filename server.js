@@ -665,6 +665,12 @@ class PokerRoom {
       });
     });
 
+    const startTs = this.handStartTime || (actions.length ? actions[0].timestamp : Date.now());
+    actions = actions.map(a => ({
+      ...a,
+      elapsedSeconds: Math.max(0, Math.floor((a.timestamp - startTs) / 1000))
+    }));
+
     io.to(this.roomCode).emit('gameOver', {
       results,
       actions,

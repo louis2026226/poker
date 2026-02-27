@@ -485,7 +485,9 @@ socket.on('gameOver', function(data) {
       actions.forEach(function(a, idx) {
         var label = actionTextMap[a.action] || a.action;
         var amt = (typeof a.amount === 'number' && a.amount !== 0) ? (' ' + a.amount) : '';
-        lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt);
+        var sec = (typeof a.elapsedSeconds === 'number') ? a.elapsedSeconds : null;
+        var secText = sec != null ? (' ' + sec + 's') : '';
+        lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt + secText);
       });
 
       var timeStr = '';
