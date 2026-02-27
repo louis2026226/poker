@@ -1,6 +1,12 @@
 // Louis Poker - 游戏前端逻辑
 
 // ============ 初始化区域 ============
+// 音效缓存：通过 <audio> 标签播放筹码/发牌等音效
+let audioCache = {
+  card: null,
+  bet: null,
+  action: null
+};
 let audioCtx = null;
 let mySocketId = null;
 let mySeat = -1;
@@ -12,46 +18,40 @@ let actionTimeLeft = 10;
 let emojiLastTime = 0;
 const EMOJI_COOLDOWN = 20000;
 
-// 音效系统 - 延迟初始化
-function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// 音效系统 - 简单的 <audio> 预加载与播放
+function loadAudio(name, url) {
+  try {
+    var audio = new Audio(url);
+    audio.preload = 'auto';
+    audioCache[name] = audio;
+  } catch (e) {
+    console.log('loadAudio error', name, e);
   }
-  return audioCtx;
+}
+
+function initAudio() {
+  // 在第一次需要时懒加载音效文件
+  if (!audioCache.card) {
+    loadAudio('card', '/card.mp3');
+  }
+  if (!audioCache.bet) {
+    loadAudio('bet', '/chip.mp3');
+  }
+  if (!audioCache.action) {
+    loadAudio('action', '/chip.mp3');
+  }
 }
 
 function playSound(type) {
   try {
-    const ctx = initAudio();
-    if (!ctx) return;
-    
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    if (type === 'card') {
-      oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.15);
-    } else if (type === 'bet') {
-      oscillator.frequency.setValueAtTime(400, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.2);
-    } else if (type === 'action') {
-      oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-      oscillator.frequency.setValueAtTime(800, ctx.currentTime + 0.05);
-      gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.1);
-    }
+    initAudio();
+    var tpl = audioCache[type];
+    if (!tpl) return;
+    // clone 一份，避免快速连击时被打断
+    var audio = tpl.cloneNode();
+    audio.play().catch(function(err) {
+      console.log('playSound error', type, err && err.message);
+    });
   } catch (e) {
     console.log('Audio error:', e);
   }
