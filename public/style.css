@@ -922,6 +922,17 @@ body {
     width: auto;
   }
 
+  /* 覆盖小屏内对 rank/suit 的缩小，保持我的手牌和公共牌内部字号为 20px */
+  .card-my .suit,
+  .card-board .suit {
+    font-size: 20px;
+  }
+
+  .card-my .rank,
+  .card-board .rank {
+    font-size: 20px;
+  }
+
   .card .rank {
     font-size: 10px;
   }
@@ -1023,6 +1034,17 @@ body {
   .card-board {
     height: 60px;
     width: auto;
+  }
+
+  /* 更小屏下也保持我的手牌和公共牌内部字号为 20px */
+  .card-my .suit,
+  .card-board .suit {
+    font-size: 20px;
+  }
+
+  .card-my .rank,
+  .card-board .rank {
+    font-size: 20px;
   }
 
   .action-buttons .btn {
