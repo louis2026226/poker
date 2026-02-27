@@ -503,9 +503,22 @@ body {
   border-radius: 25px;
 }
 
-.pot-label {
-  font-size: 16px;
-  color: #aaa;
+/* 底池前用筹码图标，底池变化时放大到 150% 再恢复 */
+.pot-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+@keyframes potIconPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+.pot-icon.pot-icon-pop {
+  animation: potIconPop 0.4s ease-out;
 }
 
 .pot-amount {
@@ -1039,8 +1052,9 @@ body {
     padding: 8px 15px;
   }
 
-  .pot-label {
-    font-size: 12px;
+  .pot-icon {
+    width: 20px;
+    height: 20px;
   }
 
   .pot-amount {

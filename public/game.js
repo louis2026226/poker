@@ -657,10 +657,21 @@ function updateLocalStatsOnGameEnd(prevState, nextState) {
   }
 }
 
+var _lastPot = null;
+
 // ============ 游戏逻辑 ============
 function updateGameState(gameState) {
   updateGameStatus(gameState);
-  potAmount.textContent = gameState.pot;
+  var newPot = gameState.pot;
+  if (potAmount) potAmount.textContent = newPot;
+  var potIconEl = document.getElementById('potIcon');
+  if (potIconEl && typeof newPot === 'number' && _lastPot !== null && _lastPot !== newPot) {
+    potIconEl.classList.remove('pot-icon-pop');
+    void potIconEl.offsetWidth;
+    potIconEl.classList.add('pot-icon-pop');
+    setTimeout(function() { potIconEl.classList.remove('pot-icon-pop'); }, 400);
+  }
+  _lastPot = newPot;
   
   if (gameState.currentBet > 0) {
     currentBetDisplay.textContent = '当前下注: ' + gameState.currentBet;
