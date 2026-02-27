@@ -162,21 +162,22 @@
       <!-- 庄家按钮 -->
       <div class="dealer-button" id="dealerButton" style="display: none;">D </div>
 
+      <!-- 行动倒计时（跟随当前行动玩家头像） -->
+      <div class="action-timer hidden" id="actionTimer" aria-live="polite" aria-label="倒计时">
+        <div class="timer-ring" role="timer" aria-live="off">
+          <svg viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="timer-bg" cx="18" cy="18" r="16"/>
+            <circle class="timer-progress" cx="18" cy="18" r="16"/>
+          </svg>
+          <span class="timer-text" id="timerText" aria-label="剩余时间">10</span>
+        </div>
+      </div>
+
    </div>
     <!-- 操作面板 -->
     <div class="action-panel" id="actionPanel" role="region" aria-label="游戏操作面板">
       <div class="action-info">
         <span id="actionText" aria-live="polite">等待行动...</span>
-        <div class="action-timer" id="actionTimer" aria-live="polite" aria-label="倒计时">
-          <div class="timer-ring" role="timer" aria-live="off">
-            <svg viewBox="0 0 36 36" aria-hidden="true">
-              <circle class="timer-bg" cx="18" cy="18" r="16"/>
-              <circle class="timer-progress" cx="18" cy="18" r="16"/>
-            </svg>
-            <span class="timer-text" id="timerText" aria-label="剩余时间">10</span>
-          </div>
-        </div>
-      </div>
       <div class="action-buttons" role="group" aria-label="操作按钮">
         <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
         <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>

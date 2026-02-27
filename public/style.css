@@ -483,8 +483,14 @@ body {
 
 /* 倒计时样式 */
 .action-timer {
+  position: absolute;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 60;
 }
 
 .timer-ring {

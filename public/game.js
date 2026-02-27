@@ -462,6 +462,8 @@ function updateGameState(gameState) {
   updateDealerButton(gameState);
   updateActionPanel(gameState);
   updateBotButton(gameState);
+  updateActionTimerPosition(gameState);
+  startActionTimer(gameState);
 }
 
 function updateGameStatus(gameState) {
@@ -685,6 +687,40 @@ function updateDealerButton(gameState) {
   }
 }
 
+// 更新行动倒计时光圈位置（放在当前行动玩家头像上方）
+function updateActionTimerPosition(gameState) {
+  var timerEl = document.getElementById('actionTimer');
+  if (!timerEl) return;
+
+  if (gameState.currentPlayerSeat == null || gameState.currentPlayerSeat === -1) {
+    timerEl.classList.add('hidden');
+    return;
+  }
+
+  var myPlayer = null;
+  for (var i = 0; i < gameState.players.length; i++) {
+    if (gameState.players[i].socketId === mySocketId) {
+      myPlayer = gameState.players[i];
+      break;
+    }
+  }
+  var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+  var displaySeat = (gameState.currentPlayerSeat - mySeatIndex + 5) % 5;
+
+  var seatEl = document.getElementById('seat-' + displaySeat);
+  var tableEl = document.querySelector('.poker-table');
+  if (!seatEl || !tableEl) {
+    timerEl.classList.add('hidden');
+    return;
+  }
+
+  var rect = seatEl.getBoundingClientRect();
+  var tableRect = tableEl.getBoundingClientRect();
+
+  timerEl.style.left = (rect.left - tableRect.left + rect.width / 2 - 20) + 'px';
+  timerEl.style.top = (rect.top - tableRect.top - 26) + 'px';
+}
+
 function updateActionPanel(gameState) {
   var myPlayer = null;
   for (var i = 0; i < gameState.players.length; i++) {
@@ -696,14 +732,12 @@ function updateActionPanel(gameState) {
   
   if (!myPlayer) {
     disableAllButtons();
-    stopActionTimer();
     return;
   }
 
   // 已弃牌、全下或筹码为 0 时不再显示操作
   if (myPlayer.folded || myPlayer.chips <= 0 || gameState.gameState === 'ended') {
     disableAllButtons();
-    stopActionTimer();
     return;
   }
 
@@ -712,11 +746,9 @@ function updateActionPanel(gameState) {
   if (!isMyTurn) {
     actionText.textContent = '等待其他玩家...';
     disableAllButtons();
-    stopActionTimer();
     return;
   }
-  
-  startActionTimer();
+
   
   var currentBet = myPlayer.bet || 0;
   var toCall = gameState.currentBet - currentBet;
@@ -796,9 +828,17 @@ function updateBotButton(gameState) {
 }
 
 // ============ 倒计时 ============
-function startActionTimer() {
-  // 已经在计时则不重复开启，避免多次重置
-  if (actionTimer) return;
+function startActionTimer(gameState) {
+  stopActionTimer();
+
+  if (!gameState ||
+      gameState.currentPlayerSeat == null ||
+      gameState.currentPlayerSeat === -1 ||
+      gameState.gameState === 'waiting' ||
+      gameState.gameState === 'ended') {
+    return;
+  }
+
   actionTimeLeft = 10;
   
   var timerEl = document.getElementById('actionTimer');
@@ -821,11 +861,31 @@ function startActionTimer() {
     
     if (actionTimeLeft <= 0) {
       stopActionTimer();
-      socket.emit('playerAction', 'fold', 0, function(response) {
-        if (!response.success) {
-          console.log('自动弃牌:', response.message);
+
+      // 只有当前行动玩家的客户端在超时时自动弃牌
+      var myPlayer = null;
+      if (currentGameState && currentGameState.players) {
+        for (var i = 0; i < currentGameState.players.length; i++) {
+          if (currentGameState.players[i].socketId === mySocketId) {
+            myPlayer = currentGameState.players[i];
+            break;
+          }
         }
-      });
+      }
+      var isMyTurn = myPlayer &&
+        currentGameState &&
+        currentGameState.currentPlayerSeat === myPlayer.seat &&
+        !myPlayer.folded &&
+        myPlayer.chips > 0 &&
+        currentGameState.gameState !== 'ended';
+
+      if (isMyTurn) {
+        socket.emit('playerAction', 'fold', 0, function(response) {
+          if (!response.success) {
+            console.log('自动弃牌:', response.message);
+          }
+        });
+      }
     }
   }, 1000);
 }
