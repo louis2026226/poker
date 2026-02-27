@@ -451,6 +451,55 @@ socket.on('gameOver', function(data) {
   gameOverModal.classList.remove('hidden');
 });
 
+// 每局结束后在头像上飘出筹码变化文字
+function showRoundResultFloats(results) {
+  try {
+    if (!results || !results.length) return;
+    if (!currentGameState || !currentGameState.players) return;
+
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+
+    var myPlayer = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
+    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+
+    results.forEach(function(result) {
+      var delta = typeof result.netChange === 'number' ? result.netChange : 0;
+      // 按昵称匹配到当前局内的玩家
+      var player = currentGameState.players.find(function(p) { return p.nickname === result.nickname; });
+      if (!player) return;
+
+      var displaySeat = (player.seat - mySeatIndex + 5) % 5;
+      var seatEl = document.getElementById('seat-' + displaySeat);
+      if (!seatEl) return;
+
+      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+      var rect = avatarEl.getBoundingClientRect();
+      var tableRect = tableEl.getBoundingClientRect();
+
+      var floatEl = document.createElement('div');
+      floatEl.className = 'round-result-float';
+
+      var sign = delta > 0 ? '+' : '';
+      floatEl.textContent = '筹码 ' + sign + delta;
+      if (delta < 0) {
+        floatEl.classList.add('negative');
+      }
+
+      floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
+      floatEl.style.top = (rect.top - tableRect.top - 10) + 'px';
+
+      tableEl.appendChild(floatEl);
+
+      setTimeout(function() {
+        floatEl.remove();
+      }, 1900);
+    });
+  } catch (e) {
+    console.log('showRoundResultFloats error', e);
+  }
+}
+
 // ============ 游戏逻辑 ============
 function updateGameState(gameState) {
   updateGameStatus(gameState);
@@ -534,6 +583,80 @@ function createCardElement(card, faceUp, options) {
   cardEl.innerHTML = '<span class="suit top-left">' + card.suit + '</span><span class="rank">' + card.rank + '</span><span class="suit bottom-right">' + card.suit + '</span>';
   
   return cardEl;
+}
+
+// 下注飞筹码：从有新增下注的玩家头像飞到桌子中心
+function animatePotChips(prevState, nextState) {
+  try {
+    if (!prevState || !nextState) return;
+    if (!prevState.players || !nextState.players) return;
+    if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
+    if (nextState.pot <= prevState.pot) return; // 底池没变就不飞筹码
+
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+
+    // 以 socketId 为键索引上一帧玩家状态
+    var prevById = {};
+    prevState.players.forEach(function(p) {
+      if (p && p.socketId) {
+        prevById[p.socketId] = p;
+      }
+    });
+
+    var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
+    var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
+
+    nextState.players.forEach(function(p) {
+      if (!p || !p.socketId) return;
+      var prev = prevById[p.socketId];
+      if (!prev) return;
+
+      var prevBet = prev.bet || 0;
+      var currBet = p.bet || 0;
+      var prevChips = prev.chips || 0;
+      var currChips = p.chips || 0;
+
+      var betIncreased = currBet > prevBet;
+      var chipsDecreased = currChips < prevChips;
+
+      if (!betIncreased && !chipsDecreased) return; // 没有新下注
+
+      var displaySeat = (p.seat - mySeatIndex + 5) % 5;
+      var seatEl = document.getElementById('seat-' + displaySeat);
+      if (!seatEl) return;
+
+      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+      var fromRect = avatarEl.getBoundingClientRect();
+      var tableRect = tableEl.getBoundingClientRect();
+
+      var chipEl = document.createElement('div');
+      chipEl.className = 'chip-fly';
+
+      var startLeft = fromRect.left - tableRect.left + fromRect.width / 2 - 10;
+      var startTop = fromRect.top - tableRect.top + fromRect.height / 2 - 10;
+      chipEl.style.left = startLeft + 'px';
+      chipEl.style.top = startTop + 'px';
+
+      tableEl.appendChild(chipEl);
+
+      // 目标是桌子中心
+      requestAnimationFrame(function() {
+        var centerLeft = tableRect.width / 2 - 10;
+        var centerTop = tableRect.height / 2 - 10;
+        var dx = centerLeft - startLeft;
+        var dy = centerTop - startTop;
+        chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        chipEl.style.opacity = '0';
+      });
+
+      setTimeout(function() {
+        chipEl.remove();
+      }, 600);
+    });
+  } catch (e) {
+    console.log('animatePotChips error', e);
+  }
 }
 
 function renderSeats(gameState) {
