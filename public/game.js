@@ -1145,6 +1145,21 @@ function showAIError(message) {
   }, 3000);
 }
 
+function loadVersionLabel() {
+  try {
+    var el = document.getElementById('versionLabel');
+    if (!el) return;
+    fetch('/version')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data && data.version) {
+          el.textContent = '当前版本：' + data.version;
+        }
+      })
+      .catch(function() {});
+  } catch (e) {}
+}
+
 // ============ 启动 ============
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM loaded, initializing...');
@@ -1153,6 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupEventListeners();
   setupEmojiButtons();
   startHeartbeat();
+  loadVersionLabel();
   showPage('lobby');
   console.log('Initialization complete');
 });

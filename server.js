@@ -16,6 +16,21 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息
+app.get('/version', (req, res) => {
+  const msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
+  const sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
+  const branch = process.env.RAILWAY_GIT_BRANCH || '';
+  const version =
+    msg ||
+    (sha ? `commit ${sha.substring(0, 7)}` : 'local-dev');
+  res.json({
+    version,
+    branch,
+    sha,
+  });
+});
+
 // 游戏配置
 const CONFIG = {
   INITIAL_CHIPS: 1000,
