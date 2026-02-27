@@ -1655,13 +1655,15 @@ function showAIError(message) {
 
 function loadVersionLabel() {
   try {
-    var el = document.getElementById('versionLabel');
-    if (!el) return;
+    var els = document.querySelectorAll('.version-label');
+    if (!els || !els.length) return;
     fetch('/version')
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data && data.version) {
-          el.textContent = '当前版本：' + data.version;
+          for (var i = 0; i < els.length; i++) {
+            els[i].textContent = '当前版本：' + data.version;
+          }
         }
       })
       .catch(function() {});
