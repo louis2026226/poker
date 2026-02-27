@@ -16,7 +16,7 @@ let currentGameState = null;
 let actionTimer = null;
 let countdownSeatEl = null;
 let countdownInfoEl = null;
-let actionTimeLeft = 10;
+let actionTimeLeft = 12;
 let emojiLastTime = 0;
 const EMOJI_COOLDOWN = 20000;
 
@@ -1316,7 +1316,7 @@ function startActionTimer(gameState) {
     return;
   }
 
-  actionTimeLeft = 10;
+  actionTimeLeft = 12;
 
   // 找到当前行动玩家对应的座位与外框，用于绘制顺时针进度条
   countdownSeatEl = null;
@@ -1355,15 +1355,16 @@ function startActionTimer(gameState) {
     console.log('startActionTimer find seat error', e);
   }
   
+  // 0.1 秒一跳，视觉更顺滑
   actionTimer = setInterval(function() {
-    actionTimeLeft--;
+    actionTimeLeft -= 0.1;
     // 更新玩家外框顺时针进度条
     if (countdownInfoEl) {
-      var ratio = Math.max(0, Math.min(1, actionTimeLeft / 10));
+      var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
       var deg = Math.floor(ratio * 360);
       countdownInfoEl.style.setProperty('--timer-deg', deg + 'deg');
     }
-    
+
     if (actionTimeLeft <= 0) {
       stopActionTimer();
 
