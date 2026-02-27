@@ -568,6 +568,9 @@ function renderSeats(gameState) {
     }
   }
   var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+
+  // 发牌顺序计数器：用于控制 preflop 时每张牌的动画延迟，实现一张张顺时针发牌的效果
+  var dealIndex = 0;
   
   gameState.players.forEach(function(player) {
     var displaySeat = (player.seat - mySeatIndex + 5) % 5;
@@ -620,7 +623,9 @@ function renderSeats(gameState) {
     if (player.hand && player.hand.length > 0) {
       if (player.socketId === mySocketId) {
         player.hand.forEach(function(card, idx) {
-          cardsEl.appendChild(createCardElement(card, true, { flyIn: handFlyIn, flyDelay: idx * 60 }));
+          var delay = handFlyIn ? dealIndex * 120 : 0;
+          cardsEl.appendChild(createCardElement(card, true, { flyIn: handFlyIn, flyDelay: delay }));
+          dealIndex++;
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
         player.hand.forEach(function(card) {
@@ -628,12 +633,16 @@ function renderSeats(gameState) {
         });
       } else {
         for (var i = 0; i < 2; i++) {
-          cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: i * 60 }));
+          var delayBack = handFlyIn ? dealIndex * 120 : 0;
+          cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack }));
+          dealIndex++;
         }
       }
     } else if (gameState.gameState !== 'waiting') {
       for (var i = 0; i < 2; i++) {
-        cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: i * 60 }));
+        var delayBack2 = handFlyIn ? dealIndex * 120 : 0;
+        cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack2 }));
+        dealIndex++;
       }
     }
   });

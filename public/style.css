@@ -389,7 +389,7 @@ body {
 /* 发牌飞入动画 */
 @keyframes cardFlyIn {
   from {
-    transform: translate(-80px, -120px) scale(0.3);
+    transform: translate(0, -120px) scale(0.3);
     opacity: 0;
   }
   to {
