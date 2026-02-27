@@ -6,6 +6,8 @@ let mySocketId = null;
 let mySeat = -1;
 let currentGameState = null;
 let actionTimer = null;
+let countdownSeatEl = null;
+let countdownInfoEl = null;
 let actionTimeLeft = 10;
 let emojiLastTime = 0;
 const EMOJI_COOLDOWN = 20000;
@@ -1055,23 +1057,51 @@ function startActionTimer(gameState) {
   }
 
   actionTimeLeft = 10;
-  
-  var timerEl = document.getElementById('actionTimer');
-  var timerText = document.getElementById('timerText');
-  var timerProgress = document.querySelector('.timer-progress');
-  
-  if (timerEl) {
-    timerEl.classList.remove('hidden');
+
+  // 找到当前行动玩家对应的座位与外框，用于绘制顺时针进度条
+  countdownSeatEl = null;
+  countdownInfoEl = null;
+
+  try {
+    var myPlayer = null;
+    if (gameState.players && gameState.players.length) {
+      for (var i = 0; i < gameState.players.length; i++) {
+        if (gameState.players[i].socketId === mySocketId) {
+          myPlayer = gameState.players[i];
+          break;
+        }
+      }
+    }
+    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+    var displaySeat = (gameState.currentPlayerSeat - mySeatIndex + 5) % 5;
+    var seatEl = document.getElementById('seat-' + displaySeat);
+    if (seatEl) {
+      var infoEl = seatEl.querySelector('.player-info');
+      if (infoEl) {
+        // 确保进度条容器存在
+        var ring = infoEl.querySelector('.seat-timer-ring');
+        if (!ring) {
+          ring = document.createElement('div');
+          ring.className = 'seat-timer-ring';
+          infoEl.appendChild(ring);
+        }
+        countdownSeatEl = seatEl;
+        countdownInfoEl = infoEl;
+        seatEl.classList.add('countdown-active');
+        infoEl.style.setProperty('--timer-deg', '360deg');
+      }
+    }
+  } catch (e) {
+    console.log('startActionTimer find seat error', e);
   }
   
   actionTimer = setInterval(function() {
     actionTimeLeft--;
-    if (timerText) {
-      timerText.textContent = actionTimeLeft;
-    }
-    if (timerProgress) {
-      var progress = (actionTimeLeft / 10) * 100;
-      timerProgress.style.strokeDashoffset = (100 - progress).toString();
+    // 更新玩家外框顺时针进度条
+    if (countdownInfoEl) {
+      var ratio = Math.max(0, Math.min(1, actionTimeLeft / 10));
+      var deg = Math.floor(ratio * 360);
+      countdownInfoEl.style.setProperty('--timer-deg', deg + 'deg');
     }
     
     if (actionTimeLeft <= 0) {
@@ -1110,10 +1140,16 @@ function stopActionTimer() {
     clearInterval(actionTimer);
     actionTimer = null;
   }
-  var timerEl = document.getElementById('actionTimer');
-  if (timerEl) {
-    timerEl.classList.add('hidden');
+
+  // 清理外框进度条高亮
+  if (countdownSeatEl) {
+    countdownSeatEl.classList.remove('countdown-active');
   }
+  if (countdownInfoEl) {
+    countdownInfoEl.style.removeProperty('--timer-deg');
+  }
+  countdownSeatEl = null;
+  countdownInfoEl = null;
 }
 
 // ============ 表情功能 ============

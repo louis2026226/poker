@@ -283,6 +283,7 @@ body {
   padding: 8px 15px;
   border-radius: 10px;
   backdrop-filter: blur(5px);
+  position: relative;
 }
 
 .player-avatar {
@@ -490,6 +491,28 @@ body {
   z-index: 55;
 }
 
+/* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
+.seat-timer-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 2px;
+  pointer-events: none;
+  background:
+    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.15s linear;
+}
+
+.seat.countdown-active .player-info .seat-timer-ring {
+  opacity: 1;
+}
+
 /* 结算面板下方的行为记录 */
 .settlement-log {
   margin-top: 10px;
@@ -529,14 +552,8 @@ body {
 
 /* 倒计时样式 */
 .action-timer {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 60;
+  /* 旧的圆形倒计时隐藏，只保留 DOM，不再展示 */
+  display: none;
 }
 
 .timer-ring {
