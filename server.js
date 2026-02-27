@@ -398,7 +398,9 @@ class PokerRoom {
 
     if (!botPlayer) return;
 
-    // 模拟思考时间
+    // 模拟思考时间（1-9秒随机），让机器人更有“犹豫感”
+    const thinkTime = 1000 + Math.floor(Math.random() * 8000);
+
     setTimeout(() => {
       // 再次确认仍然轮到该机器人且游戏仍在进行
       if (
@@ -425,6 +427,25 @@ class PokerRoom {
       const ruleDecision = pokerAI.getRuleBasedDecision(gameState, botPlayer);
       let action = ruleDecision.action || 'check';
       let amount = 0;
+
+       // 基于手牌强度加入一些随机行为，让机器人更真实
+       const handStrength = pokerAI.evaluateHandStrength(botPlayer.hand || [], this.communityCards || []);
+       const toCall = (this.currentBet || 0) - (botPlayer.bet || 0);
+       const rand = Math.random();
+
+       // 强牌时有一定概率直接全下（在有底池/有人下注时更常见）
+       if (handStrength >= 0.7 && botPlayer.chips > 0) {
+         if (this.currentBet > 0 && rand < 0.25) {
+           action = 'all-in';
+         } else if (rand < 0.1) {
+           action = 'all-in';
+         }
+       }
+
+       // 弱牌时有一定概率直接弃牌（即使本来是跟注/过牌），制造“怂”的感觉
+       if (handStrength <= 0.3 && toCall > 0 && rand < 0.25) {
+         action = 'fold';
+       }
 
       switch (action) {
         case 'fold':
