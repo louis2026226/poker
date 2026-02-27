@@ -641,6 +641,37 @@ body {
   color: #f97373;
 }
 
+/* 大牌提示（四条/三条/同花顺/皇家同花顺/顺子/同花/葫芦） */
+.hand-badge {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #fff4c2, #ffd700, #ffb300);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 80;
+  animation: handBadgeFloat 1.6s ease-out forwards;
+}
+
+@keyframes handBadgeFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -8px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -26px);
+  }
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;

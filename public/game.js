@@ -673,6 +673,7 @@ function updateGameState(gameState) {
   
   renderCommunityCards(gameState.communityCards);
   renderSeats(gameState);
+  showBigHandBadges(gameState);
   updateActionPanel(gameState);
   updateBotButton(gameState);
   updateActionTimerPosition(gameState);
@@ -716,6 +717,194 @@ function renderCommunityCards(cards) {
     communityCardsEl.appendChild(cardEl);
   });
   _lastCommunityCardsLength = cards.length;
+}
+
+// 根据玩家手牌 + 公共牌判断是否为大牌，并在头像上方飘出对应文字
+function showBigHandBadges(gameState) {
+  try {
+    if (!gameState || !gameState.communityCards || gameState.communityCards.length < 3) return;
+    if (gameState.gameState !== 'showdown' && gameState.gameState !== 'ended') return;
+    if (!currentGameState || !currentGameState.players) return;
+
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+
+    // 清理旧的提示
+    var oldBadges = tableEl.querySelectorAll('.hand-badge');
+    oldBadges.forEach(function(el) { el.remove(); });
+
+    var myPlayer = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
+    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+
+    currentGameState.players.forEach(function(p) {
+      if (!p || !p.hand || p.hand.length < 2) return;
+      var best = clientFindBestHand(p.hand, gameState.communityCards || []);
+      if (!best) return;
+
+      var label = null;
+      switch (best.type) {
+        case 'royal-flush':
+          label = '皇家同花顺';
+          break;
+        case 'straight-flush':
+          label = '同花顺';
+          break;
+        case 'four-of-a-kind':
+          label = '四条';
+          break;
+        case 'full-house':
+          label = '葫芦';
+          break;
+        case 'flush':
+          label = '同花';
+          break;
+        case 'straight':
+          label = '顺子';
+          break;
+        case 'three-of-a-kind':
+          label = '三条';
+          break;
+        default:
+          break;
+      }
+      if (!label) return;
+
+      var displaySeat = (p.seat - mySeatIndex + 5) % 5;
+      var seatEl = document.getElementById('seat-' + displaySeat);
+      if (!seatEl) return;
+
+      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+      var rect = avatarEl.getBoundingClientRect();
+      var tableRect = tableEl.getBoundingClientRect();
+
+      var badge = document.createElement('div');
+      badge.className = 'hand-badge';
+      badge.textContent = label;
+      badge.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
+      badge.style.top = (rect.top - tableRect.top - 24) + 'px';
+
+      tableEl.appendChild(badge);
+    });
+  } catch (e) {
+    console.log('showBigHandBadges error', e);
+  }
+}
+
+// 客户端评估最佳 5 张牌的大牌类型（与服务端逻辑对应的简化版）
+function clientGetCardValue(rank) {
+  var map = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+  return map[rank] || 0;
+}
+
+function clientEvaluateFiveCards(cards) {
+  var sorted = cards.slice().sort(function(a, b) {
+    return clientGetCardValue(b.rank) - clientGetCardValue(a.rank);
+  });
+  var values = sorted.map(function(c) { return clientGetCardValue(c.rank); });
+  var suits = sorted.map(function(c) { return c.suit; });
+
+  var counts = {};
+  values.forEach(function(v) { counts[v] = (counts[v] || 0) + 1; });
+  var byCountThenValue = Object.keys(counts)
+    .map(function(v) { return { value: parseInt(v, 10), count: counts[v] }; })
+    .sort(function(a, b) {
+      if (b.count !== a.count) return b.count - a.count;
+      return b.value - a.value;
+    });
+
+  var isFlush = suits.every(function(s) { return s === suits[0]; });
+  var uniqueDesc = Array.from(new Set(values));
+  var uniqueAsc = uniqueDesc.slice().sort(function(a, b) { return a - b; });
+
+  var isStraight = false;
+  var straightHigh = 0;
+  if (uniqueAsc.length >= 5) {
+    for (var i = 0; i <= uniqueAsc.length - 5; i++) {
+      var ok = true;
+      for (var j = 0; j < 4; j++) {
+        if (uniqueAsc[i + j + 1] !== uniqueAsc[i] + j + 1) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        isStraight = true;
+        straightHigh = uniqueAsc[i + 4];
+      }
+    }
+  }
+  // A-5 顺子
+  if (!isStraight &&
+      uniqueDesc.indexOf(14) !== -1 &&
+      uniqueDesc.indexOf(5) !== -1 &&
+      uniqueDesc.indexOf(4) !== -1 &&
+      uniqueDesc.indexOf(3) !== -1 &&
+      uniqueDesc.indexOf(2) !== -1) {
+    isStraight = true;
+    straightHigh = 5;
+  }
+
+  // 同花顺 / 皇家同花顺
+  if (isFlush && isStraight) {
+    var isRoyal = straightHigh === 14;
+    return {
+      type: isRoyal ? 'royal-flush' : 'straight-flush',
+      category: isRoyal ? 9 : 8
+    };
+  }
+
+  // 四条
+  if (byCountThenValue[0].count === 4) {
+    return { type: 'four-of-a-kind', category: 7 };
+  }
+
+  // 葫芦
+  if (byCountThenValue[0].count === 3 && byCountThenValue[1] && byCountThenValue[1].count >= 2) {
+    return { type: 'full-house', category: 6 };
+  }
+
+  // 同花
+  if (isFlush) {
+    return { type: 'flush', category: 5 };
+  }
+
+  // 顺子
+  if (isStraight) {
+    return { type: 'straight', category: 4 };
+  }
+
+  // 三条
+  if (byCountThenValue[0].count === 3) {
+    return { type: 'three-of-a-kind', category: 3 };
+  }
+
+  // 其它情况不用提示
+  return { type: 'other', category: 0 };
+}
+
+function clientFindBestHand(holeCards, communityCards) {
+  var cards = (holeCards || []).concat(communityCards || []);
+  if (cards.length < 5) return null;
+  var n = cards.length;
+  var best = null;
+
+  for (var a = 0; a < n - 4; a++) {
+    for (var b = a + 1; b < n - 3; b++) {
+      for (var c = b + 1; c < n - 2; c++) {
+        for (var d = c + 1; d < n - 1; d++) {
+          for (var e = d + 1; e < n; e++) {
+            var five = [cards[a], cards[b], cards[c], cards[d], cards[e]];
+            var hand = clientEvaluateFiveCards(five);
+            if (!best || hand.category > best.category) {
+              best = hand;
+            }
+          }
+        }
+      }
+    }
+  }
+  return best;
 }
 
 function createCardElement(card, faceUp, options) {
