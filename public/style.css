@@ -501,11 +501,15 @@ body {
 .card-my .suit,
 .card-board .suit {
   font-size: 20px;
+  line-height: 20px;
+  display: inline-block;
 }
 
 .card-my .rank,
 .card-board .rank {
   font-size: 20px;
+  line-height: 20px;
+  display: inline-block;
 }
 
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
