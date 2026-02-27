@@ -7,7 +7,8 @@ let audioCache = {
   bet: null,
   action: null,
   win: null,
-  over: null
+  over: null,
+  button: null
 };
 let audioCtx = null;
 let mySocketId = null;
@@ -47,6 +48,9 @@ function initAudio() {
   }
   if (!audioCache.over) {
     loadAudio('over', '/over.mp3');
+  }
+  if (!audioCache.button) {
+    loadAudio('button', '/butten.mp3');
   }
 }
 
@@ -191,12 +195,34 @@ function finishGame(won, finalChips) {
 }
 
 function showPage(page) {
+  var bgmEl = document.getElementById('bgmAudio');
   if (page === 'lobby') {
     lobbyPage.classList.remove('hidden');
     gameRoomPage.classList.add('hidden');
+    if (bgmEl) {
+      bgmEl.pause();
+      bgmEl.currentTime = 0;
+      bgmEl.removeEventListener('ended', window._bgmEndedHandler);
+    }
   } else {
     lobbyPage.classList.add('hidden');
     gameRoomPage.classList.remove('hidden');
+    if (bgmEl) {
+      if (!window._bgmEndedHandler) {
+        window._bgmEndedHandler = function() {
+          setTimeout(function() {
+            if (!gameRoomPage || gameRoomPage.classList.contains('hidden')) return;
+            var el = document.getElementById('bgmAudio');
+            if (el) {
+              el.currentTime = 0;
+              el.play().catch(function() {});
+            }
+          }, 3000);
+        };
+      }
+      bgmEl.addEventListener('ended', window._bgmEndedHandler);
+      bgmEl.play().catch(function() {});
+    }
   }
 }
 
@@ -205,6 +231,7 @@ function setupEventListeners() {
   // 创建房间
   if (createRoomBtn) {
     createRoomBtn.addEventListener('click', function() {
+      playSound('button');
       console.log('Create room clicked');
       if (!socket.connected) {
         alert('未连接服务器，请刷新页面重试');
@@ -242,6 +269,7 @@ function setupEventListeners() {
   // 加入房间按钮
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {
+      playSound('button');
       console.log('Join room clicked');
       joinForm.classList.remove('hidden');
     });
@@ -250,6 +278,7 @@ function setupEventListeners() {
   // 确认加入
   if (confirmJoinBtn) {
     confirmJoinBtn.addEventListener('click', function() {
+      playSound('button');
       console.log('Confirm join clicked');
       if (!socket.connected) {
         alert('未连接服务器，请刷新页面重试');
@@ -295,6 +324,7 @@ function setupEventListeners() {
   // 离开房间
   if (leaveRoomBtn) {
     leaveRoomBtn.addEventListener('click', function() {
+      playSound('button');
       location.reload();
     });
   }
@@ -302,6 +332,7 @@ function setupEventListeners() {
   // 再来一局
   if (newGameBtn) {
     newGameBtn.addEventListener('click', function() {
+      playSound('button');
       gameOverModal.classList.add('hidden');
       socket.emit('restartGame', function(response) {
         if (response.success) {
@@ -315,6 +346,7 @@ function setupEventListeners() {
   // 操作按钮
   if (foldBtn) {
     foldBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('playerAction', 'fold', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -323,6 +355,7 @@ function setupEventListeners() {
   
   if (checkBtn) {
     checkBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('playerAction', 'check', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -360,6 +393,7 @@ function setupEventListeners() {
   // AI+1 按钮：添加一个机器人玩家
   if (aiAssistBtn) {
     aiAssistBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('addBot');
     });
   }
@@ -368,6 +402,7 @@ function setupEventListeners() {
   var dealerTipBtn = document.getElementById('dealerTipBtn');
   if (dealerTipBtn) {
     dealerTipBtn.addEventListener('click', function() {
+      playSound('button');
       if (dealerTipBtn.disabled) return;
       dealerTipBtn.disabled = true;
       socket.emit('dealerTip', function(res) {
@@ -380,6 +415,7 @@ function setupEventListeners() {
   // 开始游戏按钮：仅房主在等待开局且人数足够时可用
   if (startGameBtn) {
     startGameBtn.addEventListener('click', function() {
+      playSound('button');
       startGameBtn.disabled = true;
       startGameBtn.textContent = '开始中...';
       socket.emit('startGame', function(response) {
@@ -1441,6 +1477,7 @@ function setupEmojiButtons() {
     emojiBtns.forEach(function(btn) {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
+        playSound('button');
         var now = Date.now();
         if (now - emojiLastTime < EMOJI_COOLDOWN) {
           return;
@@ -1529,6 +1566,7 @@ function showBetPreview() {
 
 // ============ 复制房间号 ============
 function copyRoomCode() {
+  playSound('button');
   var roomCode = document.getElementById('displayRoomCode').textContent;
   if (roomCode && roomCode !== '-----') {
     navigator.clipboard.writeText(roomCode).then(function() {
@@ -1621,6 +1659,7 @@ function displayAISuggestion(decision) {
 }
 
 function applyAISuggestion(action) {
+  playSound('button');
   console.log('Applying AI suggestion:', action);
   
   // 关闭建议面板

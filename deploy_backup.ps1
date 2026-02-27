@@ -39,23 +39,24 @@ function Invoke-Scp {
 }
 
 # 同步 public 目录（整目录上传）
-Invoke-Scp -Source "`"$LocalRoot\public\*`"" -Target "$Server:`"$RemotePath/public/`""
+$targetPublic = "${Server}:${RemotePath}/public/"
+Invoke-Scp -Source "$LocalRoot\public\*" -Target $targetPublic
 
 # 同步 server.js
-Invoke-Scp -Source "`"$LocalRoot\server.js`"" -Target "$Server:`"$RemotePath/server.js`""
+Invoke-Scp -Source "$LocalRoot\server.js" -Target "${Server}:${RemotePath}/server.js"
 
 # 同步 pokerAI.js（如存在）
 if (Test-Path "$LocalRoot\pokerAI.js") {
-    Invoke-Scp -Source "`"$LocalRoot\pokerAI.js`"" -Target "$Server:`"$RemotePath/pokerAI.js`""
+    Invoke-Scp -Source "$LocalRoot\pokerAI.js" -Target "${Server}:${RemotePath}/pokerAI.js"
 }
 
 # 同步 package.json（可选：确保依赖版本一致）
 if (Test-Path "$LocalRoot\package.json") {
-    Invoke-Scp -Source "`"$LocalRoot\package.json`"" -Target "$Server:`"$RemotePath/package.json`""
+    Invoke-Scp -Source "$LocalRoot\package.json" -Target "${Server}:${RemotePath}/package.json"
 }
 
 Write-Host "远程重启 pm2 应用 $Pm2Name ..." -ForegroundColor Yellow
 ssh $Server "cd $RemotePath && pm2 restart $Pm2Name"
 
-Write-Host "✅ 备用环境同步完成。" -ForegroundColor Green
+Write-Host "Done. Sync completed." -ForegroundColor Green
 
