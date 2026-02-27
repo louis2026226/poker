@@ -392,15 +392,22 @@ socket.on('connect_error', function(err) {
 
 socket.on('gameState', function(gameState) {
   console.log('Game state received');
-  if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
+
+  var prevState = currentGameState;
+
+  if (gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
   if (_lastGameStateForPot) {
     animatePotChips(_lastGameStateForPot, gameState);
   }
+
   currentGameState = gameState;
   updateGameState(gameState);
   _lastGameStateForPot = gameState;
+
+  // 利用 gameState 的变化在本地统计金币 / 场次 / 胜率
+  updateLocalStatsOnGameEnd(prevState, gameState);
 });
 
 socket.on('roomUpdate', function(gameState) {
@@ -497,6 +504,30 @@ function showRoundResultFloats(results) {
     });
   } catch (e) {
     console.log('showRoundResultFloats error', e);
+  }
+}
+
+// 使用 gameState 变化在本地更新主页统计（金币 / 胜率 / 场次）
+function updateLocalStatsOnGameEnd(prevState, nextState) {
+  try {
+    if (!prevState || !nextState) return;
+    if (!mySocketId) return;
+
+    // 只在状态从非 ended 变为 ended 时统计一局
+    if (prevState.gameState === 'ended' || nextState.gameState !== 'ended') return;
+    if (!prevState.players || !nextState.players) return;
+
+    var prevPlayer = prevState.players.find(function(p) { return p.socketId === mySocketId; });
+    var currPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
+    if (!prevPlayer || !currPlayer) return;
+
+    var prevChips = prevPlayer.chips || 0;
+    var currChips = currPlayer.chips || 0;
+    var netChange = currChips - prevChips;
+
+    finishGame(netChange > 0, currChips);
+  } catch (e) {
+    console.log('updateLocalStatsOnGameEnd error', e);
   }
 }
 

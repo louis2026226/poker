@@ -346,12 +346,13 @@ class PokerRoom {
   }
 
   nextAction() {
-    const activePlayers = Object.values(this.players).filter(p => !p.folded && !p.allIn);
-    // 如果只剩1个玩家，直接判定该玩家获胜
-    if (activePlayers.length <= 1) {
-      if (activePlayers.length === 1) {
-        // 唯一未弃牌的玩家获胜
-        activePlayers[0].chips += this.pot;
+    // 存活玩家（未弃牌且还有筹码），用于判断是否只剩一人
+    const alivePlayers = Object.values(this.players).filter(p => !p.folded && p.chips > 0);
+
+    // 如果只剩1个存活玩家，直接判定该玩家获胜
+    if (alivePlayers.length <= 1) {
+      if (alivePlayers.length === 1) {
+        alivePlayers[0].chips += this.pot;
       }
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
@@ -366,12 +367,26 @@ class PokerRoom {
       return;
     }
 
+    // 仍然可以行动的玩家（未弃牌、未全下、还有筹码）
+    const activePlayers = Object.values(this.players).filter(
+      p => !p.folded && !p.allIn && p.chips > 0
+    );
+
+    // 若没有任何玩家可以继续行动（都全下或弃牌），自动把公共牌发完并摊牌
+    if (activePlayers.length === 0) {
+      while (this.gameState !== 'showdown' && this.gameState !== 'ended') {
+        this.advancePhase();
+      }
+      io.to(this.roomCode).emit('gameState', this.getGameState());
+      return;
+    }
+
     const currentIndex = activePlayers.findIndex(p => p.seat === this.currentPlayerSeat);
-    let nextIndex = (currentIndex + 1) % activePlayers.length;
+    let nextIndex = (currentIndex + 1 + activePlayers.length) % activePlayers.length;
     let attempts = 0;
     while (attempts < activePlayers.length) {
       this.currentPlayerSeat = activePlayers[nextIndex].seat;
-      if (!activePlayers[nextIndex].folded && !activePlayers[nextIndex].allIn) break;
+      if (!activePlayers[nextIndex].folded && !activePlayers[nextIndex].allIn && activePlayers[nextIndex].chips > 0) break;
       nextIndex = (nextIndex + 1) % activePlayers.length;
       attempts++;
     }
@@ -493,7 +508,7 @@ class PokerRoom {
         io.to(this.roomCode).emit('gameState', this.getGameState());
         this.nextAction();
       }
-    }, 1500);
+    }, thinkTime);
   }
 
   shouldAdvancePhase() {
