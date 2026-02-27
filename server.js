@@ -16,18 +16,26 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息
+// 版本信息接口：Railway 用环境变量，阿里云等用本地 git，两端都返回 version/sha 供前端显示
 app.get('/version', (req, res) => {
-  const msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
-  const sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
+  let msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
+  let sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
   const branch = process.env.RAILWAY_GIT_BRANCH || '';
+  if (!sha) {
+    try {
+      const { execSync } = require('child_process');
+      sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    } catch (e) {
+      sha = '';
+    }
+  }
   const version =
     msg ||
-    (sha ? `commit ${sha.substring(0, 7)}` : 'local-dev');
+    (sha ? `commit ${sha.length >= 7 ? sha.substring(0, 7) : sha}` : 'local-dev');
   res.json({
     version,
     branch,
-    sha,
+    sha: sha || undefined,
   });
 });
 
