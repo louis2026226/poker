@@ -1393,7 +1393,7 @@ function startActionTimer(gameState) {
         });
       }
     }
-  }, 1000);
+  }, 100);
 }
 
 function stopActionTimer() {
