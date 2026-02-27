@@ -29,6 +29,15 @@ $LocalRoot = $PSScriptRoot
 
 Write-Host "备用环境同步 -> $Server : $RemotePath" -ForegroundColor Cyan
 
+# 写入当前 Git 提交号到 .version，供阿里云 /version 接口读取，与 Railway 版本标签一致
+try {
+    $gitSha = git rev-parse --short HEAD 2>$null
+    if ($gitSha) {
+        Set-Content -Path "$LocalRoot\.version" -Value $gitSha.Trim() -NoNewline
+        Write-Host "Version file written: $gitSha" -ForegroundColor Gray
+    }
+} catch {}
+
 function Invoke-Scp {
     param(
         [string]$Source,
@@ -44,6 +53,11 @@ Invoke-Scp -Source "$LocalRoot\public\*" -Target $targetPublic
 
 # 同步 server.js
 Invoke-Scp -Source "$LocalRoot\server.js" -Target "${Server}:${RemotePath}/server.js"
+
+# 同步 .version（部署时生成的当前提交号，保证阿里云版本标签与本次部署一致）
+if (Test-Path "$LocalRoot\.version") {
+    Invoke-Scp -Source "$LocalRoot\.version" -Target "${Server}:${RemotePath}/.version"
+}
 
 # 同步 pokerAI.js（如存在）
 if (Test-Path "$LocalRoot\pokerAI.js") {

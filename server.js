@@ -16,17 +16,26 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 版本信息接口：Railway 用环境变量，阿里云等用本地 git，两端都返回 version/sha 供前端显示
+// 版本信息接口：Railway 用环境变量，阿里云用部署时写入的 .version 文件，两端显示一致
 app.get('/version', (req, res) => {
   let msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
   let sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
   const branch = process.env.RAILWAY_GIT_BRANCH || '';
   if (!sha) {
     try {
-      const { execSync } = require('child_process');
-      sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-    } catch (e) {
-      sha = '';
+      const vpath = path.join(__dirname, '.version');
+      const fs = require('fs');
+      if (fs.existsSync(vpath)) {
+        sha = fs.readFileSync(vpath, 'utf8').trim();
+      }
+    } catch (e) {}
+    if (!sha) {
+      try {
+        const { execSync } = require('child_process');
+        sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+      } catch (e) {
+        sha = '';
+      }
     }
   }
   const version =
