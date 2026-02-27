@@ -500,12 +500,12 @@ body {
 /* 我的手牌与公共牌中牌面符号等比缩放 */
 .card-my .suit,
 .card-board .suit {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .card-my .rank,
 .card-board .rank {
-  font-size: 14px;
+  font-size: 20px;
 }
 
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
