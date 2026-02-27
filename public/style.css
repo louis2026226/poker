@@ -328,7 +328,7 @@ body {
 
 .player-bet {
   font-size: 14px;
-  color: #ff6b6b;
+  color: #ffffff;
   font-weight: bold;
   min-height: 20px;
 }
@@ -417,13 +417,13 @@ body {
 
 .current-bet {
   font-size: 14px;
-  color: #ff6b6b;
+  color: #ffffff;
 }
 
 /* 扑克牌样式 */
 .card {
-  width: 45px;
-  height: 65px;
+  width: 58px;
+  height: 85px;
   background: #fff;
   border-radius: 5px;
   display: flex;
@@ -465,7 +465,7 @@ body {
 }
 
 .card .suit {
-  font-size: 18px;
+  font-size: 22px;
   position: absolute;
 }
 
@@ -481,7 +481,7 @@ body {
 }
 
 .card .rank {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 /* 庄家按钮 */
@@ -504,9 +504,9 @@ body {
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
 .seat-timer-ring {
   position: absolute;
-  inset: -3px;
+  inset: -5px;
   border-radius: inherit;
-  padding: 2px;
+  padding: 3px;
   pointer-events: none;
   background:
     conic-gradient(#ff9800 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
