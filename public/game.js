@@ -77,7 +77,7 @@ let playerStats = {
 let lobbyPage, gameRoomPage, nicknameInput, roomCodeInput;
 let createRoomBtn, joinRoomBtn, confirmJoinBtn, joinForm;
 let displayRoomCode, gameStatus, leaveRoomBtn;
-let potAmount, communityCardsEl, currentBetDisplay, dealerButton;
+let potAmount, communityCardsEl, currentBetDisplay;
 let actionPanel, actionText, foldBtn, checkBtn, callBtn, raiseBtn, allInBtn;
 let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent, startGameBtn;
 let raiseSlider, raiseAmountPanel, raiseAmountDisplay;
@@ -99,7 +99,6 @@ function initDOMElements() {
   potAmount = document.getElementById('potAmount');
   communityCardsEl = document.getElementById('communityCards');
   currentBetDisplay = document.getElementById('currentBetDisplay');
-  dealerButton = document.getElementById('dealerButton');
   actionPanel = document.getElementById('actionPanel');
   actionText = document.getElementById('actionText');
   foldBtn = document.getElementById('foldBtn');
@@ -646,7 +645,6 @@ function updateGameState(gameState) {
   
   renderCommunityCards(gameState.communityCards);
   renderSeats(gameState);
-  updateDealerButton(gameState);
   updateActionPanel(gameState);
   updateBotButton(gameState);
   updateActionTimerPosition(gameState);
@@ -926,37 +924,6 @@ function getActionText(action) {
     'all-in': '全下'
   };
   return actions[action] || action;
-}
-
-function updateDealerButton(gameState) {
-  if (gameState.dealerSeat === -1 || gameState.gameState === 'waiting') {
-    dealerButton.style.display = 'none';
-    return;
-  }
-  
-  var myPlayer = null;
-  for (var i = 0; i < gameState.players.length; i++) {
-    if (gameState.players[i].socketId === mySocketId) {
-      myPlayer = gameState.players[i];
-      break;
-    }
-  }
-  var mySeatIndex = myPlayer ? myPlayer.seat : 0;
-  var displaySeat = (gameState.dealerSeat - mySeatIndex + 5) % 5;
-  
-  var seatEl = document.getElementById('seat-' + displaySeat);
-  if (seatEl) {
-    var rect = seatEl.getBoundingClientRect();
-    var avatarEl = seatEl.querySelector('.player-avatar');
-    if (avatarEl) {
-      rect = avatarEl.getBoundingClientRect();
-    }
-    var tableRect = document.querySelector('.poker-table').getBoundingClientRect();
-    dealerButton.style.display = 'flex';
-    // 缩小后的 D 按钮放到头像框内部左侧，避免挡住牌型文字
-    dealerButton.style.left = (rect.left - tableRect.left + 4) + 'px';
-    dealerButton.style.top = (rect.top - tableRect.top + rect.height / 2 - 11) + 'px';
-  }
 }
 
 // 更新行动倒计时光圈位置（放在当前行动玩家头像上方）
