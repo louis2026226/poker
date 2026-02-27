@@ -1355,9 +1355,9 @@ function startActionTimer(gameState) {
     console.log('startActionTimer find seat error', e);
   }
   
-  // 0.1 秒一跳，视觉更顺滑
+  // 0.02 秒一跳，视觉更顺滑
   actionTimer = setInterval(function() {
-    actionTimeLeft -= 0.1;
+    actionTimeLeft -= 0.02;
     // 更新玩家外框顺时针进度条
     if (countdownInfoEl) {
       var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
@@ -1393,7 +1393,7 @@ function startActionTimer(gameState) {
         });
       }
     }
-  }, 100);
+  }, 20);
 }
 
 function stopActionTimer() {
