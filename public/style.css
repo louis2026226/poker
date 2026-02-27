@@ -425,7 +425,7 @@ body {
   color: #ffffff;
 }
 
-/* 扑克牌样式 */
+/* 扑克牌样式（基础尺寸，其他玩家盖着的牌） */
 .card {
   width: 58px;
   height: 85px;
@@ -440,11 +440,11 @@ body {
   position: relative;
 }
 
-/* 我的手牌 & 公共牌放大约 30%（其他玩家盖着的牌保持默认大小） */
+/* 我的手牌 & 公共牌（当前桌面基础尺寸，高度约 100px） */
 .card-my,
 .card-board {
-  width: 100px;
-  height: 150px;
+  width: 70px;
+  height: 100px;
 }
 
 /* 发牌飞入动画 */
