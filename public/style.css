@@ -238,9 +238,26 @@ body {
   min-width: 120px;
 }
 
+.action-buttons-wrap {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  justify-items: center;
+  align-items: center;
+}
+
+.action-buttons-wrap .action-buttons {
+  grid-column: 1 / -1;
+}
+
+.action-buttons-wrap .start-game-btn {
+  grid-column: 4;
+  justify-self: center;
+}
+
 .start-game-btn {
   min-width: 150px;
-  margin-top: 10px;
+  margin-top: 6px;
   margin-bottom: 0;
 }
 

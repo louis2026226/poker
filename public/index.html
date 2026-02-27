@@ -63,6 +63,8 @@
   <!-- 游戏房间页面 -->
   <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
     <div class="game-header" role="banner" aria-label="游戏头部信息">
+      <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
+              tabindex="13" aria-label="离开当前房间">离开房间</button>
       <div class="room-info">
         <span class="room-label" id="roomLabel">房间号:</span>
         <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
@@ -70,8 +72,6 @@
               role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
       </div>
       <div class="game-status" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
-      <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
-              tabindex="13" aria-label="离开当前房间">离开房间</button>
     </div>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
@@ -177,16 +177,18 @@
         <input type="range" id="raiseSlider" min="0" max="1000" value="20" aria-label="加注金额" tabindex="25">
         <span id="raiseAmountDisplay" aria-live="polite">20</span>
       </div>
-      <div class="action-buttons" role="group" aria-label="操作按钮">
-        <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
-        <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
-        <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
-        <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
-        <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
-        <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
+      <div class="action-buttons-wrap" role="group" aria-label="操作按钮与开始游戏">
+        <div class="action-buttons" role="group" aria-label="操作按钮">
+          <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
+          <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
+          <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
+          <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
+          <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
+          <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
+        </div>
+        <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
+                tabindex="12" aria-label="开始游戏">开始游戏</button>
       </div>
-      <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
-              tabindex="12" aria-label="开始游戏">开始游戏</button>
     </div>
   </div>
 
