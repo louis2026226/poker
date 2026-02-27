@@ -748,7 +748,7 @@ function updateActionPanel(gameState) {
   var isMyTurn = gameState.currentPlayerSeat === myPlayer.seat;
   
   if (!isMyTurn) {
-    actionText.textContent = '等待其他玩家...';
+    actionText.textContent = '';
     disableAllButtons();
     return;
   }
@@ -757,7 +757,7 @@ function updateActionPanel(gameState) {
   var currentBet = myPlayer.bet || 0;
   var toCall = gameState.currentBet - currentBet;
   
-  actionText.textContent = '请选择操作';
+  actionText.textContent = '';
   
   foldBtn.disabled = false;
   
