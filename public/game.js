@@ -359,9 +359,13 @@ function setupEventListeners() {
       startGameBtn.disabled = true;
       startGameBtn.textContent = '开始中...';
       socket.emit('startGame', function(response) {
-        startGameBtn.textContent = '开始游戏';
         if (!response || !response.success) {
+          startGameBtn.disabled = false;
+          startGameBtn.textContent = '开始游戏';
           alert(response && response.message ? response.message : '无法开始游戏，请稍后重试');
+        } else {
+          // 开始游戏成功后隐藏按钮，等下一次牌局结束/等待时再由 updateBotButton 控制显示
+          startGameBtn.classList.add('hidden');
         }
       });
     });
@@ -1066,7 +1070,16 @@ function updateBotButton(gameState) {
       socket.id === gameState.hostId &&
       activePlayers.length >= 2 &&
       (gameState.gameState === 'waiting' || gameState.gameState === 'ended');
-    startGameBtn.disabled = !canStart;
+
+    if (gameState.gameState === 'waiting' || gameState.gameState === 'ended') {
+      startGameBtn.classList.toggle('hidden', !canStart);
+      startGameBtn.disabled = !canStart;
+      if (canStart) {
+        startGameBtn.textContent = '开始游戏';
+      }
+    } else {
+      startGameBtn.classList.add('hidden');
+    }
   }
 }
 

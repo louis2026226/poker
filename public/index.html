@@ -70,8 +70,6 @@
               role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
       </div>
       <div class="game-status" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
-      <button id="startGameBtn" class="btn btn-primary btn-small" 
-              tabindex="12" aria-label="开始游戏">开始游戏</button>
       <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
               tabindex="13" aria-label="离开当前房间">离开房间</button>
     </div>
@@ -174,6 +172,9 @@
       <div class="action-info">
         <span id="actionText" aria-live="polite"></span>
       </div>
+      <!-- 开始游戏按钮：位于筹码滑动条正上方 -->
+      <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
+              tabindex="12" aria-label="开始游戏">开始游戏</button>
       <!-- 将筹码滑动条移动到按钮上方，手机竖屏更好操作 -->
       <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
         <label for="raiseSlider" class="sr-only">加注金额滑块</label>
