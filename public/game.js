@@ -1762,8 +1762,9 @@ function loadVersionLabel() {
     fetch('/version')
       .then(function(res) { return res.json(); })
       .then(function(data) {
-        if (data && data.version) {
-          el.textContent = data.version;
+        if (data) {
+          var ver = (data.sha && data.sha.length >= 7) ? data.sha.substring(0, 7) : (data.version || '');
+          el.textContent = ver ? '当前版本：' + ver : '';
         }
       })
       .catch(function() {});
