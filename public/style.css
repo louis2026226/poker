@@ -194,17 +194,20 @@ body {
   margin-top: 6px;
 }
 
-/* 游戏房间：左上角房号 + 离开房间按钮 */
+/* 游戏房间：左上角房号，右上角离开房间按钮 */
 .game-room-top {
   position: fixed;
   top: 12px;
   left: 12px;
+  right: 12px;
   z-index: 100;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding-top: env(safe-area-inset-top, 0);
   padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
 }
 
 .room-code-fixed {
@@ -229,9 +232,10 @@ body {
 }
 
 .leave-room-fixed {
-  min-width: 100px;
-  padding: 8px 16px;
-  margin-right: env(safe-area-inset-right, 0);
+  min-width: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 .action-buttons-wrap {
@@ -376,12 +380,13 @@ body {
 .poker-table {
   position: relative;
   width: 100%;
-  height: calc(100vh - 240px);
+  height: calc(100vh - 240px + 100px);
   background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 70%, #0d330d 100%);
   border: 15px solid #5d4037;
   border-radius: 200px;
   margin-top: 140px;
   overflow: visible;
+  box-shadow: 0 8px 0 #1b5e20, 0 12px 0 rgba(0,0,0,0.15), 0 24px 40px rgba(0,0,0,0.35);
 }
 
 /* 单独针对游戏房间里的牌桌，整体再往下挪一段距离，避免贴在屏幕上半部分 */
@@ -392,7 +397,7 @@ body {
 /* 手机竖屏下进一步下移牌桌位置，保留下方操作空间 */
 @media (max-width: 768px) {
   #gameRoom .poker-table {
-    height: calc(100vh - 320px);
+    height: calc(100vh - 320px + 100px);
     margin-top: 270px;
   }
   .dealer-image {
@@ -429,18 +434,18 @@ body {
   transform: translateX(-50%) translateY(35px) !important;
 }
 
-/* 左右两侧上下座位各间隔至少 30px，避免重叠 */
+/* 左右两侧上下座位各间隔至少 30px；左侧两座往左 20px，右侧两座往右 20px */
 #seat-2 {
-  transform: translateY(-15px);
+  transform: translateY(-15px) translateX(-20px);
 }
 #seat-1 {
-  transform: translateY(15px);
+  transform: translateY(15px) translateX(-20px);
 }
 #seat-3 {
-  transform: translateY(-15px);
+  transform: translateY(-15px) translateX(20px);
 }
 #seat-4 {
-  transform: translateY(15px);
+  transform: translateY(15px) translateX(20px);
 }
 
 .player-info {
@@ -1032,7 +1037,7 @@ body {
   }
 
   .poker-table {
-    height: calc(100vh - 280px);
+    height: calc(100vh - 280px + 100px);
     margin-top: 100px;
     border-width: 8px;
     border-radius: 120px;
@@ -1048,22 +1053,22 @@ body {
 
   .seat-1 {
     bottom: 25% !important;
-    left: 8% !important;
+    left: calc(8% - 20px) !important;
   }
 
   .seat-2 {
     top: 8% !important;
-    left: 8% !important;
+    left: calc(8% - 20px) !important;
   }
 
   .seat-3 {
     top: 8% !important;
-    right: 8% !important;
+    right: calc(8% - 20px) !important;
   }
 
   .seat-4 {
     bottom: 25% !important;
-    right: 8% !important;
+    right: calc(8% - 20px) !important;
   }
 
   .player-info {
