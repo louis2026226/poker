@@ -1,8 +1,18 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 const path = require('path');
+
+// 阿里云等环境无 Railway 变量时，从 deploy_version.txt 读取短 hash（部署脚本会写入）
+let deployVersionFromFile = '';
+try {
+  const p = path.join(__dirname, 'deploy_version.txt');
+  if (fs.existsSync(p)) {
+    deployVersionFromFile = (fs.readFileSync(p, 'utf8') || '').trim().substring(0, 7);
+  }
+} catch (e) {}
 
 // 加载环境变量
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -16,10 +26,11 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息
+// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息（Railway 用 env，阿里云用 deploy_version.txt）
 app.get('/version', (req, res) => {
   const msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
-  const sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
+  let sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
+  if (!sha && deployVersionFromFile) sha = deployVersionFromFile;
   const branch = process.env.RAILWAY_GIT_BRANCH || '';
   const version =
     msg ||
@@ -27,7 +38,7 @@ app.get('/version', (req, res) => {
   res.json({
     version,
     branch,
-    sha,
+    sha: sha ? sha.substring(0, 7) : '',
   });
 });
 
