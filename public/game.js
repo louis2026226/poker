@@ -272,6 +272,7 @@ function initLanguage() {
     currentLang = saved;
   }
   applyTranslationsStatic();
+}
 
 // ============ DOM 元素 ============
 let lobbyPage, gameRoomPage, nicknameInput, roomCodeInput;
