@@ -71,6 +71,55 @@ const socket = io();
 // 本地存储键
 const STORAGE_KEY = 'poker_nickname';
 const STATS_KEY = 'poker_player_stats';
+const LANG_STORAGE_KEY = 'poker_lang';
+
+// 当前语言 'zh' | 'en'
+let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(LANG_STORAGE_KEY)) || 'zh';
+
+// 翻译文案（大厅等）
+var I18N = {
+  subtitle: { zh: '与好友一起畅玩', en: 'Play with friends' },
+  statNickname: { zh: '昵称', en: 'Nickname' },
+  statChips: { zh: '金币', en: 'Chips' },
+  statWinRate: { zh: '胜率', en: 'Win rate' },
+  statGames: { zh: '场次', en: 'Games' },
+  nicknamePlaceholder: { zh: '请输入昵称', en: 'Enter nickname' },
+  createRoom: { zh: '创建房间', en: 'Create room' },
+  joinRoom: { zh: '加入房间', en: 'Join room' },
+  roomCodePlaceholder: { zh: '请输入5位房间号', en: 'Enter 5-digit room code' },
+  confirmJoin: { zh: '确认加入', en: 'Confirm' },
+  versionPrefix: { zh: '当前版本：', en: 'Version: ' }
+};
+
+function getCurrentLang() {
+  return currentLang;
+}
+
+function setCurrentLang(lang) {
+  currentLang = lang === 'en' ? 'en' : 'zh';
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+  } catch (e) {}
+}
+
+function applyLang() {
+  var lang = getCurrentLang();
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    var t = I18N[key];
+    if (t && t[lang]) el.textContent = t[lang];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    var t = I18N[key];
+    if (t && t[lang]) el.placeholder = t[lang];
+  });
+  var versionEl = document.getElementById('versionLabel');
+  if (versionEl) {
+    var sha = versionEl.getAttribute('data-version-sha') || '';
+    versionEl.textContent = (I18N.versionPrefix && I18N.versionPrefix[lang] ? I18N.versionPrefix[lang] : '当前版本：') + sha;
+  }
+}
 
 // 玩家数据结构
 let playerStats = {
@@ -292,6 +341,15 @@ function setupEventListeners() {
     });
   }
   
+  // 语言切换（中/EN）
+  var langToggleBtn = document.getElementById('langToggleBtn');
+  if (langToggleBtn) {
+    langToggleBtn.addEventListener('click', function() {
+      setCurrentLang(getCurrentLang() === 'en' ? 'zh' : 'en');
+      applyLang();
+    });
+  }
+
   // 离开房间：先向服务端请求当前筹码，写回主界面金币总额后再刷新
   if (leaveRoomBtn) {
     leaveRoomBtn.addEventListener('click', function() {
@@ -425,16 +483,17 @@ socket.on('gameState', function(gameState) {
     animatePotChips(_lastGameStateForPot, gameState);
   }
 
-  /* 开局大小盲：先飞筹码，飞完再发手牌（延迟 700ms 后再更新状态与发牌） */
+  /* 开局大小盲：筹码先飞到白色筹码区，停留 1 秒后再更新状态与发牌并开始倒计时 */
   var potIncreased = _lastGameStateForPot && typeof gameState.pot === 'number' && gameState.pot > ((_lastGameStateForPot.pot) || 0);
   if (isNewDeal && potIncreased) {
+    var delayMs = 500 + 1000;
     setTimeout(function() {
       _isNewDealPreflop = true;
       currentGameState = gameState;
       updateGameState(gameState);
       _lastGameStateForPot = gameState;
       updateLocalStatsOnGameEnd(prevState, gameState);
-    }, 700);
+    }, delayMs);
     return;
   }
 
@@ -542,24 +601,19 @@ socket.on('gameOver', function(data) {
     console.log('render settlement log error', e);
   }
 
-  // 结算弹窗音效
   playSound('over');
-
-  // 如果自己本局赢了筹码，播放胜利音效（只播一次）
   try {
     var meWin = results.some(function(r) {
       return r && r.nickname === playerStats.nickname && typeof r.netChange === 'number' && r.netChange > 0;
     });
-    if (meWin) {
-      playSound('win');
-    }
-  } catch (e) {
-    console.log('play win sound error', e);
-  }
+    if (meWin) playSound('win');
+  } catch (e) {}
 
-  // 结算界面弹出后，暂停后续动画：不再在头像上飘筹码变化
-  // showRoundResultFloats(results);
-  gameOverModal.classList.remove('hidden');
+  /* 筹码飞到胜者头上并显示「筹码+数字」，停留 1 秒后再弹出结算框 */
+  showRoundResultFloats(results);
+  setTimeout(function() {
+    gameOverModal.classList.remove('hidden');
+  }, 2000);
 });
 
 function formatDuration(totalSeconds) {
@@ -586,12 +640,10 @@ function showRoundResultFloats(results) {
     var myPlayer = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = myPlayer ? myPlayer.seat : 0;
 
-    // 先按筹码变化从大到小排序，保证筹码飞行从最大赢家优先
-    var sorted = results.slice().sort(function(a, b) {
-      var da = typeof a.netChange === 'number' ? a.netChange : 0;
-      var db = typeof b.netChange === 'number' ? b.netChange : 0;
-      return db - da;
-    });
+    // 仅胜者：按赢的筹码从大到小排序，筹码飞到胜者头上并显示「筹码+数字」
+    var sorted = results.slice()
+      .filter(function(r) { return typeof r.netChange === 'number' && r.netChange > 0; })
+      .sort(function(a, b) { return (b.netChange || 0) - (a.netChange || 0); });
 
     sorted.forEach(function(result, idx) {
       var delta = typeof result.netChange === 'number' ? result.netChange : 0;
@@ -607,15 +659,19 @@ function showRoundResultFloats(results) {
       var rect = avatarEl.getBoundingClientRect();
       var tableRect = tableEl.getBoundingClientRect();
 
-      // 从桌面中央飞向赢家头像
-      var chipEl = document.createElement('div');
-      chipEl.className = 'chip-fly';
-
+      var chipZone = document.getElementById('chipLandingZone');
       var centerLeft = tableRect.width / 2 - 10;
       var centerTop = tableRect.height / 2 - 10;
+      if (chipZone) {
+        var zoneRect = chipZone.getBoundingClientRect();
+        centerLeft = (zoneRect.left - tableRect.left + zoneRect.width / 2) - 10;
+        centerTop = (zoneRect.top - tableRect.top + zoneRect.height / 2) - 10;
+      }
+
+      var chipEl = document.createElement('div');
+      chipEl.className = 'chip-fly';
       chipEl.style.left = centerLeft + 'px';
       chipEl.style.top = centerTop + 'px';
-
       tableEl.appendChild(chipEl);
 
       // 使用微小延迟区分多名赢家的飞行起点
@@ -1772,7 +1828,8 @@ function loadVersionLabel() {
       .then(function(data) {
         if (data) {
           var ver = (data.sha && data.sha.length >= 7) ? data.sha.substring(0, 7) : (data.version || '');
-          el.textContent = ver ? '当前版本：' + ver : '';
+          el.setAttribute('data-version-sha', ver || '');
+          applyLang();
         }
       })
       .catch(function() {});
@@ -1787,6 +1844,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupEventListeners();
   setupEmojiButtons();
   startHeartbeat();
+  applyLang();
   loadVersionLabel();
   showPage('lobby');
   console.log('Initialization complete');

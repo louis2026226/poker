@@ -12,24 +12,24 @@
   <div id="lobby" class="page" role="main" aria-label="游戏大厅">
     <div class="lobby-container" role="form" aria-labelledby="lobby-title">
       <h1 id="lobby-title" class="title">Louis Poker</h1>
-      <p class="subtitle">与好友一起畅玩</p>
+      <p class="subtitle" data-i18n="subtitle">与好友一起畅玩</p>
       
       <!-- 玩家信息显示 -->
       <div id="playerStats" class="player-stats" role="region" aria-label="玩家统计信息">
         <div class="stat-item">
-          <span class="stat-label">昵称</span>
+          <span class="stat-label" data-i18n="statNickname">昵称</span>
           <span id="statNickname" class="stat-value" aria-label="玩家昵称">-</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">金币</span>
+          <span class="stat-label" data-i18n="statChips">金币</span>
           <span id="statChips" class="stat-value" aria-label="当前金币">1000</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">胜率</span>
+          <span class="stat-label" data-i18n="statWinRate">胜率</span>
           <span id="statWinRate" class="stat-value" aria-label="胜率">0%</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">场次</span>
+          <span class="stat-label" data-i18n="statGames">场次</span>
           <span id="statGames" class="stat-value" aria-label="游戏场次">0</span>
         </div>
       </div>
@@ -37,22 +37,24 @@
       <div class="lobby-form" role="group" aria-label="登录表单">
         <div class="input-group">
           <input type="text" id="nickname" placeholder="请输入昵称" maxlength="12" 
+                 data-i18n-placeholder="nicknamePlaceholder"
                  aria-required="true" aria-label="请输入昵称" 
                  autocomplete="off" tabindex="1">
         </div>
         
         <button id="createRoomBtn" class="btn btn-primary" tabindex="2" 
-                aria-label="创建新房间">创建房间</button>
+                aria-label="创建新房间" data-i18n="createRoom">创建房间</button>
         <button id="joinRoomBtn" class="btn btn-secondary" tabindex="3" 
-                aria-label="加入已有房间">加入房间</button>
-        <div class="version-label" id="versionLabel" aria-label="版本">...</div>
+                aria-label="加入已有房间" data-i18n="joinRoom">加入房间</button>
+        <div class="version-label" id="versionLabel" aria-label="版本" data-version-sha="">...</div>
         
         <div id="joinForm" class="join-form hidden" role="group" aria-label="加入房间表单">
           <input type="text" id="roomCode" placeholder="请输入5位房间号" maxlength="5" 
+                 data-i18n-placeholder="roomCodePlaceholder"
                  aria-required="true" aria-label="请输入5位房间号"
                  autocomplete="off" tabindex="4">
           <button id="confirmJoinBtn" class="btn btn-primary" tabindex="5" 
-                  aria-label="确认加入房间">确认加入</button>
+                  aria-label="确认加入房间" data-i18n="confirmJoin">确认加入</button>
         </div>
       </div>
     </div>
