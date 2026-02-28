@@ -13,6 +13,7 @@
     <div class="lobby-container" role="form" aria-labelledby="lobby-title">
       <h1 id="lobby-title" class="title">Louis Poker</h1>
       <p class="subtitle">与好友一起畅玩</p>
+      <button id="langToggleBtn" class="lang-toggle-btn" type="button">中 / EN</button>
       
       <!-- 玩家信息显示 -->
       <div id="playerStats" class="player-stats hidden" role="region" aria-label="玩家统计信息">
@@ -68,6 +69,7 @@
       <div class="room-code-fixed">
         <span class="room-code-label">房号:</span>
         <span id="displayRoomCode" class="room-code-value" onclick="copyRoomCode()" title="点击复制" role="button" tabindex="10">-----</span>
+        <div id="totalChips" class="total-chips" data-value="0">总额：0</div>
       </div>
       <button id="leaveRoomBtn" class="btn btn-danger btn-small leave-room-fixed" 
               tabindex="13" aria-label="离开当前房间">离开房间</button>

@@ -50,6 +50,23 @@ body {
   margin-bottom: 40px;
 }
 
+.lang-toggle-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lang-toggle-btn:hover {
+  background: rgba(30, 64, 175, 0.9);
+}
+
 /* 玩家信息显示 */
 .player-stats {
   display: flex;
@@ -216,6 +233,12 @@ body {
   gap: 6px;
   font-size: 16px;
   color: #aaa;
+}
+
+.total-chips {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #fbbf24;
 }
 
 .room-code-fixed .room-code-value {
