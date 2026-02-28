@@ -727,17 +727,21 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   z-index: 200;
 }
 
-/* 底池前用筹码图标，底池变化时放大到 150% 再恢复 */
+/* 底池前筹码图标，有筹码飞入时放大 130% 再恢复 */
 .pot-icon {
+  display: inline-block;
   width: 24px;
   height: 24px;
-  margin-right: 6px;
+  margin-right: 8px;
   flex-shrink: 0;
+  background-image: url('/chip.png');
+  background-size: contain;
+  background-repeat: no-repeat;
 }
 
 @keyframes potIconPop {
   0% { transform: scale(1); }
-  50% { transform: scale(1.5); }
+  50% { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
 

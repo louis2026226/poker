@@ -1007,6 +1007,14 @@ function animatePotChips(prevState, nextState) {
 
     playSound('bet');
 
+    var potIconEl = document.getElementById('potIcon');
+    if (potIconEl) {
+      potIconEl.classList.remove('pot-icon-pop');
+      potIconEl.offsetHeight;
+      potIconEl.classList.add('pot-icon-pop');
+      setTimeout(function() { potIconEl.classList.remove('pot-icon-pop'); }, 400);
+    }
+
     var tableEl = document.querySelector('.poker-table');
     if (!tableEl) return;
 
