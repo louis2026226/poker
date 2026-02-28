@@ -898,42 +898,6 @@ body {
   }
 }
 
-/* ALL IN 飘字：黄色、外发光、上飘、停留 1 秒后消失 */
-.all-in-float {
-  position: absolute;
-  transform: translate(-50%, 0);
-  font-size: 22px;
-  font-weight: bold;
-  color: #ffeb3b;
-  text-shadow:
-    0 0 10px #ffeb3b,
-    0 0 20px #ffc107,
-    0 0 30px rgba(255, 235, 59, 0.8);
-  pointer-events: none;
-  z-index: 80;
-  white-space: nowrap;
-  animation: allInFloat 2.2s ease-out forwards;
-}
-
-@keyframes allInFloat {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 0);
-  }
-  15% {
-    opacity: 1;
-    transform: translate(-50%, -25px);
-  }
-  15.01%, 65% {
-    opacity: 1;
-    transform: translate(-50%, -25px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -45px);
-  }
-}
-
 .action-buttons {
   display: flex;
   gap: 8px;

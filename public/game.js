@@ -410,14 +410,6 @@ function setupEventListeners() {
   if (allInBtn) {
     allInBtn.addEventListener('click', function() {
       playSound('bet');
-      if (currentGameState && currentGameState.players) {
-        var myP = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
-        if (myP) {
-          var mySeatIdx = myP.seat;
-          var myDisplaySeat = (myP.seat - mySeatIdx + 5) % 5;
-          showAllInFloatAtSeat(myDisplaySeat);
-        }
-      }
       socket.emit('playerAction', 'all-in', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -508,7 +500,6 @@ socket.on('gameState', function(gameState) {
 
   currentGameState = gameState;
   updateGameState(gameState);
-  showAllInFloats(prevState, gameState);
   _lastGameStateForPot = gameState;
 
   // 利用 gameState 的变化在本地统计金币 / 场次 / 胜率
@@ -523,12 +514,10 @@ socket.on('roomUpdate', function(gameState) {
   if (currentGameState && gameState && gameState.pot > currentGameState.pot) {
     playBetSoundIfSomeoneElseBet(currentGameState, gameState);
   }
-  var prevForAllIn = currentGameState;
   // roomUpdate 不触发新一手发牌动画，避免与 gameState 重复
   _isNewDealPreflop = false;
   currentGameState = gameState;
   updateGameState(gameState);
-  showAllInFloats(prevForAllIn, gameState);
 });
 
 socket.on('playerLeft', function(data) {
@@ -707,49 +696,6 @@ function showRoundResultFloats(results) {
     });
   } catch (e) {
     console.log('showRoundResultFloats error', e);
-  }
-}
-
-/** 在指定展示座位号（0-4）上飘一次 ALL IN，与其他人效果一致 */
-function showAllInFloatAtSeat(displaySeat) {
-  var tableEl = document.querySelector('.poker-table');
-  if (!tableEl) return;
-  var seatEl = document.getElementById('seat-' + displaySeat);
-  if (!seatEl) return;
-  var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
-  var rect = avatarEl.getBoundingClientRect();
-  var tableRect = tableEl.getBoundingClientRect();
-  var floatEl = document.createElement('div');
-  floatEl.className = 'all-in-float';
-  floatEl.textContent = 'ALL IN';
-  floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
-  floatEl.style.top = (rect.top - tableRect.top - 8) + 'px';
-  tableEl.appendChild(floatEl);
-  setTimeout(function() { floatEl.remove(); }, 2300);
-}
-
-/** 有人刚全下时，在该玩家头上飘 ALL IN（黄色、外发光、上飘、停留约 1 秒后消失） */
-function showAllInFloats(prevState, nextState) {
-  try {
-    if (!nextState || !nextState.players) return;
-    var tableEl = document.querySelector('.poker-table');
-    if (!tableEl) return;
-    var myPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
-    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
-    var prevById = {};
-    if (prevState && prevState.players) {
-      prevState.players.forEach(function(p) { if (p && p.socketId) prevById[p.socketId] = p; });
-    }
-    nextState.players.forEach(function(p) {
-      if (!p || !p.allIn) return;
-      var prev = prevById[p.socketId];
-      if (prev && prev.allIn) return;
-      if (p.socketId === mySocketId) return;
-      var displaySeat = (p.seat - mySeatIndex + 5) % 5;
-      showAllInFloatAtSeat(displaySeat);
-    });
-  } catch (e) {
-    console.log('showAllInFloats error', e);
   }
 }
 
