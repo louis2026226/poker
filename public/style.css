@@ -682,16 +682,18 @@ body {
   gap: 10px;
 }
 
+/* 白色筹码区域：大小盲、跟注、加注、全下等所有投注的筹码都飞入并显示在此区域内 */
 .pot-display {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 10px 25px;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 12px 28px;
   border-radius: 25px;
   position: relative;
   z-index: 80; /* 保证底池筹码计数在飞来的筹码之上 */
-  border: 2px solid rgba(255, 255, 255, 0.5); /* 白色线框，筹码落点在此区域内 */
+  border: 3px solid rgba(255, 255, 255, 0.95); /* 白色线框明显显示，筹码落点在此区域内 */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
 }
 
 /* 底池前用筹码图标，底池变化时放大到 150% 再恢复 */
