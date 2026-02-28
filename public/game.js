@@ -1381,8 +1381,8 @@ function animatePotChips(prevState, nextState) {
     var bandHalfH = bandHeight / 2;
     var bandHalfW = bandWidth / 2;
 
-    // 垂直位置：桌面保持 150px；手机略往上提到 120px，避免压到公共牌
-    var offsetY = isMobile ? 120 : 150;
+    // 垂直位置：桌面保持 150px；手机再往上提到 80px，进一步远离公共牌
+    var offsetY = isMobile ? 80 : 150;
     var bandTopAbs = dRect.bottom + offsetY;
     var bandBottomAbs = bandTopAbs + bandHeight;
     if (bandTopAbs < tableRect.top) {
