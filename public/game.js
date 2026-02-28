@@ -938,7 +938,7 @@ function createCardElement(card, faceUp, options) {
   return cardEl;
 }
 
-// 下注飞筹码：从有新增下注的玩家头像飞到白色筹码区（底池显示下方矩形带，大小盲及所有下注统一落在此区）
+// 下注飞筹码：从有新增下注的玩家头像飞到白色筹码区（打赏下方 170×120 白色线框，大小盲及所有下注统一落在此区）
 function animatePotChips(prevState, nextState) {
   try {
     if (!prevState || !nextState) return;
@@ -952,17 +952,16 @@ function animatePotChips(prevState, nextState) {
     if (!tableEl) return;
 
     var tableRect = tableEl.getBoundingClientRect();
-    var potDisplay = tableEl.querySelector('.pot-display');
+    var chipZone = document.getElementById('chipLandingZone');
     var bandHeight = 50;
     var bandWidth = 120;
     var bandTopAbs, leftAbs, rightAbs, bandBottomAbs;
-    if (potDisplay) {
-      var potRect = potDisplay.getBoundingClientRect();
-      /* 落点在底池白色线框（.pot-display）内 */
-      bandTopAbs = potRect.top;
-      bandBottomAbs = potRect.bottom;
-      leftAbs = potRect.left;
-      rightAbs = potRect.right;
+    if (chipZone) {
+      var zoneRect = chipZone.getBoundingClientRect();
+      bandTopAbs = zoneRect.top;
+      bandBottomAbs = zoneRect.bottom;
+      leftAbs = zoneRect.left;
+      rightAbs = zoneRect.right;
     } else {
       bandTopAbs = tableRect.top + tableRect.height * 0.45;
       bandBottomAbs = bandTopAbs + bandHeight;
