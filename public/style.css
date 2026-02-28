@@ -1091,15 +1091,15 @@ body {
     width: auto;
   }
 
-  /* 手机端牌面数字与花色（比例适中，避免重叠） */
+  /* 手机端牌面数字与花色（缩小避免重叠） */
   .card-my .suit,
   .card-board .suit {
-    font-size: 18px;
+    font-size: 12px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 18px;
+    font-size: 12px;
     line-height: 1;
   }
 
@@ -1249,15 +1249,15 @@ body {
     width: auto;
   }
 
-  /* 更小屏下牌面数字与花色，确保不重叠且比例合适 */
+  /* 更小屏下牌面数字与花色，确保不重叠 */
   .card-my .suit,
   .card-board .suit {
-    font-size: 14px;
+    font-size: 10px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 14px;
+    font-size: 10px;
     line-height: 1;
   }
 
