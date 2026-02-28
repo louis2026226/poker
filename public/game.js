@@ -824,7 +824,7 @@ var _lastGameStateForPot = null;
 var _isNewDealPreflop = false;
 
 function renderCommunityCards(cards) {
-  if (cards.length > 0) {
+  if (cards.length > _lastCommunityCardsLength) {
     playSound('card');
   }
   communityCardsEl.innerHTML = '';
