@@ -411,6 +411,10 @@ socket.on('gameState', function(gameState) {
   if (gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
+  /* 牌局结束或新一局开始时清空白色线框内停留的筹码 */
+  if (gameState.gameState === 'ended' || (gameState.gameState === 'preflop' && prevState && (prevState.gameState === 'ended' || prevState.gameState === 'waiting'))) {
+    clearPotChips();
+  }
   if (_lastGameStateForPot) {
     animatePotChips(_lastGameStateForPot, gameState);
   }
@@ -938,7 +942,15 @@ function createCardElement(card, faceUp, options) {
   return cardEl;
 }
 
-// 下注飞筹码：从有新增下注的玩家头像飞到白色筹码区（打赏下方 170×120 白色线框，大小盲及所有下注统一落在此区）
+// 清空白色线框内停留的筹码（牌局结束或新一局开始时调用）
+function clearPotChips() {
+  var tableEl = document.querySelector('.poker-table');
+  if (!tableEl) return;
+  var chips = tableEl.querySelectorAll('.chip-fly-pot');
+  for (var i = 0; i < chips.length; i++) chips[i].remove();
+}
+
+// 下注飞筹码：从有新增下注的玩家头像飞到白色筹码区，停留在框内直到牌局结束。跟注1个、加注2个、全下3个。
 function animatePotChips(prevState, nextState) {
   try {
     if (!prevState || !nextState) return;
@@ -1003,7 +1015,8 @@ function animatePotChips(prevState, nextState) {
       var startLeft = fromRect.left - tableRect.left + fromRect.width / 2 - 10;
       var startTop = fromRect.top - tableRect.top + fromRect.height / 2 - 10;
 
-      var chipCount = (p.action === 'all-in') ? (2 + Math.floor(Math.random() * 2)) : 1;
+      var action = p.action || '';
+      var chipCount = (action === 'all-in') ? 3 : (action === 'raise') ? 2 : 1;
       for (var i = 0; i < chipCount; i++) {
         (function() {
           var chipEl = document.createElement('div');
@@ -1021,7 +1034,7 @@ function animatePotChips(prevState, nextState) {
             chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
             chipEl.style.opacity = '0.9';
           });
-          setTimeout(function() { chipEl.remove(); }, 600);
+          /* 筹码停留在白色线框内，牌局结束或新局时由 clearPotChips() 清空 */
         })();
       }
     });
