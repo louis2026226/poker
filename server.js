@@ -959,7 +959,7 @@ io.on('connection', (socket) => {
     if (currentPlayers.length >= CONFIG.MAX_SEATS) return;
 
     const roomCode = room.roomCode;
-    const botNames = ['AI-小王', 'AI-小李', 'AI-小张', 'AI-小刘', 'AI-小陈'];
+    const botNames = ['AI-Mike', 'AI-Dave', 'AI-John', 'AI-Sam', 'AI-Ken'];
     const existingBots = currentPlayers.filter(p => p.isBot).length;
     const botName = botNames[existingBots % botNames.length];
     const botId = `BOT_${roomCode}_${Date.now()}_${existingBots}_${Math.floor(Math.random() * 1000)}`;
@@ -1014,17 +1014,9 @@ io.on('connection', (socket) => {
       return;
     }
     player.chips -= TIP_AMOUNT;
-    const phrases = [
-      '谢谢老板！',
-      '祝您手气长红！',
-      '多谢打赏，祝您把把好牌！',
-      '感谢打赏，好运连连！',
-      '老板大气！祝您赢大池！',
-      '谢谢～祝您今晚大杀四方！',
-      '感恩打赏，牌运亨通！'
-    ];
-    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-    io.to(room.roomCode).emit('dealerSay', { nickname: player.nickname, phrase });
+    const phraseKeys = ['thanks_boss', 'wish_luck', 'thanks_tip', 'good_luck', 'big_tip', 'kill_today', 'run_good'];
+    const phraseKey = phraseKeys[Math.floor(Math.random() * phraseKeys.length)];
+    io.to(room.roomCode).emit('dealerSay', { nickname: player.nickname, phraseKey });
     io.to(room.roomCode).emit('gameState', room.getGameState());
     if (callback) callback({ success: true });
   });

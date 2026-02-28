@@ -105,6 +105,7 @@ const I18N = {
     labelWinRate: '胜率',
     labelGames: '场次',
     placeholderNickname: '请输入昵称',
+    placeholderRoomCode: '请输入5位房间号',
     btnCreateRoom: '创建房间',
     btnJoinRoom: '加入房间',
     versionLabel: '版本标签：',
@@ -117,9 +118,33 @@ const I18N = {
     btnRaise: '加注',
     btnAllIn: '全下',
     btnStartGame: '开始游戏',
+    btnStartGameCreating: '开始中...',
     modalTitleRoundEnd: '回合结束',
     btnNewGame: '再来一局',
     totalLabel: '总额：',
+    currentBetLabel: '当前下注: ',
+    betLabel: '下注: ',
+    meSuffix: ' (我)',
+    waitingCount: '等待玩家加入 (x/5)',
+    timeLabel: '时间：',
+    durationLabel: '耗时：',
+    previewChips: '下注后剩余: ',
+    previewChipsUnit: ' 筹码',
+    roomCodeCopied: '房间号已复制: ',
+    copyRoomCodeTitle: '点击复制',
+    versionLoading: '加载中...',
+    versionUnknown: '--',
+    createRoomCreating: '创建中...',
+    createRoomFail: '创建房间失败',
+    joinConfirm: '确认加入',
+    joinJoining: '加入中...',
+    joinTimeout: '请求超时，请检查房间号与网络后重试',
+    joinFail: '加入房间失败',
+    connectFail: '无法连接服务器，请确认地址正确或稍后重试',
+    enterNickname: '请输入昵称',
+    enterNicknameAndRoom: '请输入昵称和房间号',
+    enterRoomCode: '请输入5位房间号',
+    startGameError: '无法开始游戏，请稍后重试',
     statusMap: {
       waiting: '等待玩家加入...',
       preflop: '翻牌前',
@@ -146,6 +171,24 @@ const I18N = {
       fold: '弃牌',
       'all-in': '全压',
       win: '获胜'
+    },
+    handRanks: {
+      'royal-flush': '皇家同花顺',
+      'straight-flush': '同花顺',
+      'four-of-a-kind': '四条',
+      'full-house': '葫芦',
+      'flush': '同花',
+      'straight': '顺子',
+      'three-of-a-kind': '三条'
+    },
+    dealerPhrases: {
+      thanks_boss: '谢谢老板！',
+      wish_luck: '祝您手气长红！',
+      thanks_tip: '多谢打赏，祝您把把好牌！',
+      good_luck: '感谢打赏，好运连连！',
+      big_tip: '老板大气！祝您赢大池！',
+      kill_today: '谢谢～祝您今晚大杀四方！',
+      run_good: '感恩打赏，牌运亨通！'
     }
   },
   en: {
@@ -156,6 +199,7 @@ const I18N = {
     labelWinRate: 'Win Rate',
     labelGames: 'Games',
     placeholderNickname: 'Enter nickname',
+    placeholderRoomCode: 'Enter 5-digit room code',
     btnCreateRoom: 'Create Room',
     btnJoinRoom: 'Join Room',
     versionLabel: 'Version: ',
@@ -168,9 +212,33 @@ const I18N = {
     btnRaise: 'Raise',
     btnAllIn: 'All-in',
     btnStartGame: 'Start Game',
+    btnStartGameCreating: 'Starting...',
     modalTitleRoundEnd: 'Round Ended',
     btnNewGame: 'Play Again',
     totalLabel: 'Total: ',
+    currentBetLabel: 'Current bet: ',
+    betLabel: 'Bet: ',
+    meSuffix: ' (Me)',
+    waitingCount: 'Waiting for players (x/5)',
+    timeLabel: 'Time: ',
+    durationLabel: 'Duration: ',
+    previewChips: 'Chips after bet: ',
+    previewChipsUnit: '',
+    roomCodeCopied: 'Room code copied: ',
+    copyRoomCodeTitle: 'Click to copy',
+    versionLoading: 'Loading...',
+    versionUnknown: '--',
+    createRoomCreating: 'Creating...',
+    createRoomFail: 'Failed to create room',
+    joinConfirm: 'Confirm',
+    joinJoining: 'Joining...',
+    joinTimeout: 'Request timeout. Check room code and network',
+    joinFail: 'Failed to join room',
+    connectFail: 'Cannot connect to server. Check URL or try again later',
+    enterNickname: 'Please enter nickname',
+    enterNicknameAndRoom: 'Please enter nickname and room code',
+    enterRoomCode: 'Please enter 5-digit room code',
+    startGameError: 'Failed to start game. Please try again',
     statusMap: {
       waiting: 'Waiting for players...',
       preflop: 'Preflop',
@@ -197,9 +265,45 @@ const I18N = {
       fold: 'Fold',
       'all-in': 'All-in',
       win: 'Win'
+    },
+    handRanks: {
+      'royal-flush': 'Royal Flush',
+      'straight-flush': 'Straight Flush',
+      'four-of-a-kind': 'Four of a Kind',
+      'full-house': 'Full House',
+      'flush': 'Flush',
+      'straight': 'Straight',
+      'three-of-a-kind': 'Three of a Kind'
+    },
+    dealerPhrases: {
+      thanks_boss: 'Thanks, boss!',
+      wish_luck: 'Good luck!',
+      thanks_tip: 'Thanks for the tip!',
+      good_luck: 'Good luck at the tables!',
+      big_tip: 'Generous! Win big!',
+      kill_today: 'Thanks! Run good tonight!',
+      run_good: 'Thanks! Run good!'
     }
   }
 };
+
+// 服务端返回的中文文案在英文下的对应（英文版不出现中文）
+var SERVER_MSG_EN = {
+  '房间不存在': 'Room not found',
+  '房间已满': 'Room is full',
+  '无法加入房间': 'Cannot join room',
+  '只有房主可以开始游戏': 'Only host can start the game',
+  '至少需要两名玩家才能开始游戏': 'At least 2 players required to start',
+  '游戏已经在进行中': 'Game already in progress',
+  '玩家不在房间中': 'Player not in room',
+  '筹码不足': 'Insufficient chips',
+  '无效的动作': 'Invalid action',
+  '只有房主可以重启游戏': 'Only host can restart the game'
+};
+function translateServerMessage(msg) {
+  if (currentLang !== 'en' || !msg || typeof msg !== 'string') return msg;
+  return SERVER_MSG_EN[msg] || msg;
+}
 
 function applyTranslationsStatic() {
   var dict = I18N[currentLang] || I18N.zh;
@@ -220,19 +324,33 @@ function applyTranslationsStatic() {
     nicknameInput.placeholder = dict.placeholderNickname;
     nicknameInput.setAttribute('aria-label', dict.placeholderNickname);
   }
+  var roomCodeInputEl = document.getElementById('roomCode');
+  if (roomCodeInputEl && dict.placeholderRoomCode) {
+    roomCodeInputEl.placeholder = dict.placeholderRoomCode;
+    roomCodeInputEl.setAttribute('aria-label', dict.placeholderRoomCode);
+  }
 
   if (createRoomBtn) createRoomBtn.textContent = dict.btnCreateRoom;
   if (joinRoomBtn) joinRoomBtn.textContent = dict.btnJoinRoom;
 
   var versionLabelEl = document.getElementById('versionLabel');
-  if (versionLabelEl && versionLabelEl.textContent.indexOf('版本标签：') === 0 && currentLang === 'en') {
-    versionLabelEl.textContent = dict.versionLabel + versionLabelEl.textContent.replace('版本标签：', '').trim();
+  if (versionLabelEl) {
+    var versionVal = versionLabelEl.getAttribute('data-version-value');
+    if (versionVal !== null && versionVal !== undefined) {
+      if (versionVal === '加载中...' || versionVal === 'Loading...') versionVal = dict.versionLoading;
+      versionLabelEl.textContent = dict.versionLabel + versionVal;
+    }
   }
 
   var roomCodeLabelEl = document.querySelector('.room-code-label');
   if (roomCodeLabelEl) roomCodeLabelEl.textContent = dict.roomCodeLabel;
+  var displayRoomCodeEl = document.getElementById('displayRoomCode');
+  if (displayRoomCodeEl && dict.copyRoomCodeTitle) displayRoomCodeEl.setAttribute('title', dict.copyRoomCodeTitle);
 
   if (leaveRoomBtn) leaveRoomBtn.textContent = dict.btnLeaveRoom;
+
+  var confirmJoinBtnEl = document.getElementById('confirmJoinBtn');
+  if (confirmJoinBtnEl) confirmJoinBtnEl.textContent = dict.joinConfirm;
 
   var dealerTipBtn = document.getElementById('dealerTipBtn');
   if (dealerTipBtn) dealerTipBtn.textContent = dict.dealerTip;
@@ -244,6 +362,9 @@ function applyTranslationsStatic() {
   if (allInBtn) allInBtn.textContent = dict.btnAllIn;
   if (startGameBtn) startGameBtn.textContent = dict.btnStartGame;
 
+  var aiAssistBtnEl = document.getElementById('ai-assist-btn');
+  if (aiAssistBtnEl) aiAssistBtnEl.setAttribute('aria-label', currentLang === 'en' ? 'Add bot' : '添加机器人');
+
   var modalTitle = document.querySelector('#gameOverModal h2');
   if (modalTitle) modalTitle.textContent = dict.modalTitleRoundEnd;
 
@@ -254,6 +375,79 @@ function applyTranslationsStatic() {
     var num = totalEl.getAttribute('data-value') || '0';
     totalEl.textContent = dict.totalLabel + num;
   }
+
+  document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
+
+  var ariaMap = currentLang === 'en' ? {
+    '#lobby': 'Game Lobby',
+    '#playerStats': 'Player Stats',
+    '#statNickname': 'Nickname',
+    '#statChips': 'Chips',
+    '#statWinRate': 'Win Rate',
+    '#statGames': 'Games Played',
+    '.lobby-form': 'Login Form',
+    '#createRoomBtn': 'Create Room',
+    '#joinRoomBtn': 'Join Room',
+    '#versionLabel': 'Version',
+    '#joinForm': 'Join Room Form',
+    '#confirmJoinBtn': 'Confirm Join',
+    '#gameRoom': 'Game Room',
+    '#leaveRoomBtn': 'Leave Room',
+    '#dealerTipBtn': 'Tip Dealer 50',
+    '#dealerImage': 'Dealer',
+    '.poker-table': 'Poker Table',
+    '.community-area': 'Community Cards & Pot',
+    '#communityCards': 'Community Cards',
+    '#potIcon': 'Pot',
+    '#potAmount': 'Pot Amount',
+    '#currentBetDisplay': 'Current Bet',
+    '#actionTimer': 'Countdown',
+    '#timerText': 'Time Remaining',
+    '#actionPanel': 'Action Panel',
+    '#raiseAmountPanel': 'Raise Amount',
+    '#raiseSlider': 'Raise Amount',
+    '#foldBtn': 'Fold',
+    '#checkBtn': 'Check',
+    '#callBtn': 'Call',
+    '#raiseBtn': 'Raise',
+    '#allInBtn': 'All-in',
+    '#startGameBtn': 'Start Game',
+    '#emojiPopupPanel': 'Send Emoji',
+    '#seat-0': 'Your Seat',
+    '#myCards': 'Your Hand'
+  } : null;
+
+  if (ariaMap) {
+    Object.keys(ariaMap).forEach(function(sel) {
+      var el = document.querySelector(sel);
+      if (el) el.setAttribute('aria-label', ariaMap[sel]);
+    });
+    var srLabel = document.querySelector('label[for="raiseSlider"]');
+    if (srLabel) srLabel.textContent = 'Raise amount slider';
+  } else {
+    var srLabel = document.querySelector('label[for="raiseSlider"]');
+    if (srLabel) srLabel.textContent = '加注金额滑块';
+  }
+
+  var emojiAriaMap = currentLang === 'en' ? {
+    '👍': 'Thumbs Up', '👎': 'Thumbs Down', '😄': 'Happy', '😭': 'Sad',
+    '🎉': 'Celebrate', '🤔': 'Thinking', '👏': 'Clap', '🙏': 'Thanks'
+  } : {
+    '👍': '点赞', '👎': '反对', '😄': '开心', '😭': '哭泣',
+    '🎉': '庆祝', '🤔': '思考', '👏': '鼓掌', '🙏': '感谢'
+  };
+  document.querySelectorAll('.emoji-btn').forEach(function(btn) {
+    var emoji = btn.getAttribute('data-emoji');
+    if (emoji && emojiAriaMap[emoji]) btn.setAttribute('aria-label', emojiAriaMap[emoji]);
+  });
+
+  var seatAriaEn = { 'seat-1': 'Seat 1 - Left', 'seat-2': 'Seat 2 - Left', 'seat-3': 'Seat 3 - Right', 'seat-4': 'Seat 4 - Right' };
+  var seatAriaZh = { 'seat-1': '座位1 - 左侧玩家', 'seat-2': '座位2 - 左侧玩家', 'seat-3': '座位3 - 右侧玩家', 'seat-4': '座位4 - 右侧玩家' };
+  var seatMap = currentLang === 'en' ? seatAriaEn : seatAriaZh;
+  Object.keys(seatMap).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.setAttribute('aria-label', seatMap[id]);
+  });
 }
 
 function setLanguage(lang) {
@@ -453,34 +647,35 @@ function setupEventListeners() {
     createRoomBtn.addEventListener('click', function() {
       playSound('button');
       console.log('Create room clicked');
+      var dict = I18N[currentLang] || I18N.zh;
       if (!socket.connected) {
-        alert('未连接服务器，请刷新页面重试');
+        alert(dict.connectFail);
         return;
       }
       const nickname = nicknameInput.value.trim();
       if (!nickname) {
-        alert('请输入昵称');
+        alert(dict.enterNickname);
         return;
       }
       saveNickname(nickname);
       createRoomBtn.disabled = true;
-      createRoomBtn.textContent = '创建中...';
+      createRoomBtn.textContent = dict.createRoomCreating;
       var timeout = setTimeout(function() {
         createRoomBtn.disabled = false;
-        createRoomBtn.textContent = '创建房间';
-        alert('请求超时，请检查网络后重试');
+        createRoomBtn.textContent = dict.btnCreateRoom;
+        alert(dict.joinTimeout);
       }, 15000);
       socket.emit('createRoom', nickname, function(response) {
         clearTimeout(timeout);
         createRoomBtn.disabled = false;
-        createRoomBtn.textContent = '创建房间';
+        createRoomBtn.textContent = dict.btnCreateRoom;
         if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert(response && response.message ? response.message : '创建房间失败');
+          alert(translateServerMessage(response && response.message ? response.message : dict.createRoomFail));
         }
       });
     });
@@ -500,42 +695,40 @@ function setupEventListeners() {
     confirmJoinBtn.addEventListener('click', function() {
       playSound('button');
       console.log('Confirm join clicked');
+      var dict = I18N[currentLang] || I18N.zh;
       if (!socket.connected) {
-        alert('未连接服务器，请刷新页面重试');
+        alert(dict.connectFail);
         return;
       }
       const nickname = nicknameInput.value.trim();
       const roomCode = roomCodeInput.value.trim();
-      
       if (!nickname || !roomCode) {
-        alert('请输入昵称和房间号');
+        alert(dict.enterNicknameAndRoom);
         return;
       }
-      
       if (roomCode.length !== 5) {
-        alert('请输入5位房间号');
+        alert(dict.enterRoomCode);
         return;
       }
-      
       saveNickname(nickname);
       confirmJoinBtn.disabled = true;
-      confirmJoinBtn.textContent = '加入中...';
+      confirmJoinBtn.textContent = dict.joinJoining;
       var timeout = setTimeout(function() {
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = '确认加入';
-        alert('请求超时，请检查房间号与网络后重试');
+        confirmJoinBtn.textContent = dict.joinConfirm;
+        alert(dict.joinTimeout);
       }, 15000);
       socket.emit('joinRoom', roomCode, nickname, function(response) {
         clearTimeout(timeout);
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = '确认加入';
+        confirmJoinBtn.textContent = dict.joinConfirm;
         if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert(response && response.message ? response.message : '加入房间失败');
+          alert(translateServerMessage(response && response.message ? response.message : dict.joinFail));
         }
       });
     });
@@ -647,13 +840,13 @@ function setupEventListeners() {
       playSound('card');
       startGameBtn.disabled = true;
       var dict = I18N[currentLang] || I18N.zh;
-      startGameBtn.textContent = currentLang === 'en' ? 'Starting...' : (dict.btnStartGame || '开始游戏');
+      startGameBtn.textContent = dict.btnStartGameCreating || dict.btnStartGame;
       socket.emit('startGame', function(response) {
         if (!response || !response.success) {
           startGameBtn.disabled = false;
           var dictFail = I18N[currentLang] || I18N.zh;
-          startGameBtn.textContent = dictFail.btnStartGame || '开始游戏';
-          alert(response && response.message ? response.message : (dictFail.startGameError || '无法开始游戏，请稍后重试'));
+          startGameBtn.textContent = dictFail.btnStartGame;
+          alert(translateServerMessage(response && response.message ? response.message : dictFail.startGameError));
         } else {
           // 开始游戏成功后隐藏按钮，等下一次牌局结束/等待时再由 updateBotButton 控制显示
           startGameBtn.classList.add('hidden');
@@ -676,14 +869,14 @@ socket.on('connect', function() {
 });
 socket.on('disconnect', function(reason) {
   console.log('Disconnected:', reason);
-  if (createRoomBtn) createRoomBtn.disabled = false;
-  if (createRoomBtn) createRoomBtn.textContent = '创建房间';
-  if (confirmJoinBtn) confirmJoinBtn.disabled = false;
-  if (confirmJoinBtn) confirmJoinBtn.textContent = '确认加入';
+  var dict = I18N[currentLang] || I18N.zh;
+  if (createRoomBtn) { createRoomBtn.disabled = false; createRoomBtn.textContent = dict.btnCreateRoom; }
+  if (confirmJoinBtn) { confirmJoinBtn.disabled = false; confirmJoinBtn.textContent = dict.joinConfirm; }
 });
 socket.on('connect_error', function(err) {
   console.log('Connect error:', err.message);
-  alert('无法连接服务器，请确认地址正确或稍后重试');
+  var dict = I18N[currentLang] || I18N.zh;
+  alert(dict.connectFail);
 });
 
 socket.on('gameState', function(gameState) {
@@ -747,7 +940,14 @@ socket.on('emote', function(data) {
 socket.on('dealerSay', function(data) {
   var el = document.getElementById('dealerSpeech');
   if (!el) return;
-  el.textContent = data.phrase || '';
+  var dict = I18N[currentLang] || I18N.zh;
+  var phrase = '';
+  if (data.phraseKey && dict.dealerPhrases && dict.dealerPhrases[data.phraseKey] !== undefined) {
+    phrase = dict.dealerPhrases[data.phraseKey];
+  } else if (data.phrase) {
+    phrase = data.phrase;
+  }
+  el.textContent = phrase;
   el.classList.add('dealer-speech-visible');
   clearTimeout(dealerSpeechTimer);
   dealerSpeechTimer = setTimeout(function() {
@@ -820,8 +1020,8 @@ socket.on('gameOver', function(data) {
       }
 
       var metaParts = [];
-      if (timeStr) metaParts.push('时间：' + timeStr);
-      if (durationStr) metaParts.push('耗时：' + durationStr);
+      if (timeStr) metaParts.push(dict.timeLabel + timeStr);
+      if (durationStr) metaParts.push(dict.durationLabel + durationStr);
 
       logEl.innerHTML =
         '<div>' + lines.join('<br>') + '</div>' +
@@ -994,8 +1194,9 @@ function updateGameState(gameState) {
   }
   _lastPot = newPot;
   
+  var dict = I18N[currentLang] || I18N.zh;
   if (gameState.currentBet > 0) {
-    currentBetDisplay.textContent = '当前下注: ' + gameState.currentBet;
+    currentBetDisplay.textContent = dict.currentBetLabel + gameState.currentBet;
   } else {
     currentBetDisplay.textContent = '';
   }
@@ -1041,11 +1242,7 @@ function updateGameStatus(gameState) {
 
   const playerCount = gameState.players.length;
   if (gameState.gameState === 'waiting') {
-    if (currentLang === 'en') {
-      gameStatus.textContent = 'Waiting for players (' + playerCount + '/5)';
-    } else {
-      gameStatus.textContent = '等待玩家加入 (' + playerCount + '/5)';
-    }
+    gameStatus.textContent = (dict.waitingCount || statusMap.waiting).replace('x', playerCount);
   } else {
     gameStatus.textContent = statusMap[gameState.gameState] || gameState.gameState;
   }
@@ -1094,32 +1291,9 @@ function showBigHandBadges(gameState) {
       var best = clientFindBestHand(p.hand, gameState.communityCards || []);
       if (!best) return;
 
-      var label = null;
-      switch (best.type) {
-        case 'royal-flush':
-          label = '皇家同花顺';
-          break;
-        case 'straight-flush':
-          label = '同花顺';
-          break;
-        case 'four-of-a-kind':
-          label = '四条';
-          break;
-        case 'full-house':
-          label = '葫芦';
-          break;
-        case 'flush':
-          label = '同花';
-          break;
-        case 'straight':
-          label = '顺子';
-          break;
-        case 'three-of-a-kind':
-          label = '三条';
-          break;
-        default:
-          break;
-      }
+      var dict = I18N[currentLang] || I18N.zh;
+      var handRanks = dict.handRanks || {};
+      var label = handRanks[best.type] || null;
       if (!label) return;
 
       var displaySeat = (p.seat - mySeatIndex + 5) % 5;
@@ -1602,7 +1776,8 @@ function renderSeats(gameState) {
     var betEl = seatEl.querySelector('.player-bet');
     var statusEl = seatEl.querySelector('.player-status');
     
-    var displayName = player.nickname + (player.socketId === mySocketId ? ' (我)' : '');
+    var dict = I18N[currentLang] || I18N.zh;
+    var displayName = player.nickname + (player.socketId === mySocketId ? (dict.meSuffix || ' (我)') : '');
     // 👑 标记庄家：始终跟随当前 dealerSeat，而不是房主
     if (typeof gameState.dealerSeat === 'number' && player.seat === gameState.dealerSeat) {
       displayName += ' 👑';
@@ -1611,7 +1786,7 @@ function renderSeats(gameState) {
     chipsEl.innerHTML = '<span class=\"chip-icon\"></span>' + player.chips;
     
     if (player.bet > 0) {
-      betEl.textContent = '下注: ' + player.bet;
+      betEl.textContent = dict.betLabel + player.bet;
     }
     
     var gameStateValue = currentGameState ? currentGameState.gameState : 'waiting';
@@ -1754,18 +1929,13 @@ function updateActionPanel(gameState) {
     callBtn.disabled = true;
     callBtn.style.display = 'none';
     var dict = I18N[currentLang] || I18N.zh;
-    checkBtn.textContent = dict.btnCheck || '过牌';
+    checkBtn.textContent = dict.btnCheck;
   } else {
     checkBtn.disabled = true;
     checkBtn.style.display = 'none';
     callBtn.disabled = false;
     callBtn.style.display = 'inline-block';
-    var dict2 = I18N[currentLang] || I18N.zh;
-    if (currentLang === 'en') {
-      callBtn.textContent = (dict2.btnCall || 'Call') + ' ' + toCall;
-    } else {
-      callBtn.textContent = (dict2.btnCall || '跟注') + ' ' + toCall;
-    }
+    callBtn.textContent = dict.btnCall + ' ' + toCall;
   }
   
   var minRaise = Math.max(gameState.currentBet * 2, gameState.config.BIG_BLIND);
@@ -1827,7 +1997,7 @@ function updateBotButton(gameState) {
       startGameBtn.disabled = !canStart;
       if (canStart) {
         var dict = I18N[currentLang] || I18N.zh;
-        startGameBtn.textContent = dict.btnStartGame || '开始游戏';
+        startGameBtn.textContent = dict.btnStartGame;
       }
     } else {
       startGameBtn.classList.add('hidden');
@@ -2036,7 +2206,8 @@ function showBetPreview() {
   var totalBet = callAmount + betAmount;
   var remainingChips = myPlayer.chips - totalBet;
   
-  previewChips.innerHTML = '下注后剩余: <span class="' + (remainingChips < 0 ? 'text-danger' : 'text-success') + '">' + remainingChips + '</span> 筹码';
+  var dict = I18N[currentLang] || I18N.zh;
+  previewChips.innerHTML = dict.previewChips + '<span class="' + (remainingChips < 0 ? 'text-danger' : 'text-success') + '">' + remainingChips + '</span>' + dict.previewChipsUnit;
 }
 
 // ============ 复制房间号 ============
@@ -2044,8 +2215,10 @@ function copyRoomCode() {
   playSound('button');
   var roomCode = document.getElementById('displayRoomCode').textContent;
   if (roomCode && roomCode !== '-----') {
+    var dict = I18N[currentLang] || I18N.zh;
+    var msg = (dict.roomCodeCopied || '房间号已复制: ') + roomCode;
     navigator.clipboard.writeText(roomCode).then(function() {
-      alert('房间号已复制: ' + roomCode);
+      alert(msg);
     }).catch(function() {
       var input = document.createElement('input');
       input.value = roomCode;
@@ -2053,7 +2226,7 @@ function copyRoomCode() {
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
-      alert('房间号已复制: ' + roomCode);
+      alert(msg);
     });
   }
 }
@@ -2064,22 +2237,24 @@ function loadVersionLabel() {
   try {
     var el = document.getElementById('versionLabel');
     if (!el) return;
+    var dict = I18N[currentLang] || I18N.zh;
+    var val = dict.versionLoading || '加载中...';
+    el.setAttribute('data-version-value', val);
+    el.textContent = dict.versionLabel + val;
     fetch('/version')
       .then(function(res) { return res.json(); })
       .then(function(data) {
-        var text = '版本标签：';
-        if (data && data.sha) {
-          text += data.sha.substring(0, 7);
-        } else if (data && data.version) {
-          text += data.version;
-        } else {
-          text += '加载中...';
-        }
-        el.textContent = text;
+        var v = (data && data.sha) ? data.sha.substring(0, 7) : (data && data.version ? data.version : (dict.versionLoading || ''));
+        el.setAttribute('data-version-value', v);
+        el.textContent = dict.versionLabel + v;
       })
       .catch(function() {
         var el2 = document.getElementById('versionLabel');
-        if (el2) el2.textContent = '版本标签：--';
+        var d = I18N[currentLang] || I18N.zh;
+        if (el2) {
+          el2.setAttribute('data-version-value', d.versionUnknown || '--');
+          el2.textContent = d.versionLabel + (d.versionUnknown || '--');
+        }
       });
   } catch (e) {}
 }
