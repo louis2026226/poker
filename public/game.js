@@ -1242,8 +1242,10 @@ function renderSeats(gameState) {
     }
     
     var gameStateValue = currentGameState ? currentGameState.gameState : 'waiting';
-    if (player.socketId === mySocketId && gameStateValue !== 'waiting') {
-      if (player.action && player.action !== 'all-in') {
+    if (player.action) {
+      if (player.action === 'all-in') {
+        statusEl.textContent = '';
+      } else if (player.socketId === mySocketId && gameStateValue !== 'waiting') {
         statusEl.textContent = getActionText(player.action);
       }
     }
