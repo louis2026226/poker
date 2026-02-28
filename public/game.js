@@ -1119,6 +1119,30 @@ function clearPotFlyChips() {
   }
 }
 
+function updateChipTargetDebug(leftAbs, topAbs, rightAbs, bottomAbs, tableRect) {
+  try {
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+    var debugEl = document.getElementById('chipTargetDebug');
+    if (!debugEl) {
+      debugEl = document.createElement('div');
+      debugEl.id = 'chipTargetDebug';
+      debugEl.className = 'chip-target-debug';
+      tableEl.appendChild(debugEl);
+    }
+    var leftRel = leftAbs - tableRect.left;
+    var topRel = topAbs - tableRect.top;
+    var width = Math.max(0, rightAbs - leftAbs);
+    var height = Math.max(0, bottomAbs - topAbs);
+    debugEl.style.left = leftRel + 'px';
+    debugEl.style.top = topRel + 'px';
+    debugEl.style.width = width + 'px';
+    debugEl.style.height = height + 'px';
+  } catch (e) {
+    console.log('updateChipTargetDebug error', e);
+  }
+}
+
 function animatePotChips(prevState, nextState) {
   try {
     if (!prevState || !nextState) return;
@@ -1150,6 +1174,8 @@ function animatePotChips(prevState, nextState) {
     var rightAbs = centerXAbs + 60;
     if (leftAbs < tableRect.left) leftAbs = tableRect.left;
     if (rightAbs > tableRect.right) rightAbs = tableRect.right;
+
+    updateChipTargetDebug(leftAbs, bandTopAbs, rightAbs, bandBottomAbs, tableRect);
 
     var prevById = {};
     prevState.players.forEach(function(p) {
