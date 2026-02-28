@@ -85,8 +85,13 @@
         <button type="button" class="dealer-tip-btn" id="dealerTipBtn" disabled aria-label="打赏荷官">打赏 50</button>
         <div class="dealer-speech" id="dealerSpeech" aria-live="polite"></div>
       </div>
-      <!-- 白色筹码区域：打赏下方 150px，170×120px，所有飞向牌桌中间的筹码落在此框内 -->
-      <div id="chipLandingZone" class="chip-landing-zone" aria-hidden="true"></div>
+      <!-- 底池在白色筹码区域上方 15px，筹码飞入落点区隐藏线框 -->
+      <div id="chipLandingZone" class="chip-landing-zone" aria-hidden="true">
+        <div class="pot-display pot-display-above-zone">
+          <span class="pot-label">底池:</span>
+          <span id="potAmount" class="pot-amount" aria-label="底池金额">0</span>
+        </div>
+      </div>
       <!-- 座位位置 -->
       <div class="seat" id="seat-2" style="top: 20%; left: 5%;" role="article" aria-label="座位2 - 左侧玩家">
         <div class="player-info">
@@ -159,10 +164,6 @@
 
       <!-- 公共牌区 -->
       <div class="community-area" role="region" aria-label="公共牌区和底池">
-        <div class="pot-display">
-          <span class="pot-label">底池:</span>
-          <span id="potAmount" class="pot-amount" aria-label="底池金额">0</span>
-        </div>
         <div class="community-cards" id="communityCards" aria-label="公共牌"></div>
         <div class="current-bet" id="currentBetDisplay" aria-label="当前下注"></div>
       </div>

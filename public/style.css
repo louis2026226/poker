@@ -413,21 +413,29 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   cursor: not-allowed;
 }
 
-/* 白色筹码区域：打赏下方 150px，170×120px 白色线框，所有飞向牌桌的筹码落在此区域内 */
-/* 白色线框矩形：明显显示，方便看到筹码飞入落点 */
+/* 筹码落点区域：保留位置与尺寸供飞筹码动画使用，线框隐藏 */
 .chip-landing-zone {
   position: absolute;
-  top: 180px; /* 白色线框往下移 30px */
+  top: 180px;
   left: 50%;
   transform: translateX(-50%);
   width: 170px;
   height: 120px;
-  border: 4px solid #fff;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 0;
+  background: transparent;
   z-index: 75;
   pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* 底池数字：位于筹码落点区域上方，间距 15px */
+.pot-display.pot-display-above-zone {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 15px;
+  z-index: 200;
 }
 
 /* 打赏时从荷官位置飘出的红色爱心 */
@@ -696,7 +704,7 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   50% { transform: scale(1.1); }
 }
 
-/* 公共牌区 */
+/* 公共牌区（底池已移至筹码区上方） */
 .community-area {
   position: absolute;
   top: 55%;
