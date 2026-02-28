@@ -149,10 +149,10 @@ body {
   cursor: not-allowed;
 }
 
-/* 版本信息标签 */
+/* 版本信息标签：贴底，避免与加入房间按钮重叠 */
 .version-label {
   position: fixed;
-  bottom: 10px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
@@ -191,10 +191,10 @@ body {
   font-size: 12px;
 }
 
-/* 版本信息标签 */
+/* 版本信息标签：贴底，避免与加入房间按钮重叠 */
 .version-label {
   position: fixed;
-  bottom: 10px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
