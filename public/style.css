@@ -407,7 +407,7 @@ body {
 /* 白色线框矩形：明显显示，方便看到筹码飞入落点 */
 .chip-landing-zone {
   position: absolute;
-  top: 300px; /* 白色线框往上移 50px */
+  top: 150px; /* 白色线框整体上移 150px */
   left: 50%;
   transform: translateX(-50%);
   width: 170px;
