@@ -86,7 +86,7 @@ const STATS_KEY = 'poker_player_stats';
 // 玩家数据结构
 let playerStats = {
   nickname: '',
-  chips: 1000,
+  chips: 0,
   gamesPlayed: 0,
   gamesWon: 0,
   winRate: 0
@@ -298,7 +298,8 @@ var SERVER_MSG_EN = {
   '玩家不在房间中': 'Player not in room',
   '筹码不足': 'Insufficient chips',
   '无效的动作': 'Invalid action',
-  '只有房主可以重启游戏': 'Only host can restart the game'
+  '只有房主可以重启游戏': 'Only host can restart the game',
+  '需要拥有1000金币才可进入': 'You need at least 1000 gold to enter'
 };
 function translateServerMessage(msg) {
   if (currentLang !== 'en' || !msg || typeof msg !== 'string') return msg;
@@ -526,6 +527,16 @@ function initDOMElements() {
       setLanguage(currentLang === 'zh' ? 'en' : 'zh');
     });
   }
+
+  if (nicknameInput) {
+    nicknameInput.addEventListener('blur', function() {
+      var name = nicknameInput.value.trim();
+      if (name && name !== playerStats.nickname) {
+        playerStats.nickname = name;
+        fetchPlayerGold(name);
+      }
+    });
+  }
 }
 
 function loadNickname() {
@@ -533,23 +544,30 @@ function loadNickname() {
   if (saved && nicknameInput) {
     nicknameInput.value = saved;
     playerStats.nickname = saved;
+    fetchPlayerGold(saved);
   }
-  
-  const savedStats = localStorage.getItem(STATS_KEY);
-  if (savedStats) {
-    try {
-      playerStats = JSON.parse(savedStats);
-    } catch (e) {
-      console.log('Failed to load stats');
-    }
-  }
-  updatePlayerStatsDisplay();
 }
 
 function saveNickname(nickname) {
   localStorage.setItem(STORAGE_KEY, nickname);
   playerStats.nickname = nickname;
-  updatePlayerStatsDisplay();
+}
+
+function fetchPlayerGold(nickname) {
+  if (!nickname) return;
+  fetch('/api/player/' + encodeURIComponent(nickname))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data && data.success) {
+        playerStats.chips = data.gold;
+        playerStats.gamesPlayed = data.gamesPlayed || 0;
+        playerStats.gamesWon = data.gamesWon || 0;
+        playerStats.winRate = playerStats.gamesPlayed >= 10
+          ? Math.round((playerStats.gamesWon / playerStats.gamesPlayed) * 100) : 0;
+        updatePlayerStatsDisplay();
+      }
+    })
+    .catch(function() {});
 }
 
 function updatePlayerStatsDisplay() {
@@ -570,20 +588,11 @@ function updatePlayerStatsDisplay() {
 
 function updatePlayerChips(chips) {
   playerStats.chips = chips;
-  localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
   updatePlayerStatsDisplay();
 }
 
 function finishGame(won, finalChips) {
-  playerStats.gamesPlayed++;
-  if (won) {
-    playerStats.gamesWon++;
-  }
   playerStats.chips = finalChips;
-  playerStats.winRate = playerStats.gamesPlayed >= 10 
-    ? Math.round((playerStats.gamesWon / playerStats.gamesPlayed) * 100) 
-    : 0;
-  localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
   updatePlayerStatsDisplay();
 }
 
@@ -738,7 +747,10 @@ function setupEventListeners() {
   if (leaveRoomBtn) {
     leaveRoomBtn.addEventListener('click', function() {
       playSound('button');
-      location.reload();
+      socket.emit('leaveRoom', function() {
+        location.reload();
+      });
+      setTimeout(function() { location.reload(); }, 500);
     });
   }
   
@@ -1227,7 +1239,7 @@ function updateTotalChipsDisplay(gameState) {
     if (!el || !gameState || !gameState.players) return;
     var myPlayer = gameState.players.find(function(p) { return p.socketId === mySocketId; });
     if (!myPlayer) return;
-    var total = typeof playerStats.chips === 'number' ? playerStats.chips : (myPlayer.chips || 0);
+    var total = myPlayer.chips || 0;
     el.setAttribute('data-value', total);
     var dict = I18N[currentLang] || I18N.zh;
     el.textContent = dict.totalLabel + total;
