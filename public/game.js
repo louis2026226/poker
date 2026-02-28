@@ -1119,35 +1119,29 @@ function animatePotChips(prevState, nextState) {
 
     playBetSoundIfSomeoneElseBet(prevState, nextState);
 
-  var tableEl = document.querySelector('.poker-table');
-  var dealerBtn = document.getElementById('dealerTipBtn');
-  var communityEl = document.getElementById('communityCards');
-  if (!tableEl) return;
+    var tableEl = document.querySelector('.poker-table');
+    var communityEl = document.getElementById('communityCards');
+    if (!tableEl || !communityEl) return;
 
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
 
-  var tableRect = tableEl.getBoundingClientRect();
-  var bandTop = tableRect.height * 0.25;
-  var bandBottom = tableRect.height * 0.55;
-
-  if (dealerBtn) {
-    var dRect = dealerBtn.getBoundingClientRect();
-    var dBottom = dRect.bottom - tableRect.top;
-    bandTop = Math.max(bandTop, dBottom + 8);
-  }
-  if (communityEl) {
+    var tableRect = tableEl.getBoundingClientRect();
     var cRect = communityEl.getBoundingClientRect();
-    var cTop = cRect.top - tableRect.top;
-    bandBottom = Math.min(bandBottom, cTop - 8);
-  }
-  if (bandBottom <= bandTop) {
-    bandTop = tableRect.height * 0.30;
-    bandBottom = tableRect.height * 0.50;
-  }
 
-  var areaLeft = tableRect.width * 0.3;
-  var areaRight = tableRect.width * 0.7;
+    // 目标垂直范围：公共牌顶部往上 150px 内随机
+    var bandBottomAbs = cRect.top;
+    var bandTopAbs = cRect.top - 150;
+    if (bandTopAbs < tableRect.top) bandTopAbs = tableRect.top;
+    if (bandBottomAbs - bandTopAbs < 20) bandBottomAbs = bandTopAbs + 20;
+
+    // 目标水平范围：公共牌区域左右各预留 10px
+    var leftAbs = cRect.left + 10;
+    var rightAbs = cRect.right - 10;
+    if (rightAbs <= leftAbs) {
+      leftAbs = cRect.left;
+      rightAbs = cRect.right;
+    }
 
     var prevById = {};
     prevState.players.forEach(function(p) {
@@ -1193,17 +1187,17 @@ function animatePotChips(prevState, nextState) {
           tableEl.appendChild(chipEl);
 
           requestAnimationFrame(function() {
-            var targetXAbs = tableRect.left + areaLeft + Math.random() * (areaRight - areaLeft);
-            var targetYAbs = tableRect.top + bandTop + Math.random() * (bandBottom - bandTop);
-            var targetX = targetXAbs - tableRect.left;
-            var targetY = targetYAbs - tableRect.top;
-            var dx = targetX - startLeft;
-            var dy = targetY - startTop;
+            var targetXAbs = leftAbs + Math.random() * (rightAbs - leftAbs);
+            var targetYAbs = bandTopAbs + Math.random() * (bandBottomAbs - bandTopAbs);
+            var targetXRel = targetXAbs - tableRect.left;
+            var targetYRel = targetYAbs - tableRect.top;
+            var dx = targetXRel - startLeft;
+            var dy = targetYRel - startTop;
             var jitterX = (Math.random() - 0.5) * 6;
             var jitterY = (Math.random() - 0.5) * 4;
             dx += jitterX;
             dy += jitterY;
-            chipEl.style.transform = 'translate(' + targetX + 'px,' + targetY + 'px)';
+            chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
           });
         })();
       }
