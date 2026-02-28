@@ -98,6 +98,7 @@ const SUPPORTED_LANGS = ['zh', 'en'];
 
 const I18N = {
   zh: {
+    title: '路易斯德州',
     lobbySubtitle: '与好友一起畅玩',
     labelNickname: '昵称',
     labelChips: '金币',
@@ -148,6 +149,7 @@ const I18N = {
     }
   },
   en: {
+    title: 'Louis Poker',
     lobbySubtitle: 'Play with friends',
     labelNickname: 'Name',
     labelChips: 'Chips',
@@ -201,6 +203,9 @@ const I18N = {
 
 function applyTranslationsStatic() {
   var dict = I18N[currentLang] || I18N.zh;
+
+  var titleEl = document.getElementById('lobby-title');
+  if (titleEl && dict.title) titleEl.textContent = dict.title;
 
   var subtitle = document.querySelector('.subtitle');
   if (subtitle) subtitle.textContent = dict.lobbySubtitle;
@@ -1374,16 +1379,9 @@ function animatePotChips(prevState, nextState) {
     var bandHalfH = bandHeight / 2;
     var bandHalfW = bandWidth / 2;
 
-    var bandTopAbs, bandBottomAbs;
-    if (isMobile) {
-      // 手机：整个矩形始终在打赏按钮下方至少 180px 处（在原基础上再下移 80px）
-      bandTopAbs = dRect.bottom + 180;
-      bandBottomAbs = bandTopAbs + bandHeight;
-    } else {
-      var centerYAbs = dRect.bottom + 100;
-      bandTopAbs = centerYAbs - bandHalfH;
-      bandBottomAbs = centerYAbs + bandHalfH;
-    }
+    // 矩形顶边固定在荷官打赏按钮下方 150 像素处（桌面和手机一致）
+    var bandTopAbs = dRect.bottom + 150;
+    var bandBottomAbs = bandTopAbs + bandHeight;
     if (bandTopAbs < tableRect.top) {
       var shift = tableRect.top - bandTopAbs;
       bandTopAbs += shift;

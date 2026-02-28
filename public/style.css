@@ -51,8 +51,8 @@ body {
 }
 
 .lang-toggle-btn {
-  position: absolute;
-  top: 16px;
+  position: fixed;
+  bottom: 16px;
   right: 16px;
   padding: 6px 12px;
   border-radius: 999px;
@@ -229,16 +229,17 @@ body {
 
 .room-code-fixed {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   font-size: 16px;
   color: #aaa;
 }
 
 .total-chips {
-  margin-left: 8px;
-  font-size: 14px;
-  color: #fbbf24;
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd700;
 }
 
 .room-code-fixed .room-code-value {
