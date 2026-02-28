@@ -1354,7 +1354,7 @@ function updateActionPanel(gameState) {
     return;
   }
 
-  
+  if (raiseAmountPanel) raiseAmountPanel.classList.remove('hidden');
   var currentBet = myPlayer.bet || 0;
   var toCall = gameState.currentBet - currentBet;
   
@@ -1397,6 +1397,7 @@ function disableAllButtons() {
   callBtn.disabled = true;
   raiseBtn.disabled = true;
   allInBtn.disabled = true;
+  if (raiseAmountPanel) raiseAmountPanel.classList.add('hidden');
 }
 
 // 更新 AI+1 按钮（仅房主在等待开局时可用）
