@@ -155,10 +155,10 @@ body {
   cursor: not-allowed;
 }
 
-/* 版本信息标签：固定屏幕左下角，不压住加入房间按钮 */
+/* 版本信息标签：固定屏幕左下角，距底 156px */
 .version-label {
   position: fixed;
-  bottom: 6px;
+  bottom: 156px;
   left: 10px;
   margin: 0;
   font-size: 12px;
@@ -196,10 +196,10 @@ body {
   font-size: 12px;
 }
 
-/* 版本信息标签：固定屏幕左下角，不压住加入房间按钮 */
+/* 版本信息标签：固定屏幕左下角，距底 156px */
 .version-label {
   position: fixed;
-  bottom: 6px;
+  bottom: 156px;
   left: 10px;
   margin: 0;
   font-size: 12px;

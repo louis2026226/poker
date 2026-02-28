@@ -223,7 +223,7 @@ function setupEventListeners() {
         createRoomBtn.textContent = '创建房间';
         alert('请求超时，请检查网络后重试');
       }, 15000);
-      socket.emit('createRoom', nickname, function(response) {
+      socket.emit('createRoom', { nickname: nickname, chips: playerStats.chips }, function(response) {
         clearTimeout(timeout);
         createRoomBtn.disabled = false;
         createRoomBtn.textContent = '创建房间';
@@ -276,7 +276,7 @@ function setupEventListeners() {
         confirmJoinBtn.textContent = '确认加入';
         alert('请求超时，请检查房间号与网络后重试');
       }, 15000);
-      socket.emit('joinRoom', roomCode, nickname, function(response) {
+      socket.emit('joinRoom', roomCode, { nickname: nickname, chips: playerStats.chips }, function(response) {
         clearTimeout(timeout);
         confirmJoinBtn.disabled = false;
         confirmJoinBtn.textContent = '确认加入';
@@ -292,10 +292,15 @@ function setupEventListeners() {
     });
   }
   
-  // 离开房间
+  // 离开房间：先向服务端请求当前筹码，写回主界面金币总额后再刷新
   if (leaveRoomBtn) {
     leaveRoomBtn.addEventListener('click', function() {
-      location.reload();
+      socket.emit('leaveRoom', function(res) {
+        if (res && res.success && typeof res.finalChips === 'number') {
+          updatePlayerChips(res.finalChips);
+        }
+        location.reload();
+      });
     });
   }
   

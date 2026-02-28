@@ -362,14 +362,17 @@ class PokerRoom {
     this.locked = false;
   }
 
-  addPlayer(socketId, nickname, isBot = false) {
+  addPlayer(socketId, nickname, isBot = false, initialChips = null) {
     const seat = this.findEmptySeat();
     if (seat === -1) return null;
+    const chips = (typeof initialChips === 'number' && initialChips > 0)
+      ? initialChips
+      : CONFIG.INITIAL_CHIPS;
     this.players[socketId] = {
       socketId,
       nickname,
       seat,
-      chips: CONFIG.INITIAL_CHIPS,
+      chips,
       hand: [],
       bet: 0,
       folded: false,
@@ -871,13 +874,15 @@ io.on('connection', (socket) => {
     playerLastActive[socket.id] = Date.now();
   });
 
-  socket.on('createRoom', (nickname, callback) => {
+  socket.on('createRoom', (nicknameOrPayload, callback) => {
     const roomCode = generateRoomCode();
     const room = new PokerRoom(roomCode, socket.id);
     rooms[roomCode] = room;
 
-    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
-    const player = room.addPlayer(socket.id, playerName);
+    const isPayload = nicknameOrPayload && typeof nicknameOrPayload === 'object';
+    const playerName = isPayload ? (nicknameOrPayload.nickname || '玩家') : (nicknameOrPayload || '玩家');
+    const initialChips = isPayload && typeof nicknameOrPayload.chips === 'number' ? nicknameOrPayload.chips : null;
+    const player = room.addPlayer(socket.id, playerName, false, initialChips);
     socket.join(roomCode);
     socket.roomCode = roomCode;
 
@@ -885,7 +890,7 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('roomUpdate', room.getGameState());
   });
 
-  socket.on('joinRoom', (roomCode, nickname, callback) => {
+  socket.on('joinRoom', (roomCode, nicknameOrPayload, callback) => {
     const room = rooms[roomCode];
     if (!room) {
       callback({ success: false, message: '房间不存在' });
@@ -897,8 +902,10 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
-    const player = room.addPlayer(socket.id, playerName);
+    const isPayload = nicknameOrPayload && typeof nicknameOrPayload === 'object';
+    const playerName = isPayload ? (nicknameOrPayload.nickname || '玩家') : (nicknameOrPayload || '玩家');
+    const initialChips = isPayload && typeof nicknameOrPayload.chips === 'number' ? nicknameOrPayload.chips : null;
+    const player = room.addPlayer(socket.id, playerName, false, initialChips);
     if (!player) {
       callback({ success: false, message: '无法加入房间' });
       return;
@@ -1067,6 +1074,40 @@ io.on('connection', (socket) => {
 
     room.startNewHand();
     callback({ success: true, gameState: room.getGameState() });
+  });
+
+  socket.on('leaveRoom', (callback) => {
+    const roomCode = socket.roomCode;
+    const room = roomCode ? rooms[roomCode] : null;
+    if (!room || !room.players[socket.id]) {
+      if (typeof callback === 'function') callback({ success: false, finalChips: null });
+      return;
+    }
+    const player = room.players[socket.id];
+    const finalChips = player.chips;
+    const wasHost = socket.id === room.hostId;
+    room.removePlayer(socket.id);
+    delete socket.roomCode;
+    socket.leave(roomCode);
+    if (wasHost) {
+      const newHostId = room.transferHost();
+      if (newHostId) io.to(roomCode).emit('hostChanged', { newHostId });
+    }
+    room.unlockRoom();
+    io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
+    if (Object.keys(room.players).length === 0) {
+      delete rooms[roomCode];
+    } else {
+      io.to(roomCode).emit('roomUpdate', room.getGameState());
+      if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
+        const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
+        if (activePlayers.length < 2) {
+          room.gameState = 'waiting';
+          io.to(roomCode).emit('gameState', room.getGameState());
+        }
+      }
+    }
+    if (typeof callback === 'function') callback({ success: true, finalChips });
   });
 
   socket.on('disconnect', () => {
