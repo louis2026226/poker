@@ -1162,8 +1162,8 @@ function animatePotChips(prevState, nextState) {
     var tableRect = tableEl.getBoundingClientRect();
     var dRect = dealerBtn.getBoundingClientRect();
 
-    // 目标垂直范围：矩形中心始终在打赏按钮下方 200 像素处，高度固定 150
-    var centerYAbs = dRect.bottom + 200;
+    // 目标垂直范围：矩形中心始终在打赏按钮下方 100 像素处，高度固定 150
+    var centerYAbs = dRect.bottom + 100;
     var bandTopAbs = centerYAbs - 75;
     var bandBottomAbs = centerYAbs + 75;
     if (bandTopAbs < tableRect.top) {
@@ -1177,10 +1177,10 @@ function animatePotChips(prevState, nextState) {
       bandBottomAbs -= shift2;
     }
 
-    // 目标水平范围：以打赏按钮中心为轴，宽度固定 120
+    // 目标水平范围：以打赏按钮中心为轴，宽度固定 220
     var centerXAbs = (dRect.left + dRect.right) / 2;
-    var leftAbs = centerXAbs - 60;
-    var rightAbs = centerXAbs + 60;
+    var leftAbs = centerXAbs - 110;
+    var rightAbs = centerXAbs + 110;
     if (leftAbs < tableRect.left) leftAbs = tableRect.left;
     if (rightAbs > tableRect.right) rightAbs = tableRect.right;
 
