@@ -604,10 +604,19 @@ socket.on('gameOver', function(data) {
 
       actions.forEach(function(a, idx) {
         var label = actionTextMap[a.action] || a.action;
-        var amt = (typeof a.amount === 'number' && a.amount !== 0) ? (' ' + a.amount) : '';
+        var amt = (typeof a.amount === 'number' && a.amount !== 0) ? a.amount : '';
         var sec = (typeof a.elapsedSeconds === 'number') ? a.elapsedSeconds : null;
-        var secText = sec != null ? (' ' + sec + 's') : '';
-        lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt + secText);
+        var secText = sec != null ? (sec + 'S') : '';
+        var parts = [];
+        parts.push((idx + 1) + '.');
+        parts.push(a.nickname || '');
+        if (label) {
+          parts.push(label + (amt !== '' ? amt : ''));
+        }
+        if (secText) {
+          parts.push(secText);
+        }
+        lines.push(parts.join('/'));
       });
 
       var timeStr = '';
