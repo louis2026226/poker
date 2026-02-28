@@ -698,15 +698,16 @@ body {
   font-size: 28px;
 }
 
-/* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
+/* 玩家外框顺时针倒计时进度条：完全盖在绿色边框上并外发光 */
 .seat-timer-ring {
   position: absolute;
-  inset: -5px;
+  inset: -2px;
   border-radius: inherit;
-  padding: 3px;
+  padding: 2px;
   pointer-events: none;
+  z-index: 2;
   background:
-    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 215, 0, 0.08) 0deg);
+    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 215, 0, 0.12) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -714,7 +715,10 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
-  box-shadow: 0 0 18px rgba(255, 215, 0, 0.9);
+  box-shadow:
+    0 0 8px rgba(255, 215, 0, 0.9),
+    0 0 16px rgba(255, 215, 0, 0.6),
+    0 0 24px rgba(255, 215, 0, 0.4);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
