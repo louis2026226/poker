@@ -572,6 +572,8 @@ body {
   background: rgba(0, 0, 0, 0.7);
   padding: 10px 25px;
   border-radius: 25px;
+  position: relative;
+  z-index: 80; /* 保证底池筹码计数在飞来的筹码之上 */
 }
 
 /* 底池前用筹码图标，底池变化时放大到 150% 再恢复 */

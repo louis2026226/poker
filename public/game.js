@@ -1119,17 +1119,35 @@ function animatePotChips(prevState, nextState) {
 
     playBetSoundIfSomeoneElseBet(prevState, nextState);
 
-    var tableEl = document.querySelector('.poker-table');
-    var potArea = document.querySelector('.pot-display') || document.getElementById('potIcon');
-    if (!tableEl || !potArea) return;
+  var tableEl = document.querySelector('.poker-table');
+  var dealerBtn = document.getElementById('dealerTipBtn');
+  var communityEl = document.getElementById('communityCards');
+  if (!tableEl) return;
 
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
 
-    var tableRect = tableEl.getBoundingClientRect();
-    var potRect = potArea.getBoundingClientRect();
-    var potCenterX = potRect.left - tableRect.left + potRect.width / 2;
-    var potCenterY = potRect.top - tableRect.top + potRect.height / 2;
+  var tableRect = tableEl.getBoundingClientRect();
+  var bandTop = tableRect.height * 0.25;
+  var bandBottom = tableRect.height * 0.55;
+
+  if (dealerBtn) {
+    var dRect = dealerBtn.getBoundingClientRect();
+    var dBottom = dRect.bottom - tableRect.top;
+    bandTop = Math.max(bandTop, dBottom + 8);
+  }
+  if (communityEl) {
+    var cRect = communityEl.getBoundingClientRect();
+    var cTop = cRect.top - tableRect.top;
+    bandBottom = Math.min(bandBottom, cTop - 8);
+  }
+  if (bandBottom <= bandTop) {
+    bandTop = tableRect.height * 0.30;
+    bandBottom = tableRect.height * 0.50;
+  }
+
+  var areaLeft = tableRect.width * 0.3;
+  var areaRight = tableRect.width * 0.7;
 
     var prevById = {};
     prevState.players.forEach(function(p) {
@@ -1175,10 +1193,16 @@ function animatePotChips(prevState, nextState) {
           tableEl.appendChild(chipEl);
 
           requestAnimationFrame(function() {
-            var angle = Math.random() * Math.PI * 2;
-            var radius = 22 + Math.random() * 26; // 底池周围一圈，避免压住文字
-            var targetX = potCenterX + Math.cos(angle) * radius - startLeft;
-            var targetY = potCenterY + Math.sin(angle) * radius - startTop;
+            var targetXAbs = tableRect.left + areaLeft + Math.random() * (areaRight - areaLeft);
+            var targetYAbs = tableRect.top + bandTop + Math.random() * (bandBottom - bandTop);
+            var targetX = targetXAbs - tableRect.left;
+            var targetY = targetYAbs - tableRect.top;
+            var dx = targetX - startLeft;
+            var dy = targetY - startTop;
+            var jitterX = (Math.random() - 0.5) * 6;
+            var jitterY = (Math.random() - 0.5) * 4;
+            dx += jitterX;
+            dy += jitterY;
             chipEl.style.transform = 'translate(' + targetX + 'px,' + targetY + 'px)';
           });
         })();
