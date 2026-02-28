@@ -714,12 +714,14 @@ function renderCommunityCards(cards) {
   communityCardsEl.innerHTML = '';
   cards.forEach(function(card, index) {
     var isNewCard = index >= _lastCommunityCardsLength;
+    var delay = isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0;
     var cardEl = createCardElement(card, true, {
       flyIn: isNewCard,
-      flyDelay: isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0,
+      flyDelay: delay,
       extraClass: 'card-board'
     });
     communityCardsEl.appendChild(cardEl);
+    if (isNewCard) scheduleCardFlyFromDealer(cardEl, delay);
   });
   _lastCommunityCardsLength = cards.length;
 }
@@ -920,10 +922,8 @@ function createCardElement(card, faceUp, options) {
     cardEl.classList.add(options.extraClass);
   }
   if (options.flyIn) {
-    cardEl.classList.add('card-fly-in');
-    if (options.flyDelay != null) {
-      cardEl.style.animationDelay = (options.flyDelay / 1000) + 's';
-    }
+    cardEl.classList.add('card-fly-from-dealer');
+    cardEl.style.opacity = '0';
   }
   
   if (!faceUp || !card.rank) {
@@ -940,6 +940,39 @@ function createCardElement(card, faceUp, options) {
   cardEl.innerHTML = '<span class="suit top-left">' + card.suit + '</span><span class="rank">' + card.rank + '</span><span class="suit bottom-right">' + card.suit + '</span>';
   
   return cardEl;
+}
+
+// 从荷官图片中间飞入：先定位到荷官中心再动画到牌位
+function runCardFlyFromDealer(cardEl) {
+  var dealerEl = document.querySelector('.dealer-image');
+  if (!dealerEl || !cardEl) return;
+  var dealerRect = dealerEl.getBoundingClientRect();
+  var dealerCenterX = dealerRect.left + dealerRect.width / 2;
+  var dealerCenterY = dealerRect.top + dealerRect.height / 2;
+  var cardRect = cardEl.getBoundingClientRect();
+  var cardCenterX = cardRect.left + cardRect.width / 2;
+  var cardCenterY = cardRect.top + cardRect.height / 2;
+  var dx = dealerCenterX - cardCenterX;
+  var dy = dealerCenterY - cardCenterY;
+  cardEl.style.transition = 'none';
+  cardEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(0.2)';
+  cardEl.style.opacity = '0';
+  cardEl.offsetHeight;
+  cardEl.style.transition = 'transform 0.45s ease-out, opacity 0.25s ease-out';
+  cardEl.style.transform = 'translate(0,0) scale(1)';
+  cardEl.style.opacity = '1';
+  setTimeout(function() {
+    cardEl.style.transition = '';
+    cardEl.classList.remove('card-fly-from-dealer');
+  }, 460);
+}
+
+function scheduleCardFlyFromDealer(cardEl, delayMs) {
+  if (!cardEl || !delayMs) {
+    if (cardEl) runCardFlyFromDealer(cardEl);
+    return;
+  }
+  setTimeout(function() { runCardFlyFromDealer(cardEl); }, delayMs);
 }
 
 // 清空白色线框内停留的筹码（牌局结束或新一局开始时调用）
@@ -1140,11 +1173,13 @@ function renderSeats(gameState) {
       if (player.socketId === mySocketId) {
         player.hand.forEach(function(card, idx) {
           var delay = handFlyIn ? dealIndex * 120 : 0;
-          cardsEl.appendChild(createCardElement(card, true, {
+          var cardEl = createCardElement(card, true, {
             flyIn: handFlyIn,
             flyDelay: delay,
             extraClass: 'card-my'
-          }));
+          });
+          cardsEl.appendChild(cardEl);
+          if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delay);
           dealIndex++;
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
@@ -1154,14 +1189,18 @@ function renderSeats(gameState) {
       } else {
         for (var i = 0; i < 2; i++) {
           var delayBack = handFlyIn ? dealIndex * 120 : 0;
-          cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack }));
+          var cardEl = createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack });
+          cardsEl.appendChild(cardEl);
+          if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delayBack);
           dealIndex++;
         }
       }
     } else if (gameState.gameState !== 'waiting') {
       for (var i = 0; i < 2; i++) {
         var delayBack2 = handFlyIn ? dealIndex * 120 : 0;
-        cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack2 }));
+        var cardEl = createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack2 });
+        cardsEl.appendChild(cardEl);
+        if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delayBack2);
         dealIndex++;
       }
     }
@@ -1236,6 +1275,7 @@ function updateActionPanel(gameState) {
   // 已弃牌、全下或筹码为 0 时不再显示操作
   if (myPlayer.folded || myPlayer.chips <= 0 || gameState.gameState === 'ended') {
     disableAllButtons();
+    if (raiseAmountPanel) raiseAmountPanel.classList.add('hidden');
     return;
   }
 
@@ -1244,10 +1284,11 @@ function updateActionPanel(gameState) {
   if (!isMyTurn) {
     actionText.textContent = '';
     disableAllButtons();
+    if (raiseAmountPanel) raiseAmountPanel.classList.add('hidden');
     return;
   }
 
-  
+  if (raiseAmountPanel) raiseAmountPanel.classList.remove('hidden');
   var currentBet = myPlayer.bet || 0;
   var toCall = gameState.currentBet - currentBet;
   
@@ -1290,6 +1331,7 @@ function disableAllButtons() {
   callBtn.disabled = true;
   raiseBtn.disabled = true;
   allInBtn.disabled = true;
+  if (raiseAmountPanel) raiseAmountPanel.classList.add('hidden');
 }
 
 // 更新 AI+1 按钮（仅房主在等待开局时可用）

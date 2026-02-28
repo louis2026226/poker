@@ -25,6 +25,16 @@ body {
   justify-content: center;
 }
 
+/* 游戏房间：牌桌固定屏幕高度中间，不上下滑动 */
+#gameRoom {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;
+}
+
 /* 大厅样式 */
 .lobby-container {
   text-align: center;
@@ -514,25 +524,25 @@ body {
 .poker-table {
   position: relative;
   width: 100%;
-  height: calc(100vh - 240px + 100px);
+  max-height: min(calc(100vh - 180px), 720px);
+  height: calc(100vh - 180px);
   background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 70%, #0d330d 100%);
   border: 15px solid #5d4037;
   border-radius: 200px;
-  margin-top: 140px;
+  margin: 0;
   overflow: visible;
   box-shadow: 0 8px 0 #1b5e20, 0 12px 0 rgba(0,0,0,0.15), 0 24px 40px rgba(0,0,0,0.35);
 }
 
-/* 单独针对游戏房间里的牌桌，整体再往下挪一段距离，避免贴在屏幕上半部分 */
 #gameRoom .poker-table {
-  margin-top: 240px; /* 额外下移约 100 像素 */
+  margin: 0;
 }
 
-/* 手机竖屏下进一步下移牌桌位置，保留下方操作空间 */
+/* 手机竖屏 */
 @media (max-width: 768px) {
   #gameRoom .poker-table {
-    height: calc(100vh - 320px + 100px);
-    margin-top: 270px;
+    height: calc(100vh - 200px);
+    max-height: none;
   }
   .dealer-image {
     width: 117px;
@@ -768,21 +778,9 @@ body {
   aspect-ratio: 58 / 85;
 }
 
-/* 发牌飞入：手牌和底牌都从荷官位置（牌桌上方）飞入 */
-@keyframes cardFlyIn {
-  from {
-    transform: translate(0, -220px) scale(0.2);
-    opacity: 0;
-  }
-  to {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
-  }
-}
-
-.card.card-fly-in {
-  transform-origin: 50% 150%;
-  animation: cardFlyIn 0.45s ease-out forwards;
+/* 手牌和公共牌从荷官图片中间飞入（由 JS runCardFlyFromDealer 实现） */
+.card.card-fly-from-dealer {
+  transform-origin: 50% 50%;
 }
 
 .card.red {
@@ -895,6 +893,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.raise-amount.hidden {
+  display: none !important;
 }
 
 .action-info {
