@@ -1164,24 +1164,29 @@ function animatePotChips(prevState, nextState) {
 
     var isMobile = window.innerWidth && window.innerWidth <= 768;
 
-    // 基础：矩形中心在打赏按钮下方 100 像素处，高度固定 150（桌面）
-    var centerYAbs = dRect.bottom + 100;
+    // 桌面基础：高度 150，宽度 220，中心在打赏按钮下方 100px
     var bandHeight = 150;
-    var bandHalfH = bandHeight / 2;
     var bandWidth = 220;
-    var bandHalfW = bandWidth / 2;
 
-    // 在手机浏览器上：高度和宽度各减少 100px，整体再上移 90px（你刚才的需求）
+    // 手机端：高度和宽度各减少 100px（150->50, 220->120）
     if (isMobile) {
-      bandHeight = Math.max(50, bandHeight - 100); // 150 -> 50，高度减少 100
-      bandHalfH = bandHeight / 2;
-      bandWidth = Math.max(80, bandWidth - 100);   // 220 -> 120，宽度减少 100
-      bandHalfW = bandWidth / 2;
-      centerYAbs -= 90;
+      bandHeight = Math.max(50, 150 - 100);
+      bandWidth = Math.max(80, 220 - 100);
     }
 
-    var bandTopAbs = centerYAbs - bandHalfH;
-    var bandBottomAbs = centerYAbs + bandHalfH;
+    var bandHalfH = bandHeight / 2;
+    var bandHalfW = bandWidth / 2;
+
+    var bandTopAbs, bandBottomAbs;
+    if (isMobile) {
+      // 手机：整个矩形始终在打赏按钮下方至少 100px 处
+      bandTopAbs = dRect.bottom + 100;
+      bandBottomAbs = bandTopAbs + bandHeight;
+    } else {
+      var centerYAbs = dRect.bottom + 100;
+      bandTopAbs = centerYAbs - bandHalfH;
+      bandBottomAbs = centerYAbs + bandHalfH;
+    }
     if (bandTopAbs < tableRect.top) {
       var shift = tableRect.top - bandTopAbs;
       bandTopAbs += shift;
