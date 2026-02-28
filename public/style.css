@@ -74,6 +74,11 @@ body {
   background: rgba(30, 64, 175, 0.9);
 }
 
+/* 房间内不显示翻译按钮 */
+body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
+  display: none !important;
+}
+
 /* 玩家信息显示 */
 .player-stats {
   display: flex;
@@ -241,8 +246,7 @@ body {
   padding-top: calc(15px + env(safe-area-inset-top, 0));
   padding-left: calc(30px + env(safe-area-inset-left, 0));
   padding-right: calc(30px + env(safe-area-inset-right, 0));
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+  background: transparent;
 }
 
 .game-header .room-info {
@@ -712,7 +716,7 @@ body {
   padding: 10px 25px;
   border-radius: 25px;
   position: relative;
-  z-index: 80;
+  z-index: 200;
 }
 
 /* 底池前用筹码图标，底池变化时放大到 150% 再恢复 */
