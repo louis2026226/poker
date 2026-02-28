@@ -407,27 +407,36 @@ socket.on('gameState', function(gameState) {
   console.log('Game state received');
 
   var prevState = currentGameState;
+  var isNewDeal = gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting');
 
-  if (gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting')) {
+  if (isNewDeal) {
     _lastCommunityCardsLength = 0;
   }
   /* 牌局结束或新一局开始时清空白色线框内停留的筹码 */
-  if (gameState.gameState === 'ended' || (gameState.gameState === 'preflop' && prevState && (prevState.gameState === 'ended' || prevState.gameState === 'waiting'))) {
+  if (gameState.gameState === 'ended' || isNewDeal) {
     clearPotChips();
   }
   if (_lastGameStateForPot) {
     animatePotChips(_lastGameStateForPot, gameState);
   }
 
-  // 仅在从 waiting/ended 进入 preflop 时标记为新一手，用于控制发牌动画只播放一次
-  _isNewDealPreflop = gameState.gameState === 'preflop' &&
-    (!prevState || prevState.gameState === 'waiting' || prevState.gameState === 'ended');
+  /* 开局大小盲：先飞筹码，飞完再发手牌（延迟 700ms 后再更新状态与发牌） */
+  var potIncreased = _lastGameStateForPot && typeof gameState.pot === 'number' && gameState.pot > ((_lastGameStateForPot.pot) || 0);
+  if (isNewDeal && potIncreased) {
+    setTimeout(function() {
+      _isNewDealPreflop = true;
+      currentGameState = gameState;
+      updateGameState(gameState);
+      _lastGameStateForPot = gameState;
+      updateLocalStatsOnGameEnd(prevState, gameState);
+    }, 700);
+    return;
+  }
 
+  _isNewDealPreflop = isNewDeal;
   currentGameState = gameState;
   updateGameState(gameState);
   _lastGameStateForPot = gameState;
-
-  // 利用 gameState 的变化在本地统计金币 / 场次 / 胜率
   updateLocalStatsOnGameEnd(prevState, gameState);
 });
 

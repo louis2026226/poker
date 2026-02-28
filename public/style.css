@@ -25,14 +25,10 @@ body {
   justify-content: center;
 }
 
-/* 游戏房间：牌桌固定屏幕高度中间，不上下滑动 */
+/* 游戏房间：牌桌可上下滑动 */
 #gameRoom {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-top: 60px;
+  display: block;
+  min-height: 100vh;
 }
 
 /* 大厅样式 */
@@ -417,7 +413,7 @@ body {
 /* 白色线框矩形：明显显示，方便看到筹码飞入落点 */
 .chip-landing-zone {
   position: absolute;
-  top: 150px; /* 白色线框整体上移 150px */
+  top: 180px; /* 白色线框往下移 30px */
   left: 50%;
   transform: translateX(-50%);
   width: 170px;
@@ -524,25 +520,24 @@ body {
 .poker-table {
   position: relative;
   width: 100%;
-  max-height: min(calc(100vh - 180px), 720px);
-  height: calc(100vh - 180px);
+  height: calc(100vh - 240px + 100px);
   background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 70%, #0d330d 100%);
   border: 15px solid #5d4037;
   border-radius: 200px;
-  margin: 0;
+  margin-top: 140px;
   overflow: visible;
   box-shadow: 0 8px 0 #1b5e20, 0 12px 0 rgba(0,0,0,0.15), 0 24px 40px rgba(0,0,0,0.35);
 }
 
 #gameRoom .poker-table {
-  margin: 0;
+  margin-top: 240px;
 }
 
 /* 手机竖屏 */
 @media (max-width: 768px) {
   #gameRoom .poker-table {
-    height: calc(100vh - 200px);
-    max-height: none;
+    height: calc(100vh - 320px + 100px);
+    margin-top: 270px;
   }
   .dealer-image {
     width: 117px;
