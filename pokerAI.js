@@ -9,7 +9,7 @@ const path = require('path');
 // 加载环境变量
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const API_KEY = process.env.CODING_PLAN_API_KEY || 'sk-cp-pk_6nQosAy2N6W7Pm3Wx2yMjM022bJc6U5EWJdCK9tZbySsvU0vQej7JTmXHVx7s1qfIbXj3lNWxSfta3CoSFeq2hAxVeWjgftDEnA8sKwFVSqpdaU1jCls';
+const API_KEY = process.env.CODING_PLAN_API_KEY || '';
 const API_URL = 'https://api.codingplan.com/v1/poker/decision';
 
 // API超时时间（毫秒）
@@ -43,6 +43,9 @@ function formatCards(cards) {
  * @returns {Promise<Object>} - AI决策结果
  */
 async function getAIDecision(gameState, playerId) {
+  if (!API_KEY) {
+    return getDefaultDecision(gameState);
+  }
   try {
     // 构建请求数据
     const requestData = {

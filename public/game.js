@@ -410,6 +410,14 @@ function setupEventListeners() {
   if (allInBtn) {
     allInBtn.addEventListener('click', function() {
       playSound('bet');
+      if (currentGameState && currentGameState.players) {
+        var myP = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
+        if (myP) {
+          var mySeatIdx = myP.seat;
+          var myDisplaySeat = (myP.seat - mySeatIdx + 5) % 5;
+          showAllInFloatAtSeat(myDisplaySeat);
+        }
+      }
       socket.emit('playerAction', 'all-in', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -702,6 +710,24 @@ function showRoundResultFloats(results) {
   }
 }
 
+/** 在指定展示座位号（0-4）上飘一次 ALL IN，与其他人效果一致 */
+function showAllInFloatAtSeat(displaySeat) {
+  var tableEl = document.querySelector('.poker-table');
+  if (!tableEl) return;
+  var seatEl = document.getElementById('seat-' + displaySeat);
+  if (!seatEl) return;
+  var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+  var rect = avatarEl.getBoundingClientRect();
+  var tableRect = tableEl.getBoundingClientRect();
+  var floatEl = document.createElement('div');
+  floatEl.className = 'all-in-float';
+  floatEl.textContent = 'ALL IN';
+  floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
+  floatEl.style.top = (rect.top - tableRect.top - 8) + 'px';
+  tableEl.appendChild(floatEl);
+  setTimeout(function() { floatEl.remove(); }, 2300);
+}
+
 /** 有人刚全下时，在该玩家头上飘 ALL IN（黄色、外发光、上飘、停留约 1 秒后消失） */
 function showAllInFloats(prevState, nextState) {
   try {
@@ -718,19 +744,9 @@ function showAllInFloats(prevState, nextState) {
       if (!p || !p.allIn) return;
       var prev = prevById[p.socketId];
       if (prev && prev.allIn) return;
+      if (p.socketId === mySocketId) return;
       var displaySeat = (p.seat - mySeatIndex + 5) % 5;
-      var seatEl = document.getElementById('seat-' + displaySeat);
-      if (!seatEl) return;
-      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
-      var rect = avatarEl.getBoundingClientRect();
-      var tableRect = tableEl.getBoundingClientRect();
-      var floatEl = document.createElement('div');
-      floatEl.className = 'all-in-float';
-      floatEl.textContent = 'ALL IN';
-      floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
-      floatEl.style.top = (rect.top - tableRect.top - 8) + 'px';
-      tableEl.appendChild(floatEl);
-      setTimeout(function() { floatEl.remove(); }, 2300);
+      showAllInFloatAtSeat(displaySeat);
     });
   } catch (e) {
     console.log('showAllInFloats error', e);
