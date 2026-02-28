@@ -1162,7 +1162,7 @@ function animatePotChips(prevState, nextState) {
     var tableRect = tableEl.getBoundingClientRect();
     var dRect = dealerBtn.getBoundingClientRect();
 
-    var isMobile = window.innerWidth && window.innerWidth <= 768;
+    var isMobile = window.innerWidth && (window.innerWidth <= 900 || window.innerHeight > window.innerWidth);
 
     // 桌面基础：高度 150，宽度 220，中心在打赏按钮下方 100px
     var bandHeight = 150;
