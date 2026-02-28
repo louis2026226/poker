@@ -495,6 +495,7 @@ socket.on('gameState', function(gameState) {
 
   if (gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
+    clearPotFlyChips();
   }
   if (_lastGameStateForPot) {
     animatePotChips(_lastGameStateForPot, gameState);
@@ -1098,7 +1099,17 @@ function playBetSoundIfSomeoneElseBet(prevState, nextState) {
   if (someoneElseBet) playSound('bet');
 }
 
-// 下注飞筹码：从有新增下注的玩家头像飞到桌子中心
+function clearPotFlyChips() {
+  try {
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+    var chips = tableEl.querySelectorAll('.chip-fly-pot');
+    chips.forEach(function(el) { el.remove(); });
+  } catch (e) {
+    console.log('clearPotFlyChips error', e);
+  }
+}
+
 function animatePotChips(prevState, nextState) {
   try {
     if (!prevState || !nextState) return;
@@ -1109,10 +1120,21 @@ function animatePotChips(prevState, nextState) {
     playBetSoundIfSomeoneElseBet(prevState, nextState);
 
     var tableEl = document.querySelector('.poker-table');
-    if (!tableEl) return;
+    var potArea = document.querySelector('.pot-display') || document.getElementById('potIcon');
+    if (!tableEl || !potArea) return;
 
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
+
+    var tableRect = tableEl.getBoundingClientRect();
+    var potRect = potArea.getBoundingClientRect();
+    var potCenterX = potRect.left - tableRect.left + potRect.width / 2;
+    var potCenterY = potRect.top - tableRect.top + potRect.height / 2;
+
+    var prevById = {};
+    prevState.players.forEach(function(p) {
+      if (p && p.socketId) prevById[p.socketId] = p;
+    });
 
     nextState.players.forEach(function(p) {
       if (!p || !p.socketId) return;
@@ -1135,31 +1157,32 @@ function animatePotChips(prevState, nextState) {
 
       var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
       var fromRect = avatarEl.getBoundingClientRect();
-      var tableRect = tableEl.getBoundingClientRect();
-
-      var chipEl = document.createElement('div');
-      chipEl.className = 'chip-fly';
 
       var startLeft = fromRect.left - tableRect.left + fromRect.width / 2 - 10;
       var startTop = fromRect.top - tableRect.top + fromRect.height / 2 - 10;
-      chipEl.style.left = startLeft + 'px';
-      chipEl.style.top = startTop + 'px';
 
-      tableEl.appendChild(chipEl);
+      var chipCount = 1;
+      if (p.action === 'all-in') {
+        chipCount = 2 + Math.floor(Math.random() * 2); // 2 或 3 个筹码
+      }
 
-      // 目标是桌子中心
-      requestAnimationFrame(function() {
-        var centerLeft = tableRect.width / 2 - 10;
-        var centerTop = tableRect.height / 2 - 10;
-        var dx = centerLeft - startLeft;
-        var dy = centerTop - startTop;
-        chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-        chipEl.style.opacity = '0';
-      });
+      for (var i = 0; i < chipCount; i++) {
+        (function() {
+          var chipEl = document.createElement('div');
+          chipEl.className = 'chip-fly chip-fly-pot';
+          chipEl.style.left = startLeft + 'px';
+          chipEl.style.top = startTop + 'px';
+          tableEl.appendChild(chipEl);
 
-      setTimeout(function() {
-        chipEl.remove();
-      }, 600);
+          requestAnimationFrame(function() {
+            var angle = Math.random() * Math.PI * 2;
+            var radius = 22 + Math.random() * 26; // 底池周围一圈，避免压住文字
+            var targetX = potCenterX + Math.cos(angle) * radius - startLeft;
+            var targetY = potCenterY + Math.sin(angle) * radius - startTop;
+            chipEl.style.transform = 'translate(' + targetX + 'px,' + targetY + 'px)';
+          });
+        })();
+      }
     });
   } catch (e) {
     console.log('animatePotChips error', e);
