@@ -669,12 +669,12 @@ body {
 /* 我的手牌与公共牌中牌面符号等比缩放（比例与牌面协调） */
 .card-my .suit,
 .card-board .suit {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .card-my .rank,
 .card-board .rank {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
@@ -685,7 +685,7 @@ body {
   padding: 3px;
   pointer-events: none;
   background:
-    conic-gradient(#ffffff var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 215, 0, 0.08) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -693,7 +693,7 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.9);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
@@ -770,7 +770,7 @@ body {
 
 .timer-progress {
   fill: none;
-  stroke: #4ade80; /* 亮绿色 */
+  stroke: #ffd700; /* 黄色 */
   stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 100;
@@ -785,7 +785,7 @@ body {
   transform: translate(-50%, -50%);
   font-size: 12px;
   font-weight: bold;
-  color: #e5ffe5;
+  color: #ffd700;
 }
 
 /* 下注飞筹码动画 */
@@ -1094,12 +1094,12 @@ body {
   /* 手机端牌面数字与花色（比例适中，避免重叠） */
   .card-my .suit,
   .card-board .suit {
-    font-size: 14px;
+    font-size: 18px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 14px;
+    font-size: 18px;
     line-height: 1;
   }
 
@@ -1251,12 +1251,12 @@ body {
   /* 更小屏下牌面数字与花色，确保不重叠且比例合适 */
   .card-my .suit,
   .card-board .suit {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1;
   }
 
