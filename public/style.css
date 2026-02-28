@@ -1115,21 +1115,22 @@ body {
     right: 2px;
   }
 
-  .card .rank {
+  /* 仅其他玩家小牌缩小，手牌/公共牌不适用 */
+  .card:not(.card-my):not(.card-board) .rank {
     font-size: 7px;
     line-height: 1;
   }
 
-  .card .suit {
+  .card:not(.card-my):not(.card-board) .suit {
     font-size: 7px;
   }
 
-  .card .suit.top-left {
+  .card:not(.card-my):not(.card-board) .suit.top-left {
     top: 1px;
     left: 1px;
   }
 
-  .card .suit.bottom-right {
+  .card:not(.card-my):not(.card-board) .suit.bottom-right {
     bottom: 1px;
     right: 1px;
   }
@@ -1272,21 +1273,22 @@ body {
     right: 1px;
   }
 
-  .card .rank {
+  /* 仅其他玩家小牌缩小，手牌/公共牌不适用 */
+  .card:not(.card-my):not(.card-board) .rank {
     font-size: 6px;
     line-height: 1;
   }
 
-  .card .suit {
+  .card:not(.card-my):not(.card-board) .suit {
     font-size: 6px;
   }
 
-  .card .suit.top-left {
+  .card:not(.card-my):not(.card-board) .suit.top-left {
     top: 0;
     left: 0;
   }
 
-  .card .suit.bottom-right {
+  .card:not(.card-my):not(.card-board) .suit.bottom-right {
     bottom: 0;
     right: 0;
   }
