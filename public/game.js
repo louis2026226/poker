@@ -1866,7 +1866,8 @@ function updateActionTimerPosition(gameState) {
   var timerEl = document.getElementById('actionTimer');
   if (!timerEl) return;
 
-  if (gameState.currentPlayerSeat == null || gameState.currentPlayerSeat === -1) {
+  if (gameState.currentPlayerSeat == null || gameState.currentPlayerSeat === -1 ||
+      gameState.gameState === 'waiting' || gameState.gameState === 'ended') {
     timerEl.classList.add('hidden');
     return;
   }
@@ -1897,6 +1898,7 @@ function updateActionTimerPosition(gameState) {
 
   timerEl.style.left = (rect.left - tableRect.left + rect.width / 2 - 16) + 'px';
   timerEl.style.top = (rect.top - tableRect.top + rect.height / 2 - 16) + 'px';
+  timerEl.classList.remove('hidden');
 }
 
 function updateActionPanel(gameState) {
@@ -2068,14 +2070,27 @@ function startActionTimer(gameState) {
     console.log('startActionTimer find seat error', e);
   }
   
-  // 0.02 秒一跳，视觉更顺滑
+  var timerTextEl = document.getElementById('timerText');
+  var progressCircle = document.querySelector('.timer-progress');
+  var circumference = progressCircle ? 2 * Math.PI * 16 : 100;
+  if (progressCircle) {
+    progressCircle.style.strokeDasharray = circumference;
+    progressCircle.style.strokeDashoffset = '0';
+  }
+  if (timerTextEl) timerTextEl.textContent = '12';
+
   actionTimer = setInterval(function() {
     actionTimeLeft -= 0.02;
-    // 更新玩家外框顺时针进度条
+    var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
+
     if (countdownInfoEl) {
-      var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
       var deg = Math.floor(ratio * 360);
       countdownInfoEl.style.setProperty('--timer-deg', deg + 'deg');
+    }
+
+    if (timerTextEl) timerTextEl.textContent = Math.ceil(Math.max(0, actionTimeLeft));
+    if (progressCircle) {
+      progressCircle.style.strokeDashoffset = ((1 - ratio) * circumference) + '';
     }
 
     if (actionTimeLeft <= 0) {
@@ -2115,7 +2130,6 @@ function stopActionTimer() {
     actionTimer = null;
   }
 
-  // 清理外框进度条高亮
   if (countdownSeatEl) {
     countdownSeatEl.classList.remove('countdown-active');
   }
@@ -2124,6 +2138,9 @@ function stopActionTimer() {
   }
   countdownSeatEl = null;
   countdownInfoEl = null;
+
+  var timerEl = document.getElementById('actionTimer');
+  if (timerEl) timerEl.classList.add('hidden');
 }
 
 // ============ 表情功能 ============
