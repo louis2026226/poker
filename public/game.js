@@ -1749,7 +1749,7 @@ function loadVersionLabel() {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data && data.version) {
-          el.textContent = '当前版本：' + data.version;
+          el.textContent = data.version;
         }
       })
       .catch(function() {});
