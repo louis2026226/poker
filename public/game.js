@@ -1153,25 +1153,32 @@ function animatePotChips(prevState, nextState) {
     playBetSoundIfSomeoneElseBet(prevState, nextState);
 
     var tableEl = document.querySelector('.poker-table');
-    var communityEl = document.getElementById('communityCards');
-    if (!tableEl || !communityEl) return;
+    var dealerBtn = document.getElementById('dealerTipBtn');
+    if (!tableEl || !dealerBtn) return;
 
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
 
     var tableRect = tableEl.getBoundingClientRect();
-    var cRect = communityEl.getBoundingClientRect();
-    var cHeight = communityEl.offsetHeight || 0;
+    var dRect = dealerBtn.getBoundingClientRect();
 
-    // 目标垂直范围：公共牌上方，避开牌本身（高度按公共牌高度动态上移）
-    var safeGap = (cHeight > 0 ? cHeight * 0.6 : 0) + 12;
-    var bandBottomAbs = cRect.top - safeGap;
-    var bandTopAbs = bandBottomAbs - 150;
-    if (bandTopAbs < tableRect.top) bandTopAbs = tableRect.top;
-    if (bandBottomAbs - bandTopAbs < 20) bandBottomAbs = bandTopAbs + 20;
+    // 目标垂直范围：矩形中心始终在打赏按钮下方 200 像素处，高度固定 150
+    var centerYAbs = dRect.bottom + 200;
+    var bandTopAbs = centerYAbs - 75;
+    var bandBottomAbs = centerYAbs + 75;
+    if (bandTopAbs < tableRect.top) {
+      var shift = tableRect.top - bandTopAbs;
+      bandTopAbs += shift;
+      bandBottomAbs += shift;
+    }
+    if (bandBottomAbs > tableRect.bottom) {
+      var shift2 = bandBottomAbs - tableRect.bottom;
+      bandTopAbs -= shift2;
+      bandBottomAbs -= shift2;
+    }
 
-    // 目标水平范围：以公共牌中心为轴，宽度固定为 120px
-    var centerXAbs = (cRect.left + cRect.right) / 2;
+    // 目标水平范围：以打赏按钮中心为轴，宽度固定 120
+    var centerXAbs = (dRect.left + dRect.right) / 2;
     var leftAbs = centerXAbs - 60;
     var rightAbs = centerXAbs + 60;
     if (leftAbs < tableRect.left) leftAbs = tableRect.left;
