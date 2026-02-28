@@ -646,12 +646,14 @@ function setupEventListeners() {
       playSound('button');
       playSound('card');
       startGameBtn.disabled = true;
-      startGameBtn.textContent = '开始中...';
+      var dict = I18N[currentLang] || I18N.zh;
+      startGameBtn.textContent = currentLang === 'en' ? 'Starting...' : (dict.btnStartGame || '开始游戏');
       socket.emit('startGame', function(response) {
         if (!response || !response.success) {
           startGameBtn.disabled = false;
-          startGameBtn.textContent = '开始游戏';
-          alert(response && response.message ? response.message : '无法开始游戏，请稍后重试');
+          var dictFail = I18N[currentLang] || I18N.zh;
+          startGameBtn.textContent = dictFail.btnStartGame || '开始游戏';
+          alert(response && response.message ? response.message : (dictFail.startGameError || '无法开始游戏，请稍后重试'));
         } else {
           // 开始游戏成功后隐藏按钮，等下一次牌局结束/等待时再由 updateBotButton 控制显示
           startGameBtn.classList.add('hidden');
@@ -1379,8 +1381,9 @@ function animatePotChips(prevState, nextState) {
     var bandHalfH = bandHeight / 2;
     var bandHalfW = bandWidth / 2;
 
-    // 矩形顶边固定在荷官打赏按钮下方 150 像素处（桌面和手机一致）
-    var bandTopAbs = dRect.bottom + 150;
+    // 垂直位置：桌面保持 150px；手机略往上提到 120px，避免压到公共牌
+    var offsetY = isMobile ? 120 : 150;
+    var bandTopAbs = dRect.bottom + offsetY;
     var bandBottomAbs = bandTopAbs + bandHeight;
     if (bandTopAbs < tableRect.top) {
       var shift = tableRect.top - bandTopAbs;
@@ -1743,13 +1746,19 @@ function updateActionPanel(gameState) {
     checkBtn.style.display = 'inline-block';
     callBtn.disabled = true;
     callBtn.style.display = 'none';
-    checkBtn.textContent = '过牌';
+    var dict = I18N[currentLang] || I18N.zh;
+    checkBtn.textContent = dict.btnCheck || '过牌';
   } else {
     checkBtn.disabled = true;
     checkBtn.style.display = 'none';
     callBtn.disabled = false;
     callBtn.style.display = 'inline-block';
-    callBtn.textContent = '跟注 ' + toCall;
+    var dict2 = I18N[currentLang] || I18N.zh;
+    if (currentLang === 'en') {
+      callBtn.textContent = (dict2.btnCall || 'Call') + ' ' + toCall;
+    } else {
+      callBtn.textContent = (dict2.btnCall || '跟注') + ' ' + toCall;
+    }
   }
   
   var minRaise = Math.max(gameState.currentBet * 2, gameState.config.BIG_BLIND);
@@ -1810,7 +1819,8 @@ function updateBotButton(gameState) {
       startGameBtn.classList.toggle('hidden', !canStart);
       startGameBtn.disabled = !canStart;
       if (canStart) {
-        startGameBtn.textContent = '开始游戏';
+        var dict = I18N[currentLang] || I18N.zh;
+        startGameBtn.textContent = dict.btnStartGame || '开始游戏';
       }
     } else {
       startGameBtn.classList.add('hidden');

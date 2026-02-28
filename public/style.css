@@ -237,9 +237,9 @@ body {
 }
 
 .total-chips {
-  font-size: 20px;
-  font-weight: bold;
-  color: #ffd700;
+  font-size: 16px;
+  font-weight: normal;
+  color: #aaa;
 }
 
 .room-code-fixed .room-code-value {
