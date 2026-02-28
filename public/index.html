@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Louis Poker - Play Texas Hold'em with friends online">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Louis Poker - 与好友一起在线玩德州扑克">
   <title>Louis Poker</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,10 +13,9 @@
     <div class="lobby-container" role="form" aria-labelledby="lobby-title">
       <h1 id="lobby-title" class="title">Louis Poker</h1>
       <p class="subtitle">与好友一起畅玩</p>
-      <button id="langToggleBtn" class="lang-toggle-btn" type="button">中 / EN</button>
       
       <!-- 玩家信息显示 -->
-      <div id="playerStats" class="player-stats hidden" role="region" aria-label="玩家统计信息">
+      <div id="playerStats" class="player-stats" role="region" aria-label="玩家统计信息">
         <div class="stat-item">
           <span class="stat-label">昵称</span>
           <span id="statNickname" class="stat-value" aria-label="玩家昵称">-</span>
@@ -46,8 +45,8 @@
                 aria-label="创建新房间">创建房间</button>
         <button id="joinRoomBtn" class="btn btn-secondary" tabindex="3" 
                 aria-label="加入已有房间">加入房间</button>
-        <div class="version-label" id="versionLabel" aria-label="版本标签">
-          版本标签：加载中...
+        <div class="version-label" id="versionLabel" aria-label="当前版本信息">
+          当前版本：加载中...
         </div>
         
         <div id="joinForm" class="join-form hidden" role="group" aria-label="加入房间表单">
@@ -61,32 +60,25 @@
     </div>
   </div>
 
+  <!-- 语言切换：固定于页面右下角，不参与大厅表单布局 -->
+  <button type="button" id="langToggleBtn" class="lang-toggle-btn" aria-label="切换语言">中 / EN</button>
+
   <!-- 游戏房间页面 -->
   <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
-    <audio id="bgmAudio" src="/BGM.mp3" preload="auto" aria-hidden="true"></audio>
-    <!-- 左上角：房号 + 离开房间 -->
-    <div class="game-room-top">
-      <div class="room-code-fixed">
-        <div class="room-code-line">
-          <span class="room-code-label">房号:</span>
-          <span id="displayRoomCode" class="room-code-value" onclick="copyRoomCode()" title="点击复制" role="button" tabindex="10">-----</span>
-        </div>
-        <div id="totalChips" class="total-chips" data-value="0">总额：0</div>
+    <div class="game-header" role="banner" aria-label="游戏头部信息">
+      <div class="room-info">
+        <span class="room-label" id="roomLabel">房间号:</span>
+        <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
+              title="点击复制房间号" style="cursor: pointer;" 
+              role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
+        <span id="totalChips" class="total-chips" data-value="0">总额：0</span>
       </div>
-      <button id="leaveRoomBtn" class="btn btn-danger btn-small leave-room-fixed" 
+      <div class="game-status" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
+      <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
               tabindex="13" aria-label="离开当前房间">离开房间</button>
     </div>
-    <span id="gameStatus" class="sr-only" aria-hidden="true">等待玩家加入...</span>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
-      <!-- 荷官图 + 打赏按钮 -->
-      <div class="dealer-wrap">
-        <div class="dealer-image" id="dealerImage" role="img" aria-label="荷官">
-          <img src="girl.png" alt="Dealer" />
-        </div>
-        <button type="button" class="dealer-tip-btn" id="dealerTipBtn" aria-label="打赏荷官50筹码">打赏 50</button>
-        <div class="dealer-speech" id="dealerSpeech" aria-live="polite"></div>
-      </div>
       <!-- 座位位置 -->
       <div class="seat" id="seat-2" style="top: 20%; left: 5%;" role="article" aria-label="座位2 - 左侧玩家">
         <div class="player-info">
@@ -159,11 +151,11 @@
 
       <!-- 公共牌区 -->
       <div class="community-area" role="region" aria-label="公共牌区和底池">
-        <div class="community-cards" id="communityCards" aria-label="公共牌"></div>
         <div class="pot-display">
-          <span class="chip-icon pot-icon" id="potIcon" aria-label="底池"></span>
+          <span class="pot-label">底池:</span>
           <span id="potAmount" class="pot-amount" aria-label="底池金额">0</span>
         </div>
+        <div class="community-cards" id="communityCards" aria-label="公共牌"></div>
         <div class="current-bet" id="currentBetDisplay" aria-label="当前下注"></div>
       </div>
 
@@ -184,35 +176,31 @@
       <div class="action-info">
         <span id="actionText" aria-live="polite"></span>
       </div>
-      <div class="raise-amount hidden" id="raiseAmountPanel" role="group" aria-label="加注金额">
+      <div class="raise-amount" id="raiseAmountPanel" role="group" aria-label="加注金额">
         <label for="raiseSlider" class="sr-only">加注金额滑块</label>
         <input type="range" id="raiseSlider" min="0" max="1000" value="20" aria-label="加注金额" tabindex="25">
         <span id="raiseAmountDisplay" aria-live="polite">20</span>
       </div>
-      <div class="action-buttons-wrap" role="group" aria-label="操作按钮与开始游戏">
-        <div class="action-buttons" role="group" aria-label="操作按钮">
-          <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
-          <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
-          <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
-          <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
-          <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
-          <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
-        </div>
-        <div class="start-game-row">
-          <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
-                  tabindex="12" aria-label="开始游戏">开始游戏</button>
-        </div>
+      <div class="action-buttons" role="group" aria-label="操作按钮">
+        <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
+        <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
+        <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
+        <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
+        <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
+        <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
       </div>
+      <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
+              tabindex="12" aria-label="开始游戏">开始游戏</button>
     </div>
   </div>
 
   <!-- 表情显示区域 -->
   <div id="emojiDisplay" class="emoji-display"></div>
 
-  <!-- 回合结束弹窗 -->
+  <!-- 游戏结束弹窗 -->
   <div id="gameOverModal" class="modal hidden">
     <div class="modal-content">
-      <h2>回合结束</h2>
+      <h2>🎉 游戏结束</h2>
       <div id="settlementList"></div>
       <div id="settlementLog" class="settlement-log"></div>
       <button class="btn btn-primary" id="newGameBtn">再来一局</button>
