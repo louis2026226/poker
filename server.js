@@ -10,108 +10,24 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 // 引入AI服务模块
 const pokerAI = require('./pokerAI');
 
-const fs = require('fs');
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ====== 金币持久化系统 ======
-const GOLD_FILE = path.join(__dirname, 'gold_store.json');
-const DEFAULT_GOLD = 10000;
-const DAILY_BONUS = 1000;
-const MIN_ENTRY_GOLD = 1000;
-
-let goldStore = {};
-
-function loadGoldStore() {
-  try {
-    if (fs.existsSync(GOLD_FILE)) {
-      goldStore = JSON.parse(fs.readFileSync(GOLD_FILE, 'utf8'));
-    }
-  } catch (e) {
-    console.log('Failed to load gold store:', e.message);
-    goldStore = {};
-  }
-}
-
-function saveGoldStore() {
-  try {
-    fs.writeFileSync(GOLD_FILE, JSON.stringify(goldStore, null, 2), 'utf8');
-  } catch (e) {
-    console.log('Failed to save gold store:', e.message);
-  }
-}
-
-loadGoldStore();
-
-function getOrCreatePlayer(nickname) {
-  if (!goldStore[nickname]) {
-    goldStore[nickname] = {
-      gold: DEFAULT_GOLD,
-      lastLoginDate: new Date().toISOString().slice(0, 10),
-      gamesPlayed: 0,
-      gamesWon: 0
-    };
-    saveGoldStore();
-    return goldStore[nickname];
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  if (goldStore[nickname].lastLoginDate !== today) {
-    goldStore[nickname].gold += DAILY_BONUS;
-    goldStore[nickname].lastLoginDate = today;
-    saveGoldStore();
-  }
-  return goldStore[nickname];
-}
-
-function updatePlayerGold(nickname, gold) {
-  if (!goldStore[nickname]) {
-    goldStore[nickname] = { gold, lastLoginDate: new Date().toISOString().slice(0, 10), gamesPlayed: 0, gamesWon: 0 };
-  } else {
-    goldStore[nickname].gold = gold;
-  }
-  saveGoldStore();
-}
-
-app.get('/api/player/:nickname', (req, res) => {
-  const nickname = decodeURIComponent(req.params.nickname);
-  if (!nickname) return res.json({ success: false });
-  const p = getOrCreatePlayer(nickname);
-  res.json({ success: true, gold: p.gold, gamesPlayed: p.gamesPlayed || 0, gamesWon: p.gamesWon || 0 });
-});
-
-// 版本信息接口：Railway 用环境变量，阿里云用部署时写入的 .version 文件，两端显示一致
+// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息
 app.get('/version', (req, res) => {
-  let msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
-  let sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
+  const msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
+  const sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
   const branch = process.env.RAILWAY_GIT_BRANCH || '';
-  if (!sha) {
-    try {
-      const vpath = path.join(__dirname, '.version');
-      if (fs.existsSync(vpath)) {
-        sha = fs.readFileSync(vpath, 'utf8').trim();
-      }
-    } catch (e) {}
-    if (!sha) {
-      try {
-        const { execSync } = require('child_process');
-        sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-      } catch (e) {
-        sha = '';
-      }
-    }
-  }
   const version =
     msg ||
-    (sha ? `commit ${sha.length >= 7 ? sha.substring(0, 7) : sha}` : 'local-dev');
+    (sha ? `commit ${sha.substring(0, 7)}` : 'local-dev');
   res.json({
     version,
     branch,
-    sha: sha || undefined,
+    sha,
   });
 });
 
@@ -446,14 +362,14 @@ class PokerRoom {
     this.locked = false;
   }
 
-  addPlayer(socketId, nickname, isBot = false, chips = CONFIG.INITIAL_CHIPS) {
+  addPlayer(socketId, nickname, isBot = false) {
     const seat = this.findEmptySeat();
     if (seat === -1) return null;
     this.players[socketId] = {
       socketId,
       nickname,
       seat,
-      chips,
+      chips: CONFIG.INITIAL_CHIPS,
       hand: [],
       bet: 0,
       folded: false,
@@ -476,26 +392,6 @@ class PokerRoom {
     delete this.players[socketId];
   }
 
-  /** 局中有人断开：视为弃牌，保留在列表内等本局结束后再移除 */
-  markPlayerLeftAsFolded(socketId) {
-    const p = this.players[socketId];
-    if (p) {
-      p.folded = true;
-      p.left = true;
-    }
-  }
-
-  /** 将房主转移给除 socketId 外的第一个玩家（局中有人退出时用） */
-  transferHostToOther(exceptSocketId) {
-    const nextId = Object.keys(this.players).find(id => id !== exceptSocketId);
-    if (nextId) {
-      this.hostId = nextId;
-      return this.hostId;
-    }
-    this.hostId = null;
-    return null;
-  }
-
   transferHost() {
     const playerIds = Object.keys(this.players);
     if (playerIds.length > 0) {
@@ -506,11 +402,6 @@ class PokerRoom {
   }
 
   startNewHand() {
-    // 本局结束后再移除“中途退出”的玩家
-    Object.keys(this.players).forEach(id => {
-      if (this.players[id].left) delete this.players[id];
-    });
-
     this.deck = createDeck();
     this.communityCards = [];
     this.pot = 0;
@@ -886,6 +777,14 @@ class PokerRoom {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     this.emitGameOverIfBust();
+
+    // 1.5秒后发牌开始新局
+    setTimeout(() => {
+      const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
+      if (activePlayers.length >= 2) {
+        this.startNewHand();
+      }
+    }, 1500);
   }
 
   endHand() {
@@ -936,18 +835,6 @@ class PokerRoom {
       elapsedSeconds: Math.max(0, Math.floor((a.timestamp - startTs) / 1000))
     }));
 
-    Object.values(this.players).forEach(p => {
-      if (!p.isBot && p.nickname && goldStore[p.nickname]) {
-        goldStore[p.nickname].gamesPlayed = (goldStore[p.nickname].gamesPlayed || 0) + 1;
-      }
-    });
-    winners.forEach(w => {
-      if (goldStore[w.nickname]) {
-        goldStore[w.nickname].gamesWon = (goldStore[w.nickname].gamesWon || 0) + 1;
-      }
-    });
-    saveGoldStore();
-
     io.to(this.roomCode).emit('gameOver', {
       results,
       actions,
@@ -985,26 +872,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('createRoom', (nickname, callback) => {
-    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || 'Player') : (nickname || 'Player');
-    const pData = getOrCreatePlayer(playerName);
-    if (pData.gold < MIN_ENTRY_GOLD) {
-      callback({ success: false, message: '需要拥有1000金币才可进入' });
-      return;
-    }
-
     const roomCode = generateRoomCode();
     const room = new PokerRoom(roomCode, socket.id);
     rooms[roomCode] = room;
 
-    const entryChips = pData.gold;
-    pData.gold = 0;
-    saveGoldStore();
-
-    const player = room.addPlayer(socket.id, playerName, false, entryChips);
+    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
+    const player = room.addPlayer(socket.id, playerName);
     socket.join(roomCode);
     socket.roomCode = roomCode;
 
-    callback({ success: true, roomCode, player: { ...player, isHost: true }, gold: 0 });
+    callback({ success: true, roomCode, player: { ...player, isHost: true } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
   });
 
@@ -1020,21 +897,9 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || 'Player') : (nickname || 'Player');
-    const pData = getOrCreatePlayer(playerName);
-    if (pData.gold < MIN_ENTRY_GOLD) {
-      callback({ success: false, message: '需要拥有1000金币才可进入' });
-      return;
-    }
-
-    const entryChips = pData.gold;
-    pData.gold = 0;
-    saveGoldStore();
-
-    const player = room.addPlayer(socket.id, playerName, false, entryChips);
+    const playerName = (nickname && typeof nickname === 'object') ? (nickname.nickname || '玩家') : (nickname || '玩家');
+    const player = room.addPlayer(socket.id, playerName);
     if (!player) {
-      pData.gold = entryChips;
-      saveGoldStore();
       callback({ success: false, message: '无法加入房间' });
       return;
     }
@@ -1044,7 +909,7 @@ io.on('connection', (socket) => {
     room.lockRoom();
 
     const isHost = socket.id === room.hostId;
-    callback({ success: true, roomCode, player: { ...player, isHost }, gold: 0 });
+    callback({ success: true, roomCode, player: { ...player, isHost } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
   });
 
@@ -1060,7 +925,7 @@ io.on('connection', (socket) => {
     if (currentPlayers.length >= CONFIG.MAX_SEATS) return;
 
     const roomCode = room.roomCode;
-    const botNames = ['AI-Mike', 'AI-Dave', 'AI-John', 'AI-Sam', 'AI-Ken'];
+    const botNames = ['AI-小王', 'AI-小李', 'AI-小张', 'AI-小刘', 'AI-小陈'];
     const existingBots = currentPlayers.filter(p => p.isBot).length;
     const botName = botNames[existingBots % botNames.length];
     const botId = `BOT_${roomCode}_${Date.now()}_${existingBots}_${Math.floor(Math.random() * 1000)}`;
@@ -1098,30 +963,6 @@ io.on('connection', (socket) => {
     if (callback) callback({ success: true, gameState: room.getGameState() });
   });
 
-  socket.on('dealerTip', (callback) => {
-    const room = rooms[socket.roomCode];
-    if (!room) {
-      if (callback) callback({ success: false, message: '房间不存在' });
-      return;
-    }
-    const player = room.players[socket.id];
-    if (!player) {
-      if (callback) callback({ success: false, message: '玩家不在房间中' });
-      return;
-    }
-    const TIP_AMOUNT = 50;
-    if (player.chips < TIP_AMOUNT) {
-      if (callback) callback({ success: false, message: '筹码不足' });
-      return;
-    }
-    player.chips -= TIP_AMOUNT;
-    const phraseKeys = ['thanks_boss', 'wish_luck', 'thanks_tip', 'good_luck', 'big_tip', 'kill_today', 'run_good'];
-    const phraseKey = phraseKeys[Math.floor(Math.random() * phraseKeys.length)];
-    io.to(room.roomCode).emit('dealerSay', { nickname: player.nickname, phraseKey });
-    io.to(room.roomCode).emit('gameState', room.getGameState());
-    if (callback) callback({ success: true });
-  });
-
   socket.on('playerAction', (action, amount, callback) => {
     const room = rooms[socket.roomCode];
     if (!room) {
@@ -1133,11 +974,65 @@ io.on('connection', (socket) => {
     const success = room.playerAction(socket.id, action, amount);
     if (success) {
       io.to(room.roomCode).emit('gameState', room.getGameState());
+      if (action === 'all-in' && player) {
+        io.to(room.roomCode).emit('emote', {
+          playerId: socket.id,
+          nickname: player.nickname,
+          emoji: 'ALL IN !!!',
+          seat: player.seat,
+          autoTrigger: true
+        });
+      }
       room.nextAction();
       callback({ success: true });
     } else {
       callback({ success: false, message: '无效的动作' });
     }
+  });
+
+  // AI建议事件 - 获取AI决策辅助
+  socket.on('getAISuggestion', (callback) => {
+    const room = rooms[socket.roomCode];
+    if (!room) {
+      callback({ success: false, message: '房间不存在' });
+      return;
+    }
+
+    const player = room.players[socket.id];
+    if (!player) {
+      callback({ success: false, message: '玩家不在房间中' });
+      return;
+    }
+
+    // 构建游戏状态
+    const gameState = {
+      pot: room.pot,
+      currentBet: room.currentBet,
+      communityCards: room.communityCards,
+      gameState: room.gameState,
+      playerChips: player.chips,
+      playerPosition: player.seat
+    };
+
+    // 获取AI决策（优先使用API，如果失败则使用规则决策）
+    pokerAI.getAIDecision(gameState, socket.id).then(decision => {
+      callback({
+        success: true,
+        decision: decision
+      });
+    }).catch(err => {
+      // API失败时使用本地规则决策
+      const ruleDecision = pokerAI.getRuleBasedDecision(gameState, player);
+      callback({
+        success: true,
+        decision: {
+          action: ruleDecision.action,
+          amount: ruleDecision.amount,
+          reasoning: ruleDecision.reasoning,
+          isLocal: true
+        }
+      });
+    });
   });
 
   socket.on('emote', (emoji) => {
@@ -1166,51 +1061,27 @@ io.on('connection', (socket) => {
       return;
     }
 
+    Object.values(room.players).forEach(p => {
+      p.chips = CONFIG.INITIAL_CHIPS;
+    });
+
     room.startNewHand();
     callback({ success: true, gameState: room.getGameState() });
   });
 
-  socket.on('leaveRoom', (callback) => {
-    returnChipsToGold(socket);
-    if (callback) callback({ success: true });
-  });
-
   socket.on('disconnect', () => {
     console.log('Disconnected:', socket.id);
-    returnChipsToGold(socket);
-  });
-});
-
-function returnChipsToGold(socket) {
-  for (const roomCode in rooms) {
-    const room = rooms[roomCode];
-    if (room.players[socket.id]) {
-      const player = room.players[socket.id];
-      const wasHost = socket.id === room.hostId;
-      const inHand = room.gameState !== 'waiting' && room.gameState !== 'ended';
-
-      if (!player.isBot && player.nickname) {
-        updatePlayerGold(player.nickname, (goldStore[player.nickname] ? goldStore[player.nickname].gold : 0) + (player.chips || 0));
-      }
-
-      if (inHand) {
-        room.markPlayerLeftAsFolded(socket.id);
-        if (wasHost) {
-          const newHostId = room.transferHostToOther(socket.id);
-          if (newHostId) io.to(roomCode).emit('hostChanged', { newHostId });
-        }
-        room.unlockRoom();
-        io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
-        if (room.currentPlayerSeat === player.seat) {
-          room.nextAction();
-        } else {
-          io.to(roomCode).emit('gameState', room.getGameState());
-        }
-      } else {
+    for (const roomCode in rooms) {
+      const room = rooms[roomCode];
+      if (room.players[socket.id]) {
+        const player = room.players[socket.id];
+        const wasHost = socket.id === room.hostId;
         room.removePlayer(socket.id);
         if (wasHost) {
           const newHostId = room.transferHost();
-          if (newHostId) io.to(roomCode).emit('hostChanged', { newHostId });
+          if (newHostId) {
+            io.to(roomCode).emit('hostChanged', { newHostId });
+          }
         }
         room.unlockRoom();
         io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
@@ -1218,12 +1089,19 @@ function returnChipsToGold(socket) {
           delete rooms[roomCode];
         } else {
           io.to(roomCode).emit('roomUpdate', room.getGameState());
+          if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
+            const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
+            if (activePlayers.length < 2) {
+              room.gameState = 'waiting';
+              io.to(roomCode).emit('gameState', room.getGameState());
+            }
+          }
         }
+        break;
       }
-      break;
     }
-  }
-}
+  });
+});
 
 // 播放音效函数（服务端简单实现）
 function playSound(type) {

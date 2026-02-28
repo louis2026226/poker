@@ -1,7 +1,133 @@
 /**
- * 本地规则 Poker AI：仅用于机器人决策，不调用外部服务
+ * Poker AI 服务 - Coding Plan API 集成
+ * 用于获取AI决策来辅助游戏
  */
 
+const axios = require('axios');
+const path = require('path');
+
+// 加载环境变量
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+const API_KEY = process.env.CODING_PLAN_API_KEY || 'sk-cp-pk_6nQosAy2N6W7Pm3Wx2yMjM022bJc6U5EWJdCK9tZbySsvU0vQej7JTmXHVx7s1qfIbXj3lNWxSfta3CoSFeq2hAxVeWjgftDEnA8sKwFVSqpdaU1jCls';
+const API_URL = 'https://api.codingplan.com/v1/poker/decision';
+
+// API超时时间（毫秒）
+const API_TIMEOUT = 5000;
+
+/**
+ * 将扑克牌转换为API需要的格式
+ * @param {Array} cards - 扑克牌数组 [{suit: '♠', rank: 'A'}]
+ * @returns {Array} - 转换后的数组 ['As']
+ */
+function formatCards(cards) {
+  if (!cards || !Array.isArray(cards)) return [];
+  
+  const suitMap = {
+    '♠': 's',  // spades
+    '♥': 'h',  // hearts
+    '♦': 'd',  // diamonds
+    '♣': 'c'   // clubs
+  };
+  
+  return cards.map(card => {
+    const suit = suitMap[card.suit] || card.suit;
+    return card.rank + suit;
+  });
+}
+
+/**
+ * 获取AI决策
+ * @param {Object} gameState - 游戏状态
+ * @param {string} playerId - 玩家ID
+ * @returns {Promise<Object>} - AI决策结果
+ */
+async function getAIDecision(gameState, playerId) {
+  try {
+    // 构建请求数据
+    const requestData = {
+      player_id: playerId,
+      pot: gameState.pot || 0,
+      current_bet: gameState.currentBet || 0,
+      community_cards: formatCards(gameState.communityCards || []),
+      player_chips: gameState.playerChips || 1000,
+      position: gameState.playerPosition || 0,
+      game_phase: gameState.gameState || 'preflop'
+    };
+    
+    // 发送请求到Coding Plan API
+    const response = await axios.post(API_URL, requestData, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: API_TIMEOUT
+    });
+    
+    if (response.data && response.data.decision) {
+      return {
+        success: true,
+        action: response.data.decision.action || 'check',
+        amount: response.data.decision.amount || 0,
+        confidence: response.data.decision.confidence || 0.5,
+        reasoning: response.data.decision.reasoning || ''
+      };
+    }
+    
+    // 如果返回格式不符合预期，使用默认决策
+    return getDefaultDecision(gameState);
+    
+  } catch (error) {
+    console.error('AI决策获取失败:', error.message);
+    // API失败时返回默认决策
+    return getDefaultDecision(gameState);
+  }
+}
+
+/**
+ * 获取默认决策（当API不可用时）
+ * @param {Object} gameState - 游戏状态
+ * @returns {Object} - 默认决策
+ */
+function getDefaultDecision(gameState) {
+  const communityCards = gameState.communityCards || [];
+  const hasCommunityCards = communityCards.length > 0;
+  
+  // 简单策略：没有公共牌时保守，有牌时根据情况加注
+  if (!hasCommunityCards) {
+    return {
+      success: true,
+      action: 'call',
+      amount: 0,
+      confidence: 0.3,
+      reasoning: '默认策略：preflop阶段跟注'
+    };
+  } else if (communityCards.length >= 3) {
+    // 有公共牌时可以考虑加注
+    return {
+      success: true,
+      action: 'check',
+      amount: 0,
+      confidence: 0.4,
+      reasoning: '默认策略：过牌观察'
+    };
+  }
+  
+  return {
+    success: true,
+    action: 'check',
+    amount: 0,
+    confidence: 0.3,
+    reasoning: '默认策略：过牌'
+  };
+}
+
+/**
+ * 评估当前手牌强度
+ * @param {Array} holeCards - 玩家手牌
+ * @param {Array} communityCards - 公共牌
+ * @returns {number} - 手牌强度 (0-1)
+ */
 function evaluateHandStrength(holeCards, communityCards) {
   if (!holeCards || holeCards.length < 2) return 0;
   
@@ -98,6 +224,8 @@ function getRuleBasedDecision(gameState, player) {
 }
 
 module.exports = {
+  getAIDecision,
   getRuleBasedDecision,
-  evaluateHandStrength
+  evaluateHandStrength,
+  formatCards
 };
