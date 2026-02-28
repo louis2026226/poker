@@ -1425,6 +1425,11 @@ body {
 
 .action-timer:not(.hidden) {
   display: flex;
+  position: absolute;
+  z-index: 150;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
 }
 
 .timer-ring {
