@@ -1405,6 +1405,13 @@ function animatePotChips(prevState, nextState) {
 
     updateChipTargetDebug(leftAbs, bandTopAbs, rightAbs, bandBottomAbs, tableRect);
 
+    // 目标区向内收缩，保证 20px 筹码完全落在白框内（大小盲及所有下注统一落在此区）
+    var inset = 12;
+    var w = Math.max(20, (rightAbs - leftAbs) - inset * 2);
+    var h = Math.max(20, (bandBottomAbs - bandTopAbs) - inset * 2);
+    var targetLeft = leftAbs + inset;
+    var targetTop = bandTopAbs + inset;
+
     var prevById = {};
     prevState.players.forEach(function(p) {
       if (p && p.socketId) prevById[p.socketId] = p;
@@ -1449,8 +1456,8 @@ function animatePotChips(prevState, nextState) {
           tableEl.appendChild(chipEl);
 
           requestAnimationFrame(function() {
-            var targetXAbs = leftAbs + Math.random() * (rightAbs - leftAbs);
-            var targetYAbs = bandTopAbs + Math.random() * (bandBottomAbs - bandTopAbs);
+            var targetXAbs = targetLeft + Math.random() * w;
+            var targetYAbs = targetTop + Math.random() * h;
             var targetXRel = targetXAbs - tableRect.left;
             var targetYRel = targetYAbs - tableRect.top;
             var dx = targetXRel - startLeft;

@@ -236,6 +236,14 @@ body {
   color: #aaa;
 }
 
+.room-code-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
 .total-chips {
   font-size: 16px;
   font-weight: normal;
@@ -855,6 +863,7 @@ body {
 }
 
 .chip-target-debug {
+  display: none; /* 隐藏筹码目标白框，需要调试时可改为 block */
   position: absolute;
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
