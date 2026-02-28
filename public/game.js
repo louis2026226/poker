@@ -1161,9 +1161,11 @@ function animatePotChips(prevState, nextState) {
 
     var tableRect = tableEl.getBoundingClientRect();
     var cRect = communityEl.getBoundingClientRect();
+    var cHeight = communityEl.offsetHeight || 0;
 
-    // 目标垂直范围：公共牌顶部往上 150px 内随机，但不压在公共牌上（上移 12 像素）
-    var bandBottomAbs = cRect.top - 12;
+    // 目标垂直范围：公共牌上方，避开牌本身（高度按公共牌高度动态上移）
+    var safeGap = (cHeight > 0 ? cHeight * 0.6 : 0) + 12;
+    var bandBottomAbs = cRect.top - safeGap;
     var bandTopAbs = bandBottomAbs - 150;
     if (bandTopAbs < tableRect.top) bandTopAbs = tableRect.top;
     if (bandBottomAbs - bandTopAbs < 20) bandBottomAbs = bandTopAbs + 20;

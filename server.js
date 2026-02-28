@@ -819,14 +819,6 @@ class PokerRoom {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     this.emitGameOverIfBust();
-
-    // 底池飞向获胜者动画约 0.5s + 停留 1.5s 后发牌开始新局
-    setTimeout(() => {
-      const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
-      if (activePlayers.length >= 2) {
-        this.startNewHand();
-      }
-    }, 2000);
   }
 
   endHand() {
