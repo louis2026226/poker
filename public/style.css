@@ -8,7 +8,9 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   min-height: 100vh;
+  min-height: 100dvh;
   color: #fff;
+  overflow-x: hidden;
 }
 
 .hidden {
@@ -17,6 +19,7 @@ body {
 
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -200,6 +203,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-left: env(safe-area-inset-left, 0);
 }
 
 .room-code-fixed {
@@ -226,6 +231,33 @@ body {
 .leave-room-fixed {
   min-width: 100px;
   padding: 8px 16px;
+  margin-right: env(safe-area-inset-right, 0);
+}
+
+.action-buttons-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-buttons-wrap .action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.start-game-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.start-game-btn {
+  min-width: 150px;
+  margin: 0;
 }
 
 /* 荷官区域：图 + 打赏按钮 + 台词 */
@@ -252,6 +284,7 @@ body {
 
 .dealer-wrap .dealer-tip-btn {
   pointer-events: auto;
+  margin-top: 0;
   padding: 6px 14px;
   font-size: 13px;
   border-radius: 20px;
@@ -270,6 +303,35 @@ body {
 .dealer-wrap .dealer-tip-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 打赏时从荷官位置飘出的红色爱心 */
+.heart-float {
+  position: fixed;
+  font-size: 40px;
+  color: #e74c3c;
+  pointer-events: none;
+  z-index: 200;
+  animation: heartFloat 2s ease-out forwards;
+  text-shadow: 0 0 8px rgba(231, 76, 60, 0.8);
+}
+
+@keyframes heartFloat {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(0);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-15px);
+  }
+  30% {
+    transform: scale(1) translateY(-35px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-120px);
+  }
 }
 
 .dealer-speech {
@@ -311,32 +373,6 @@ body {
   object-fit: cover;
 }
 
-.action-buttons-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.action-buttons-wrap .action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.start-game-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
-  margin-bottom: 0;
-}
-
-.start-game-btn {
-  min-width: 150px;
-  margin: 0;
-}
-
 .poker-table {
   position: relative;
   width: 100%;
@@ -359,12 +395,11 @@ body {
     height: calc(100vh - 320px);
     margin-top: 270px;
   }
-  .dealer-wrap .dealer-image,
   .dealer-image {
     width: 117px;
     height: 117px;
+    top: -6%;
   }
-  .dealer-wrap { top: -6%; }
 }
 
 .poker-table::before {
@@ -389,6 +424,20 @@ body {
   min-width: 120px;
 }
 
+/* 左右两侧上下座位各间隔至少 30px，避免重叠 */
+#seat-2 {
+  transform: translateY(-15px);
+}
+#seat-1 {
+  transform: translateY(15px);
+}
+#seat-3 {
+  transform: translateY(-15px);
+}
+#seat-4 {
+  transform: translateY(15px);
+}
+
 .player-info {
   display: flex;
   flex-direction: column;
@@ -409,6 +458,13 @@ body {
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
+  overflow: hidden;
+}
+.player-avatar.has-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .player-name {
@@ -587,7 +643,7 @@ body {
 
 .card.back {
   background: linear-gradient(135deg, #1a237e, #283593);
-  border: 1px solid #fff;
+  border: 2px solid #fff;
 }
 
 .card .suit {
@@ -610,19 +666,15 @@ body {
   font-size: 20px;
 }
 
-/* 我的手牌与公共牌中牌面符号等比缩放 */
+/* 我的手牌与公共牌中牌面符号等比缩放（比例与牌面协调） */
 .card-my .suit,
 .card-board .suit {
-  font-size: 20px;
-  line-height: 20px;
-  display: inline-block;
+  font-size: 24px;
 }
 
 .card-my .rank,
 .card-board .rank {
-  font-size: 20px;
-  line-height: 20px;
-  display: inline-block;
+  font-size: 24px;
 }
 
 /* 玩家外框顺时针倒计时进度条（跟随玩家边框形状） */
@@ -633,7 +685,7 @@ body {
   padding: 3px;
   pointer-events: none;
   background:
-    conic-gradient(#ffd700 var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
+    conic-gradient(#ffffff var(--timer-deg, 0deg), rgba(255, 255, 255, 0.06) 0deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -641,20 +693,22 @@ body {
           mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.15s linear;
-  box-shadow: 0 0 18px rgba(255, 215, 0, 0.95);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.95);
 }
 
 .seat.countdown-active .player-info .seat-timer-ring {
   opacity: 1;
 }
 
-/* 结算面板下方的行为记录 */
+/* 结算面板下方的行为记录：默认显示 5 行，超出可滚动 */
 .settlement-log {
   margin-top: 10px;
   font-size: 13px;
+  line-height: 1.5;
   color: #ccc;
   text-align: left;
-  max-height: 7.5em; /* 约 5 行高度 */
+  height: 7.5em;   /* 5 行：5 × 1.5em */
+  max-height: 7.5em;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -673,6 +727,9 @@ body {
   right: 0;
   background: transparent;
   padding: 10px 12px 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+  padding-left: calc(12px + env(safe-area-inset-left, 0));
+  padding-right: calc(12px + env(safe-area-inset-right, 0));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -858,6 +915,9 @@ body {
   font-weight: bold;
   color: #ffd700;
   min-width: 60px;
+  text-align: center;
+  display: block;
+  width: 100%;
 }
 
 /* 弹窗样式 */
@@ -870,6 +930,7 @@ body {
   background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
   justify-content: center;
   z-index: 1000;
 }
@@ -1023,29 +1084,54 @@ body {
     font-size: 14px;
   }
 
-  .card .rank {
-    font-size: 10px;
-  }
-
-  .card .suit {
-    font-size: 10px;
-  }
-
-  /* 小屏下我的手牌与公共牌也按基础高度 60px，并强制内部字号为 20px */
+  /* 小屏下我的手牌与公共牌也按基础高度 60px，交给布局控制是否需要再缩小 */
   .card-my,
   .card-board {
     height: 60px;
     width: auto;
   }
 
+  /* 手机端牌面数字与花色（比例适中，避免重叠） */
   .card-my .suit,
   .card-board .suit {
-    font-size: 20px;
+    font-size: 14px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 20px;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .card-my .suit.top-left,
+  .card-board .suit.top-left {
+    top: 2px;
+    left: 2px;
+  }
+
+  .card-my .suit.bottom-right,
+  .card-board .suit.bottom-right {
+    bottom: 2px;
+    right: 2px;
+  }
+
+  .card .rank {
+    font-size: 7px;
+    line-height: 1;
+  }
+
+  .card .suit {
+    font-size: 7px;
+  }
+
+  .card .suit.top-left {
+    top: 1px;
+    left: 1px;
+  }
+
+  .card .suit.bottom-right {
+    bottom: 1px;
+    right: 1px;
   }
 
   .pot-display {
@@ -1076,6 +1162,7 @@ body {
 
   .action-buttons .btn {
     min-width: 60px;
+    min-height: 44px;
     padding: 10px 12px;
     font-size: 12px;
   }
@@ -1083,6 +1170,7 @@ body {
   .raise-amount {
     flex-direction: column;
     gap: 5px;
+    align-items: center;
   }
 
   .raise-amount input[type="range"] {
@@ -1091,6 +1179,7 @@ body {
 
   #raiseAmountDisplay {
     font-size: 16px;
+    text-align: center;
   }
 
   .modal-content {
@@ -1119,6 +1208,21 @@ body {
   .leave-room-fixed {
     padding: 6px 12px;
     font-size: 11px;
+    min-height: 44px;
+  }
+
+  .game-room-top {
+    top: 8px;
+    left: 8px;
+    gap: 8px;
+  }
+
+  .room-code-fixed {
+    font-size: 14px;
+  }
+
+  .room-code-fixed .room-code-value {
+    font-size: 16px;
   }
 }
 
@@ -1144,21 +1248,58 @@ body {
     width: auto;
   }
 
-  /* 更小屏下也保持我的手牌和公共牌内部字号为 20px */
+  /* 更小屏下牌面数字与花色，确保不重叠且比例合适 */
   .card-my .suit,
   .card-board .suit {
-    font-size: 20px;
+    font-size: 11px;
   }
 
   .card-my .rank,
   .card-board .rank {
-    font-size: 20px;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .card-my .suit.top-left,
+  .card-board .suit.top-left {
+    top: 1px;
+    left: 1px;
+  }
+
+  .card-my .suit.bottom-right,
+  .card-board .suit.bottom-right {
+    bottom: 1px;
+    right: 1px;
+  }
+
+  .card .rank {
+    font-size: 6px;
+    line-height: 1;
+  }
+
+  .card .suit {
+    font-size: 6px;
+  }
+
+  .card .suit.top-left {
+    top: 0;
+    left: 0;
+  }
+
+  .card .suit.bottom-right {
+    bottom: 0;
+    right: 0;
   }
 
   .action-buttons .btn {
     min-width: 55px;
+    min-height: 44px;
     padding: 8px 10px;
     font-size: 11px;
+  }
+
+  .game-room-top {
+    left: 6px;
   }
 }
 
@@ -1216,25 +1357,25 @@ body {
     transform: translateY(-150px);
     margin-bottom: 150px;
   }
-  
+
   .player-cards {
     gap: 2px;
     min-height: 35px;
   }
-  
+
   .community-cards {
     gap: 4px;
   }
-  
+
   #myCards {
     gap: 2px;
   }
-  
+
   .seat .player-cards .card {
     width: 24px;
     height: 34px;
   }
-  
+
   #myCards .card {
     width: 28px;
     height: 40px;
@@ -1248,6 +1389,12 @@ body {
   .community-cards .card.card-board {
     height: 60px;
     width: auto;
+  }
+
+  /* 牌面内容不溢出、数字与花色不重叠 */
+  #myCards .card.card-my,
+  .community-cards .card.card-board {
+    overflow: hidden;
   }
 }
 
