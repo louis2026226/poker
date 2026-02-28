@@ -1,0 +1,16 @@
+---
+description: 改完就 commit + push，同步到 Railway
+alwaysApply: true
+---
+
+# 改完就 commit + push
+
+对 **poker-repo** 做过任何会影响线上的代码修改后，必须：
+
+1. **提交**：`git add` 改动的文件 → `git commit -m "简短说明"`
+2. **推送**：`git push origin main`
+
+推送后 Railway 会自动部署，无需额外操作。
+
+- 工作目录：`poker-repo`（即本 worktree 对应仓库根目录）
+- 用户明确说「不要提交」「不要推」「只改不部署」时，不执行 commit/push。

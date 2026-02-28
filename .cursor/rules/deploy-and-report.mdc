@@ -1,0 +1,48 @@
+---
+description: 修改后同步到 Railway 与阿里云并汇报版本与完成情况
+alwaysApply: true
+---
+
+# 部署与汇报流程
+
+## 适用时机
+
+每次完成**会影响线上运行的代码修改**后（包括但不限于：前端、后端、配置、依赖），必须执行完整部署并汇报。
+
+## 必须执行的步骤（按顺序）
+
+1. **提交**  
+   - 若有未提交改动，先 `git add` 并 `git commit`，再继续。  
+   - 若用户明确说「先不要提交」或「只改不部署」，则跳过部署步骤，仅说明「未部署，当前无新版本标签」。
+
+2. **同步到 Railway**  
+   - 执行：`git push`（推送到 main，由 Railway 自动部署）。  
+   - 若 push 失败，在汇报中写明错误信息并标记 Railway 未成功。
+
+3. **同步到阿里云**  
+   - 在项目根目录执行：`powershell -ExecutionPolicy Bypass -File .\deploy_backup.ps1`。  
+   - 若脚本报错或中途失败，在汇报中写明并标记阿里云未成功。
+
+4. **汇报（每次部署后必须给用户一段汇总）**  
+   用下面格式回复，不要省略：
+
+   ```
+   ## 部署完成情况
+
+   | 项目 | 状态 |
+   |------|------|
+   | **版本标签** | <short commit，如 d7f03ce> |
+   | **Railway** | 已推送 / 推送失败：原因 |
+   | **阿里云** | 已同步并重启 / 失败：原因 |
+
+   阿里云版本核对：服务器上执行 `cat /home/admin/poker/deploy_version.txt` 应显示上述版本标签。
+   ```
+
+## 项目路径
+
+- 项目根目录（执行脚本、git 命令）：`C:\Users\Administrator\.cursor\worktrees\louis-poker-git\poker-repo`
+
+## 例外
+
+- 仅修改文档、注释或 `.cursor/rules` 且用户未要求部署时，可只说明「未执行部署」。
+- 用户明确说「不要推」「不要部署」时，不执行 push 与 deploy_backup.ps1，只做代码修改与说明。
