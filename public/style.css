@@ -149,12 +149,11 @@ body {
   cursor: not-allowed;
 }
 
-/* 版本信息标签：贴底，避免与加入房间按钮重叠 */
+/* 版本信息标签：固定屏幕左下角，不压住加入房间按钮 */
 .version-label {
   position: fixed;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 6px;
+  left: 10px;
   margin: 0;
   font-size: 12px;
   color: #ccc;
@@ -191,12 +190,11 @@ body {
   font-size: 12px;
 }
 
-/* 版本信息标签：贴底，避免与加入房间按钮重叠 */
+/* 版本信息标签：固定屏幕左下角，不压住加入房间按钮 */
 .version-label {
   position: fixed;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 6px;
+  left: 10px;
   margin: 0;
   font-size: 12px;
   color: #ccc;
@@ -249,6 +247,11 @@ body {
   flex: 1;
   text-align: center;
   margin: 0 12px;
+}
+
+/* 房间上方“等待玩家加入”已去掉，不再显示 */
+.game-status.always-hidden {
+  display: none !important;
 }
 
 .game-header #leaveRoomBtn {
@@ -454,6 +457,7 @@ body {
 
 /* 荷官图：发牌从该区域飞入 */
 .dealer-image {
+  position: relative;
   width: 156px;
   height: 156px;
   border-radius: 50%;
@@ -462,10 +466,32 @@ body {
   box-shadow: 0 0 24px rgba(46, 204, 113, 0.85), 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+.dealer-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dealer-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.dealer-placeholder {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  background: linear-gradient(135deg, #4a90d9, #2d6ab3);
+  border-radius: 50%;
+}
+
+.dealer-image img[style*="display: none"] ~ .dealer-placeholder,
+.dealer-image .dealer-placeholder:only-child {
+  display: flex;
 }
 
 .poker-table {

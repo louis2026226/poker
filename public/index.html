@@ -71,14 +71,22 @@
         <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
               title="点击复制房间号" style="cursor: pointer;" 
               role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
-        <span id="totalChips" class="total-chips" data-value="0">总额：0</span>
       </div>
-      <div class="game-status" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
+      <div class="game-status always-hidden" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
       <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
               tabindex="13" aria-label="离开当前房间">离开房间</button>
     </div>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
+      <!-- 荷官：图 + 打赏 + 台词 -->
+      <div class="dealer-wrap" aria-label="荷官">
+        <div class="dealer-image">
+          <img src="/dealer.png" alt="荷官" onerror="this.style.display='none'; var s=this.nextElementSibling; if(s) s.style.display='flex';">
+          <span class="dealer-placeholder">👩</span>
+        </div>
+        <button type="button" class="dealer-tip-btn" id="dealerTipBtn" disabled aria-label="打赏荷官">打赏 50</button>
+        <div class="dealer-speech" id="dealerSpeech" aria-live="polite"></div>
+      </div>
       <!-- 座位位置 -->
       <div class="seat" id="seat-2" style="top: 20%; left: 5%;" role="article" aria-label="座位2 - 左侧玩家">
         <div class="player-info">
