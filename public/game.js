@@ -1179,8 +1179,8 @@ function animatePotChips(prevState, nextState) {
 
     var bandTopAbs, bandBottomAbs;
     if (isMobile) {
-      // 手机：整个矩形始终在打赏按钮下方至少 100px 处
-      bandTopAbs = dRect.bottom + 100;
+      // 手机：整个矩形始终在打赏按钮下方至少 180px 处（在原基础上再下移 80px）
+      bandTopAbs = dRect.bottom + 180;
       bandBottomAbs = bandTopAbs + bandHeight;
     } else {
       var centerYAbs = dRect.bottom + 100;
