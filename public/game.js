@@ -1162,10 +1162,26 @@ function animatePotChips(prevState, nextState) {
     var tableRect = tableEl.getBoundingClientRect();
     var dRect = dealerBtn.getBoundingClientRect();
 
-    // 目标垂直范围：矩形中心始终在打赏按钮下方 100 像素处，高度固定 150
+    var isMobile = window.innerWidth && window.innerWidth <= 768;
+
+    // 基础：矩形中心在打赏按钮下方 100 像素处，高度固定 150
     var centerYAbs = dRect.bottom + 100;
-    var bandTopAbs = centerYAbs - 75;
-    var bandBottomAbs = centerYAbs + 75;
+    var bandHeight = 150;
+    var bandHalfH = bandHeight / 2;
+    var bandWidth = 220;
+    var bandHalfW = bandWidth / 2;
+
+    // 在手机浏览器上：高度和宽度各减少 100px，整体再上移 90px
+    if (isMobile) {
+      bandHeight = Math.max(50, bandHeight - 100); // 150 -> 50
+      bandHalfH = bandHeight / 2;
+      bandWidth = Math.max(80, bandWidth - 100);   // 220 -> 120
+      bandHalfW = bandWidth / 2;
+      centerYAbs -= 90;
+    }
+
+    var bandTopAbs = centerYAbs - bandHalfH;
+    var bandBottomAbs = centerYAbs + bandHalfH;
     if (bandTopAbs < tableRect.top) {
       var shift = tableRect.top - bandTopAbs;
       bandTopAbs += shift;
@@ -1177,10 +1193,10 @@ function animatePotChips(prevState, nextState) {
       bandBottomAbs -= shift2;
     }
 
-    // 目标水平范围：以打赏按钮中心为轴，宽度固定 220
+    // 目标水平范围：以打赏按钮中心为轴，宽度固定（桌面 220 / 手机 120）
     var centerXAbs = (dRect.left + dRect.right) / 2;
-    var leftAbs = centerXAbs - 110;
-    var rightAbs = centerXAbs + 110;
+    var leftAbs = centerXAbs - bandHalfW;
+    var rightAbs = centerXAbs + bandHalfW;
     if (leftAbs < tableRect.left) leftAbs = tableRect.left;
     if (rightAbs > tableRect.right) rightAbs = tableRect.right;
 
