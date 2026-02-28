@@ -1064,51 +1064,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // AI建议事件 - 获取AI决策辅助
-  socket.on('getAISuggestion', (callback) => {
-    const room = rooms[socket.roomCode];
-    if (!room) {
-      callback({ success: false, message: '房间不存在' });
-      return;
-    }
-
-    const player = room.players[socket.id];
-    if (!player) {
-      callback({ success: false, message: '玩家不在房间中' });
-      return;
-    }
-
-    // 构建游戏状态
-    const gameState = {
-      pot: room.pot,
-      currentBet: room.currentBet,
-      communityCards: room.communityCards,
-      gameState: room.gameState,
-      playerChips: player.chips,
-      playerPosition: player.seat
-    };
-
-    // 获取AI决策（优先使用API，如果失败则使用规则决策）
-    pokerAI.getAIDecision(gameState, socket.id).then(decision => {
-      callback({
-        success: true,
-        decision: decision
-      });
-    }).catch(err => {
-      // API失败时使用本地规则决策
-      const ruleDecision = pokerAI.getRuleBasedDecision(gameState, player);
-      callback({
-        success: true,
-        decision: {
-          action: ruleDecision.action,
-          amount: ruleDecision.amount,
-          reasoning: ruleDecision.reasoning,
-          isLocal: true
-        }
-      });
-    });
-  });
-
   socket.on('emote', (emoji) => {
     const room = rooms[socket.roomCode];
     if (!room) return;
