@@ -1164,18 +1164,18 @@ function animatePotChips(prevState, nextState) {
 
     var isMobile = window.innerWidth && window.innerWidth <= 768;
 
-    // 基础：矩形中心在打赏按钮下方 100 像素处，高度固定 150
+    // 基础：矩形中心在打赏按钮下方 100 像素处，高度固定 150（桌面）
     var centerYAbs = dRect.bottom + 100;
     var bandHeight = 150;
     var bandHalfH = bandHeight / 2;
     var bandWidth = 220;
     var bandHalfW = bandWidth / 2;
 
-    // 在手机浏览器上：高度和宽度各减少 100px，整体再上移 90px
+    // 在手机浏览器上：高度和宽度各减少 100px，整体再上移 90px（你刚才的需求）
     if (isMobile) {
-      bandHeight = Math.max(50, bandHeight - 100); // 150 -> 50
+      bandHeight = Math.max(50, bandHeight - 100); // 150 -> 50，高度减少 100
       bandHalfH = bandHeight / 2;
-      bandWidth = Math.max(80, bandWidth - 100);   // 220 -> 120
+      bandWidth = Math.max(80, bandWidth - 100);   // 220 -> 120，宽度减少 100
       bandHalfW = bandWidth / 2;
       centerYAbs -= 90;
     }
