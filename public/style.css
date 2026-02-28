@@ -424,6 +424,11 @@ body {
   min-width: 120px;
 }
 
+/* 我的座位与手牌整体下移 35px */
+#seat-0 {
+  transform: translateX(-50%) translateY(35px) !important;
+}
+
 /* 左右两侧上下座位各间隔至少 30px，避免重叠 */
 #seat-2 {
   transform: translateY(-15px);
@@ -589,6 +594,7 @@ body {
 }
 
 .current-bet {
+  display: none; /* 底牌下方当前下注信息已隐藏 */
   font-size: 14px;
   color: #ffffff;
 }
