@@ -1138,19 +1138,18 @@ function animatePotChips(prevState, nextState) {
     var tableRect = tableEl.getBoundingClientRect();
     var cRect = communityEl.getBoundingClientRect();
 
-    // 目标垂直范围：公共牌顶部往上 150px 内随机
-    var bandBottomAbs = cRect.top;
-    var bandTopAbs = cRect.top - 150;
+    // 目标垂直范围：公共牌顶部往上 150px 内随机，但不压在公共牌上
+    var bandBottomAbs = cRect.top - 8;
+    var bandTopAbs = bandBottomAbs - 150;
     if (bandTopAbs < tableRect.top) bandTopAbs = tableRect.top;
     if (bandBottomAbs - bandTopAbs < 20) bandBottomAbs = bandTopAbs + 20;
 
-    // 目标水平范围：公共牌区域左右各预留 10px
-    var leftAbs = cRect.left + 10;
-    var rightAbs = cRect.right - 10;
-    if (rightAbs <= leftAbs) {
-      leftAbs = cRect.left;
-      rightAbs = cRect.right;
-    }
+    // 目标水平范围：以公共牌中心为轴，宽度固定为 120px
+    var centerXAbs = (cRect.left + cRect.right) / 2;
+    var leftAbs = centerXAbs - 60;
+    var rightAbs = centerXAbs + 60;
+    if (leftAbs < tableRect.left) leftAbs = tableRect.left;
+    if (rightAbs > tableRect.right) rightAbs = tableRect.right;
 
     var prevById = {};
     prevState.players.forEach(function(p) {
@@ -1202,10 +1201,6 @@ function animatePotChips(prevState, nextState) {
             var targetYRel = targetYAbs - tableRect.top;
             var dx = targetXRel - startLeft;
             var dy = targetYRel - startTop;
-            var jitterX = (Math.random() - 0.5) * 6;
-            var jitterY = (Math.random() - 0.5) * 4;
-            dx += jitterX;
-            dy += jitterY;
             chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
           });
         })();

@@ -1048,15 +1048,6 @@ io.on('connection', (socket) => {
     const success = room.playerAction(socket.id, action, amount);
     if (success) {
       io.to(room.roomCode).emit('gameState', room.getGameState());
-      if (action === 'all-in' && player) {
-        io.to(room.roomCode).emit('emote', {
-          playerId: socket.id,
-          nickname: player.nickname,
-          emoji: 'ALL IN !!!',
-          seat: player.seat,
-          autoTrigger: true
-        });
-      }
       room.nextAction();
       callback({ success: true });
     } else {
