@@ -409,6 +409,26 @@ class PokerRoom {
     delete this.players[socketId];
   }
 
+  /** 局中有人断开：视为弃牌，保留在列表内等本局结束后再移除 */
+  markPlayerLeftAsFolded(socketId) {
+    const p = this.players[socketId];
+    if (p) {
+      p.folded = true;
+      p.left = true;
+    }
+  }
+
+  /** 将房主转移给除 socketId 外的第一个玩家（局中有人退出时用） */
+  transferHostToOther(exceptSocketId) {
+    const nextId = Object.keys(this.players).find(id => id !== exceptSocketId);
+    if (nextId) {
+      this.hostId = nextId;
+      return this.hostId;
+    }
+    this.hostId = null;
+    return null;
+  }
+
   transferHost() {
     const playerIds = Object.keys(this.players);
     if (playerIds.length > 0) {
@@ -419,6 +439,11 @@ class PokerRoom {
   }
 
   startNewHand() {
+    // 本局结束后再移除“中途退出”的玩家
+    Object.keys(this.players).forEach(id => {
+      if (this.players[id].left) delete this.players[id];
+    });
+
     this.deck = createDeck();
     this.communityCards = [];
     this.pot = 0;
@@ -1125,25 +1150,34 @@ io.on('connection', (socket) => {
       if (room.players[socket.id]) {
         const player = room.players[socket.id];
         const wasHost = socket.id === room.hostId;
-        room.removePlayer(socket.id);
-        if (wasHost) {
-          const newHostId = room.transferHost();
-          if (newHostId) {
-            io.to(roomCode).emit('hostChanged', { newHostId });
+        const inHand = room.gameState !== 'waiting' && room.gameState !== 'ended';
+
+        if (inHand) {
+          // 局中退出：视为弃牌，保留在列表直到本局结束
+          room.markPlayerLeftAsFolded(socket.id);
+          if (wasHost) {
+            const newHostId = room.transferHostToOther(socket.id);
+            if (newHostId) io.to(roomCode).emit('hostChanged', { newHostId });
           }
-        }
-        room.unlockRoom();
-        io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
-        if (Object.keys(room.players).length === 0) {
-          delete rooms[roomCode];
+          room.unlockRoom();
+          io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
+          if (room.currentPlayerSeat === player.seat) {
+            room.nextAction();
+          } else {
+            io.to(roomCode).emit('gameState', room.getGameState());
+          }
         } else {
-          io.to(roomCode).emit('roomUpdate', room.getGameState());
-          if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
-            const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
-            if (activePlayers.length < 2) {
-              room.gameState = 'waiting';
-              io.to(roomCode).emit('gameState', room.getGameState());
-            }
+          room.removePlayer(socket.id);
+          if (wasHost) {
+            const newHostId = room.transferHost();
+            if (newHostId) io.to(roomCode).emit('hostChanged', { newHostId });
+          }
+          room.unlockRoom();
+          io.to(roomCode).emit('playerLeft', { nickname: player.nickname });
+          if (Object.keys(room.players).length === 0) {
+            delete rooms[roomCode];
+          } else {
+            io.to(roomCode).emit('roomUpdate', room.getGameState());
           }
         }
         break;

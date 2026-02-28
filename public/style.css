@@ -529,6 +529,11 @@ body {
   opacity: 0.5;
 }
 
+/* 弃牌玩家的手牌半透明 */
+.seat.folded .player-cards .card {
+  opacity: 0.45;
+}
+
 /* 牌局进行中时，空座位半透明 */
 .seat.empty.in-game {
   opacity: 0.4;
@@ -655,6 +660,11 @@ body {
 .card.back {
   background: linear-gradient(135deg, #1a237e, #283593);
   border: 2px solid #fff;
+}
+
+/* 其他玩家盖着的手牌：1px 白色描边 */
+.seat .player-cards .card.back {
+  border: 1px solid #fff;
 }
 
 .card .suit {
@@ -881,6 +891,42 @@ body {
   100% {
     opacity: 0;
     transform: translate(-50%, -26px);
+  }
+}
+
+/* ALL IN 飘字：黄色、外发光、上飘、停留 1 秒后消失 */
+.all-in-float {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffeb3b;
+  text-shadow:
+    0 0 10px #ffeb3b,
+    0 0 20px #ffc107,
+    0 0 30px rgba(255, 235, 59, 0.8);
+  pointer-events: none;
+  z-index: 80;
+  white-space: nowrap;
+  animation: allInFloat 2.2s ease-out forwards;
+}
+
+@keyframes allInFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -25px);
+  }
+  15.01%, 65% {
+    opacity: 1;
+    transform: translate(-50%, -25px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -45px);
   }
 }
 

@@ -59,7 +59,14 @@ function playSound(type) {
     initAudio();
     var tpl = audioCache[type];
     if (!tpl) return;
-    // clone 一份，避免快速连击时被打断
+    // 发牌音效用同一元素重播，便于在用户手势解锁后连续播放多声
+    if (type === 'card') {
+      tpl.currentTime = 0;
+      tpl.play().catch(function(err) {
+        console.log('playSound error', type, err && err.message);
+      });
+      return;
+    }
     var audio = tpl.cloneNode();
     audio.play().catch(function(err) {
       console.log('playSound error', type, err && err.message);
@@ -207,13 +214,17 @@ function showPage(page) {
   } else {
     lobbyPage.classList.add('hidden');
     gameRoomPage.classList.remove('hidden');
+    initAudio();
     if (bgmEl) {
+      bgmEl.volume = 0.3;
+      try { bgmEl.load(); } catch (e) {}
       if (!window._bgmEndedHandler) {
         window._bgmEndedHandler = function() {
           setTimeout(function() {
             if (!gameRoomPage || gameRoomPage.classList.contains('hidden')) return;
             var el = document.getElementById('bgmAudio');
             if (el) {
+              el.volume = 0.3;
               el.currentTime = 0;
               el.play().catch(function() {});
             }
@@ -222,6 +233,21 @@ function showPage(page) {
       }
       bgmEl.addEventListener('ended', window._bgmEndedHandler);
       bgmEl.play().catch(function() {});
+      if (!window._bgmClickUnlock) {
+        window._bgmClickUnlock = true;
+        function tryPlayBgm() {
+          var el = document.getElementById('bgmAudio');
+          if (el && gameRoomPage && !gameRoomPage.classList.contains('hidden') && el.paused) {
+            el.volume = 0.3;
+            el.play().catch(function() {});
+          }
+        }
+        gameRoomPage.addEventListener('click', tryPlayBgm, { once: true });
+        document.addEventListener('click', function docBgm() {
+          tryPlayBgm();
+          document.removeEventListener('click', docBgm);
+        }, { once: true });
+      }
     }
   }
 }
@@ -416,6 +442,7 @@ function setupEventListeners() {
   if (startGameBtn) {
     startGameBtn.addEventListener('click', function() {
       playSound('button');
+      playSound('card');
       startGameBtn.disabled = true;
       startGameBtn.textContent = '开始中...';
       socket.emit('startGame', function(response) {
@@ -473,6 +500,7 @@ socket.on('gameState', function(gameState) {
 
   currentGameState = gameState;
   updateGameState(gameState);
+  showAllInFloats(prevState, gameState);
   _lastGameStateForPot = gameState;
 
   // 利用 gameState 的变化在本地统计金币 / 场次 / 胜率
@@ -484,10 +512,15 @@ socket.on('roomUpdate', function(gameState) {
   if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
+  if (currentGameState && gameState && gameState.pot > currentGameState.pot) {
+    playBetSoundIfSomeoneElseBet(currentGameState, gameState);
+  }
+  var prevForAllIn = currentGameState;
   // roomUpdate 不触发新一手发牌动画，避免与 gameState 重复
   _isNewDealPreflop = false;
   currentGameState = gameState;
   updateGameState(gameState);
+  showAllInFloats(prevForAllIn, gameState);
 });
 
 socket.on('playerLeft', function(data) {
@@ -666,6 +699,41 @@ function showRoundResultFloats(results) {
     });
   } catch (e) {
     console.log('showRoundResultFloats error', e);
+  }
+}
+
+/** 有人刚全下时，在该玩家头上飘 ALL IN（黄色、外发光、上飘、停留约 1 秒后消失） */
+function showAllInFloats(prevState, nextState) {
+  try {
+    if (!nextState || !nextState.players) return;
+    var tableEl = document.querySelector('.poker-table');
+    if (!tableEl) return;
+    var myPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
+    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+    var prevById = {};
+    if (prevState && prevState.players) {
+      prevState.players.forEach(function(p) { if (p && p.socketId) prevById[p.socketId] = p; });
+    }
+    nextState.players.forEach(function(p) {
+      if (!p || !p.allIn) return;
+      var prev = prevById[p.socketId];
+      if (prev && prev.allIn) return;
+      var displaySeat = (p.seat - mySeatIndex + 5) % 5;
+      var seatEl = document.getElementById('seat-' + displaySeat);
+      if (!seatEl) return;
+      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+      var rect = avatarEl.getBoundingClientRect();
+      var tableRect = tableEl.getBoundingClientRect();
+      var floatEl = document.createElement('div');
+      floatEl.className = 'all-in-float';
+      floatEl.textContent = 'ALL IN';
+      floatEl.style.left = (rect.left - tableRect.left + rect.width / 2) + 'px';
+      floatEl.style.top = (rect.top - tableRect.top - 8) + 'px';
+      tableEl.appendChild(floatEl);
+      setTimeout(function() { floatEl.remove(); }, 2300);
+    });
+  } catch (e) {
+    console.log('showAllInFloats error', e);
   }
 }
 
@@ -990,6 +1058,28 @@ function createCardElement(card, faceUp, options) {
   return cardEl;
 }
 
+// 检测是否有“他人（含 AI）”下注导致底池增加，若有则播放下注音效
+function playBetSoundIfSomeoneElseBet(prevState, nextState) {
+  if (!prevState || !nextState || !prevState.players || !nextState.players) return;
+  if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
+  if (nextState.pot <= prevState.pot) return;
+  var prevById = {};
+  var prevBySeat = {};
+  prevState.players.forEach(function(p) {
+    if (!p) return;
+    if (p.socketId) prevById[p.socketId] = p;
+    if (typeof p.seat === 'number') prevBySeat[p.seat] = p;
+  });
+  var someoneElseBet = false;
+  nextState.players.forEach(function(p) {
+    if (!p || p.socketId === mySocketId) return;
+    var prev = prevById[p.socketId] || (typeof p.seat === 'number' ? prevBySeat[p.seat] : null);
+    if (!prev) return;
+    if (p.bet > prev.bet || p.chips < prev.chips) someoneElseBet = true;
+  });
+  if (someoneElseBet) playSound('bet');
+}
+
 // 下注飞筹码：从有新增下注的玩家头像飞到桌子中心
 function animatePotChips(prevState, nextState) {
   try {
@@ -998,20 +1088,7 @@ function animatePotChips(prevState, nextState) {
     if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
     if (nextState.pot <= prevState.pot) return; // 底池没变就不飞筹码
 
-    // 以 socketId 为键索引上一帧玩家状态
-    var prevById = {};
-    prevState.players.forEach(function(p) {
-      if (p && p.socketId) prevById[p.socketId] = p;
-    });
-    // 只有当他人在本帧增加下注时才播放音效（自己点跟注/加注时已在点击时播放，避免不同步或重复）
-    var someoneElseBet = false;
-    nextState.players.forEach(function(p) {
-      if (!p || !p.socketId) return;
-      var prev = prevById[p.socketId];
-      if (!prev) return;
-      if ((p.bet > prev.bet || p.chips < prev.chips) && p.socketId !== mySocketId) someoneElseBet = true;
-    });
-    if (someoneElseBet) playSound('bet');
+    playBetSoundIfSomeoneElseBet(prevState, nextState);
 
     var tableEl = document.querySelector('.poker-table');
     if (!tableEl) return;
@@ -1114,7 +1191,9 @@ function renderSeats(gameState) {
 
   // 发牌顺序计数器：用于控制 preflop 时每张牌的动画延迟，实现一张张顺时针发牌的效果
   var dealIndex = 0;
-  
+  var handFlyIn = _isNewDealPreflop && gameState.gameState === 'preflop';
+  if (handFlyIn) playSound('card');
+
   gameState.players.forEach(function(player) {
     var displaySeat = (player.seat - mySeatIndex + 5) % 5;
     var seatEl = document.getElementById('seat-' + displaySeat);
@@ -1163,7 +1242,6 @@ function renderSeats(gameState) {
       seatEl.classList.add('all-in');
     }
     
-    var handFlyIn = _isNewDealPreflop && gameState.gameState === 'preflop';
     if (player.hand && player.hand.length > 0) {
       if (player.socketId === mySocketId) {
         player.hand.forEach(function(card, idx) {
@@ -1173,6 +1251,7 @@ function renderSeats(gameState) {
             flyDelay: delay,
             extraClass: 'card-my'
           }));
+          if (handFlyIn) setTimeout(function() { playSound('card'); }, delay);
           dealIndex++;
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
@@ -1183,6 +1262,7 @@ function renderSeats(gameState) {
         for (var i = 0; i < 2; i++) {
           var delayBack = handFlyIn ? dealIndex * 120 : 0;
           cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack }));
+          if (handFlyIn) setTimeout(function() { playSound('card'); }, delayBack);
           dealIndex++;
         }
       }
@@ -1190,6 +1270,7 @@ function renderSeats(gameState) {
       for (var i = 0; i < 2; i++) {
         var delayBack2 = handFlyIn ? dealIndex * 120 : 0;
         cardsEl.appendChild(createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack2 }));
+        if (handFlyIn) setTimeout(function() { playSound('card'); }, delayBack2);
         dealIndex++;
       }
     }
