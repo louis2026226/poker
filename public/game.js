@@ -511,6 +511,10 @@ socket.on('gameState', function(gameState) {
   showAllInFloats(prevState, gameState);
   _lastGameStateForPot = gameState;
 
+  if (gameState.gameState === 'ended' && prevState && prevState.pot > 0) {
+    animatePotToWinners(prevState, gameState);
+  }
+
   // 利用 gameState 的变化在本地统计金币 / 场次 / 胜率
   updateLocalStatsOnGameEnd(prevState, gameState);
 });
@@ -1161,6 +1165,71 @@ function animatePotChips(prevState, nextState) {
     });
   } catch (e) {
     console.log('animatePotChips error', e);
+  }
+}
+
+/** 局结束：底池筹码从中间飞向获胜者头像，停留 1.5 秒后移除（下一局由服务端约 2 秒后发牌） */
+function animatePotToWinners(prevState, nextState) {
+  try {
+    if (!prevState || !nextState || nextState.gameState !== 'ended') return;
+    var pot = prevState.pot;
+    if (typeof pot !== 'number' || pot <= 0) return;
+    if (!prevState.players || !nextState.players) return;
+
+    var prevBySocketId = {};
+    prevState.players.forEach(function(p) {
+      if (p && p.socketId) prevBySocketId[p.socketId] = p;
+    });
+    var winners = nextState.players.filter(function(p) {
+      var prevP = prevBySocketId[p.socketId];
+      return prevP && (p.chips || 0) > (prevP.chips || 0);
+    });
+    if (winners.length === 0) return;
+
+    var tableEl = document.querySelector('.poker-table');
+    var potArea = document.querySelector('.pot-display') || document.getElementById('potIcon');
+    if (!tableEl || !potArea) return;
+
+    var tableRect = tableEl.getBoundingClientRect();
+    var potRect = potArea.getBoundingClientRect();
+    var centerX = potRect.left - tableRect.left + potRect.width / 2;
+    var centerY = potRect.top - tableRect.top + potRect.height / 2;
+
+    var myPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
+    var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+
+    var chipsPerWinner = 5;
+    var durationMs = 500;
+    var stayMs = 1500;
+
+    winners.forEach(function(winner) {
+      var displaySeat = (winner.seat - mySeatIndex + 5) % 5;
+      var seatEl = document.getElementById('seat-' + displaySeat);
+      if (!seatEl) return;
+      var avatarEl = seatEl.querySelector('.player-avatar') || seatEl;
+      var avatarRect = avatarEl.getBoundingClientRect();
+      var targetX = avatarRect.left - tableRect.left + avatarRect.width / 2 - 10;
+      var targetY = avatarRect.top - tableRect.top + avatarRect.height / 2 - 10;
+      var dx = targetX - centerX;
+      var dy = targetY - centerY;
+
+      for (var i = 0; i < chipsPerWinner; i++) {
+        var chipEl = document.createElement('div');
+        chipEl.className = 'chip-fly chip-fly-to-winner';
+        chipEl.style.left = (centerX - 10) + 'px';
+        chipEl.style.top = (centerY - 10) + 'px';
+        chipEl.style.transition = 'transform ' + (durationMs / 1000) + 's ease-out, opacity ' + (durationMs / 1000) + 's ease-out';
+        tableEl.appendChild(chipEl);
+        requestAnimationFrame(function() {
+          chipEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        });
+        setTimeout(function() {
+          chipEl.remove();
+        }, durationMs + stayMs);
+      }
+    });
+  } catch (e) {
+    console.log('animatePotToWinners error', e);
   }
 }
 
