@@ -160,12 +160,13 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   cursor: not-allowed;
 }
 
-/* 版本信息标签：固定屏幕右下角，预留安全区 */
+/* 版本信息标签：固定屏幕底部居中，预留安全区 */
 .version-label {
   position: fixed;
   bottom: calc(6px + env(safe-area-inset-bottom, 0));
-  right: calc(10px + env(safe-area-inset-right, 0));
-  left: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
   margin: 0;
   font-size: 12px;
   color: #ccc;
@@ -202,11 +203,12 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   font-size: 12px;
 }
 
-/* 版本信息标签：固定屏幕右下角（与上一定义一致） */
+/* 版本信息标签：固定屏幕底部居中（与上一定义一致） */
 .version-label {
   bottom: calc(6px + env(safe-area-inset-bottom, 0));
-  right: calc(10px + env(safe-area-inset-right, 0));
-  left: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
 }
 
 /* 筹码图标（用于玩家筹码显示） */
