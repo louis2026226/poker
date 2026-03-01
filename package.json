@@ -1,6 +1,6 @@
 {
   "name": "texas-holdempoker",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Web-based Texas Hold'em Poker for friends",
   "main": "server.js",
   "scripts": {
