@@ -1285,6 +1285,12 @@ function updateGameState(gameState) {
   var prevPot = _lastPotValue;
   if (newPot > prevPot) {
     animatePotAmount(prevPot, newPot);
+  } else if (newPot < prevPot) {
+    /* 仅在新局或结束时的变小才更新，避免乱序的旧 state 用较小底池覆盖当前显示 */
+    if (gameState.gameState === 'ended' || gameState.gameState === 'preflop' || gameState.gameState === 'waiting') {
+      _lastPotValue = newPot;
+      potAmount.textContent = formatChips(newPot);
+    }
   } else {
     _lastPotValue = newPot;
     potAmount.textContent = formatChips(newPot);

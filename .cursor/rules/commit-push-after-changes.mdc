@@ -1,16 +1,21 @@
 ---
-description: 改完就 commit + push，同步到 Railway
+description: 改完就 commit + push，由 AI 代为执行，同步到 Railway
 alwaysApply: true
 ---
 
-# 改完就 commit + push
+# 改完就 commit + push（由 AI 执行）
 
-对 **poker-repo** 做过任何会影响线上的代码修改后，必须：
+对 **poker-repo** 做过任何会影响线上的代码修改后，**必须由你在对话中代为执行**：
 
-1. **提交**：`git add` 改动的文件 → `git commit -m "简短说明"`
-2. **推送**：`git push origin main`
+1. **版本号**：若有业务代码改动，将 `package.json` 的 `version` 小版本 +1（如 1.0.18 → 1.0.19）。
+2. **提交**：`git add` 改动的文件（含 package.json；仅业务代码与版本，不含 .cursor、patch_*）→ `git commit -m "简短说明"`
+3. **推送**：在项目根目录执行 `git push origin main`
 
-推送后 Railway 会自动部署，无需额外操作。
+推送成功后 Railway 会自动部署。若 push 失败（如 SSH 连 GitHub 报错），在回复中写明并提示用户在本机 PowerShell 执行同一条 `git push origin main`。
 
-- 工作目录：`poker-repo`（即本 worktree 对应仓库根目录）
+3. **告知版本号（每次更新完必须）**  
+   - 在回复中明确写出一行：**「版本号：\<package.json 的 version\>（提交 \<git rev-parse --short HEAD\>）」**  
+   - 例如：版本号：1.0.18（提交 7aa5736）
+
+- 工作目录：`C:\Users\Administrator\.cursor\worktrees\louis-poker-git\poker-repo`
 - 用户明确说「不要提交」「不要推」「只改不部署」时，不执行 commit/push。
