@@ -7,7 +7,8 @@ let audioCache = {
   bet: null,
   action: null,
   win: null,
-  over: null
+  over: null,
+  button: null
 };
 let audioCtx = null;
 let mySocketId = null;
@@ -49,6 +50,9 @@ function initAudio() {
   }
   if (!audioCache.over) {
     loadAudio('over', '/over.mp3');
+  }
+  if (!audioCache.button) {
+    loadAudio('button', '/button');
   }
 }
 
@@ -392,6 +396,7 @@ function setupEventListeners() {
   // 创建房间
   if (createRoomBtn) {
     createRoomBtn.addEventListener('click', function() {
+      playSound('button');
       console.log('Create room clicked');
       if (!socket.connected) {
         alert(i18n('errNotConnected'));
@@ -434,6 +439,7 @@ function setupEventListeners() {
   var getChipsBtn = document.getElementById('getChipsBtn');
   if (getChipsBtn) {
     getChipsBtn.addEventListener('click', function() {
+      playSound('button');
       updatePlayerChips((playerStats.chips || 0) + 1000);
     });
   }
@@ -441,6 +447,7 @@ function setupEventListeners() {
   // 加入房间按钮：点击时先判定筹码是否至少 500
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {
+      playSound('button');
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
         alert(i18n('tipMinChips'));
         return;
@@ -452,6 +459,7 @@ function setupEventListeners() {
   // 确认加入
   if (confirmJoinBtn) {
     confirmJoinBtn.addEventListener('click', function() {
+      playSound('button');
       console.log('Confirm join clicked');
       if (!socket.connected) {
         alert(i18n('errNotConnected'));
@@ -523,11 +531,15 @@ function setupEventListeners() {
   }
 
   if (leaveRoomBtn) {
-    leaveRoomBtn.addEventListener('click', doLeaveRoom);
+    leaveRoomBtn.addEventListener('click', function() {
+      playSound('button');
+      doLeaveRoom();
+    });
   }
 
   if (settlementBtn) {
     settlementBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('requestSettlement', function(res) {
         if (res && res.success) {
           // 服务端会发 gameOver，由 gameOver 逻辑弹结算界面
@@ -541,6 +553,7 @@ function setupEventListeners() {
   var leaveRoomFromModalBtn = document.getElementById('leaveRoomFromModalBtn');
   if (leaveRoomFromModalBtn) {
     leaveRoomFromModalBtn.addEventListener('click', function() {
+      playSound('button');
       gameOverModal.classList.add('hidden');
       doLeaveRoom();
     });
@@ -549,6 +562,7 @@ function setupEventListeners() {
   // 恢复游戏：若为暂停则恢复当前局，若为结束则开始下一局
   if (resumeGameBtn) {
     resumeGameBtn.addEventListener('click', function() {
+      playSound('button');
       gameOverModal.classList.add('hidden');
       if (_settlementReason === 'paused') {
         socket.emit('resumeGame', function(response) {
@@ -580,6 +594,7 @@ function setupEventListeners() {
   // 操作按钮
   if (foldBtn) {
     foldBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('playerAction', 'fold', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -588,6 +603,7 @@ function setupEventListeners() {
   
   if (checkBtn) {
     checkBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('playerAction', 'check', 0, function(response) {
         if (!response.success) console.log(response.message);
       });
@@ -622,6 +638,7 @@ function setupEventListeners() {
   // AI+1 按钮：添加一个机器人玩家
   if (aiAssistBtn) {
     aiAssistBtn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('addBot');
     });
   }
