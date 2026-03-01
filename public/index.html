@@ -178,6 +178,9 @@
                 tabindex="12" aria-label="开始游戏" data-i18n="startGame">开始游戏</button>
       </div>
 
+      <!-- 连胜标识：仅自己可见，赢一局显示 WIN，连续赢显示 WIN x2 / x3… -->
+      <div id="winStreakBadge" class="win-streak-badge hidden" aria-hidden="true">WIN</div>
+
       <!-- 公共牌区 -->
       <div class="community-area" role="region" aria-label="公共牌区和底池">
         <div class="community-cards" id="communityCards" aria-label="公共牌"></div>

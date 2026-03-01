@@ -318,6 +318,8 @@ var _lastSettlementData = null;
 var _settlementReason = 'ended';
 /** 点击结算暂停时，发起暂停的玩家昵称（用于标题「某某暂停游戏」） */
 var _pausedByNickname = '';
+/** 当前连胜场次，仅自己可见的 WIN / WIN x2 等 */
+var winStreakCount = 0;
 
 // ============ 初始化函数 ============
 function initDOMElements() {
@@ -609,6 +611,8 @@ function setupEventListeners() {
 
   function doLeaveRoom() {
     stopBGM();
+    winStreakCount = 0;
+    updateWinStreakBadge();
     socket.emit('leaveRoom', function(res) {
       var chips = (res && res.success && typeof res.finalChips === 'number')
         ? res.finalChips
@@ -914,6 +918,20 @@ function setSettlementModalTitle() {
   updateSoundToggleIcon();
 }
 
+/** 更新连胜标识（仅自己可见）：WIN / WIN x2 / WIN x3…，中断则隐藏 */
+function updateWinStreakBadge() {
+  var el = document.getElementById('winStreakBadge');
+  if (!el) return;
+  if (winStreakCount >= 1) {
+    el.textContent = winStreakCount === 1 ? 'WIN' : 'WIN x' + winStreakCount;
+    el.classList.remove('hidden');
+    el.setAttribute('aria-hidden', 'false');
+  } else {
+    el.classList.add('hidden');
+    el.setAttribute('aria-hidden', 'true');
+  }
+}
+
 function updateSoundToggleIcon() {
   var btn = document.getElementById('soundToggleBtn');
   if (!btn) return;
@@ -1005,7 +1023,13 @@ socket.on('gameOver', function(data) {
     var meWin = results.some(function(r) {
       return r && r.nickname === playerStats.nickname && typeof r.netChange === 'number' && r.netChange > 0;
     });
-    if (meWin) playSound('win');
+    if (meWin) {
+      playSound('win');
+      winStreakCount++;
+    } else {
+      winStreakCount = 0;
+    }
+    updateWinStreakBadge();
   } catch (e) {}
 
   showRoundResultFloats(results);

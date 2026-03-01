@@ -737,6 +737,24 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   50% { transform: scale(1.1); }
 }
 
+/* 连胜标识：仅自己可见，牌桌中央黄色 WIN / WIN x2… */
+.win-streak-badge {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 300;
+  pointer-events: none;
+  color: #ffc107;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 4px #ffc107;
+  letter-spacing: 0.05em;
+}
+.win-streak-badge.hidden {
+  display: none;
+}
+
 /* 公共牌区（底池已移至筹码区上方） */
 .community-area {
   position: absolute;
