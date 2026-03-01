@@ -87,6 +87,7 @@ let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(L
 
 // 翻译文案（大厅等）
 var I18N = {
+  appTitle: { zh: '路易斯德州', en: 'Louis Poker' },
   subtitle: { zh: '与好友一起畅玩', en: 'Play with friends' },
   statNickname: { zh: '昵称', en: 'Nickname' },
   statChips: { zh: '筹码', en: 'Chips' },
