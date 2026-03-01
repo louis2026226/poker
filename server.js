@@ -790,15 +790,17 @@ class PokerRoom {
 
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
-    this.emitGameOverIfBust();
+    const hadBust = this.emitGameOverIfBust();
 
-    // 1.5秒后发牌开始新局
-    setTimeout(() => {
-      const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
-      if (activePlayers.length >= 2) {
-        this.startNewHand();
-      }
-    }, 1500);
+    // 有人破产时不再自动开新局，由 emitGameOver 清退房间；无人破产时 1.5 秒后开新局
+    if (!hadBust) {
+      setTimeout(() => {
+        const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
+        if (activePlayers.length >= 2) {
+          this.startNewHand();
+        }
+      }, 1500);
+    }
   }
 
   endHand() {
@@ -808,14 +810,15 @@ class PokerRoom {
   }
 
   emitGameOverIfBust() {
-    if (!this.chipsAtStartOfHand) return;
+    if (!this.chipsAtStartOfHand) return false;
     const bustedPlayers = Object.values(this.players).filter(p =>
       this.chipsAtStartOfHand[p.socketId] != null &&
       this.chipsAtStartOfHand[p.socketId] > 0 &&
       p.chips === 0
     );
-    if (bustedPlayers.length === 0) return;
+    if (bustedPlayers.length === 0) return false;
     this.emitGameOver(bustedPlayers);
+    return true;
   }
 
   emitGameOver(bustedPlayers = []) {
@@ -849,9 +852,11 @@ class PokerRoom {
       elapsedSeconds: Math.max(0, Math.floor((a.timestamp - startTs) / 1000))
     }));
 
+    const roomClosed = bustedPlayers.length > 0;
     io.to(this.roomCode).emit('gameOver', {
       results,
       actions,
+      roomClosed,
       meta: {
         endedAt: now.toISOString(),
         durationSeconds,
@@ -859,6 +864,18 @@ class PokerRoom {
         busted: bustedPlayers.map(p => p.nickname)
       }
     });
+
+    if (roomClosed) {
+      const roomCode = this.roomCode;
+      Object.keys(this.players).forEach((socketId) => {
+        const s = io.sockets.sockets.get(socketId);
+        if (s) {
+          s.leave(roomCode);
+          delete s.roomCode;
+        }
+      });
+      delete rooms[roomCode];
+    }
   }
 
   getGameState() {

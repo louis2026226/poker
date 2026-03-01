@@ -1225,6 +1225,12 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   margin-top: 20px;
 }
 
+.modal-room-closed {
+  margin-top: 20px;
+  color: #aaa;
+  font-size: 14px;
+}
+
 /* 响应式 - 手机端 */
 @media (max-width: 768px) {
   .lobby-container {
