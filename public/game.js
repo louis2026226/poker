@@ -641,21 +641,9 @@ socket.on('gameOver', function(data) {
     if (meWin) playSound('win');
   } catch (e) {}
 
-  var roomClosed = !!data.roomClosed;
-
   showRoundResultFloats(results);
   setTimeout(function() {
     gameOverModal.classList.remove('hidden');
-    var modalActions = document.getElementById('modalActions');
-    var modalRoomClosed = document.getElementById('modalRoomClosed');
-    if (roomClosed && modalActions && modalRoomClosed) {
-      modalActions.classList.add('hidden');
-      modalRoomClosed.classList.remove('hidden');
-      setTimeout(function() { location.reload(); }, 3000);
-    } else {
-      if (modalRoomClosed) modalRoomClosed.classList.add('hidden');
-      if (modalActions) modalActions.classList.remove('hidden');
-    }
   }, 2000);
 });
 
