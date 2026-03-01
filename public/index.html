@@ -226,23 +226,13 @@
   <div id="phraseBubbleContainer" class="phrase-bubble-container" aria-live="polite"></div>
   <!-- 右下角互动短语入口 -->
   <button type="button" id="phraseBubbleBtn" class="phrase-bubble-btn hidden" aria-label="快捷短语" title="快捷短语">💬</button>
-  <!-- 互动短语面板（分类 + 短语列表 + 发送对象） -->
+  <!-- 互动短语面板：全部短语一列，可滑动查看 -->
   <div id="phrasePanel" class="phrase-panel hidden" role="dialog" aria-label="选择短语">
     <div class="phrase-panel-header">
       <span class="phrase-panel-title">快捷短语</span>
       <button type="button" id="phrasePanelClose" class="phrase-panel-close" aria-label="关闭">×</button>
     </div>
-    <div class="phrase-panel-target">
-      <label>发送给</label>
-      <select id="phraseTargetSelect"><option value="">—</option></select>
-    </div>
-    <div class="phrase-tabs">
-      <button type="button" class="phrase-tab active" data-category="general">通用</button>
-      <button type="button" class="phrase-tab" data-category="action">行动</button>
-      <button type="button" class="phrase-tab" data-category="comment">评论</button>
-      <button type="button" class="phrase-tab" data-category="social">社交</button>
-    </div>
-    <div id="phraseList" class="phrase-list"></div>
+    <div id="phraseList" class="phrase-list phrase-list-scroll"></div>
   </div>
   <!-- 长按头像时的短语轮盘 -->
   <div id="phraseWheel" class="phrase-wheel hidden"></div>

@@ -55,7 +55,8 @@ const CONFIG = {
   SMALL_BLIND: 10,
   BIG_BLIND: 20,
   MAX_SEATS: 5,
-  ROOM_CODE_LENGTH: 5
+  ROOM_CODE_LENGTH: 5,
+  DEAL_DELAY_MS: 800  // 玩家操作后延迟多久再发下一阶段牌（翻牌/转牌/河牌）
 };
 
 // 扑克牌相关
@@ -328,7 +329,13 @@ function evaluateFiveCards(cards) {
   };
 }
 
-// 比较牌型（含踢脚牌），>0 hand1 强，<0 hand2 强，0 完全平局
+/**
+ * 比较牌型与平局：>0 hand1 强，<0 hand2 强，0 完全平局（平分彩池）
+ * - 不同类型：牌型等级(category)高者胜
+ * - 同类型：按 ranks 逐项比较（顺子/同花顺比最大牌；四条/葫芦/三条/两对/一对先比牌组再比踢脚；同花/高牌从大到小逐张比）
+ * - A-2-3-4-5 为最小顺子(straightHigh=5)
+ * - 五张牌点数与顺序完全一致则返回 0，摊牌时平分该彩池
+ */
 function compareHands(hand1, hand2) {
   if (!hand1 && !hand2) return 0;
   if (!hand1) return -1;
@@ -428,7 +435,7 @@ class PokerRoom {
   }
 
   startNewHand() {
-    this.deck = createDeck();
+    this.deck = createDeck();  // 每手牌全新 52 张并洗牌，不复用上局牌堆
     this.communityCards = [];
     this.pot = 0;
     this.playerBets = {};
@@ -443,7 +450,7 @@ class PokerRoom {
       return;
     }
 
-    // 清空上一局手牌，并按标准顺序发底牌：每人一张、共发两轮
+    // 发底牌：标准德州每人 2 张私有牌，每圈发一张、共 2 圈
     activePlayers.forEach(p => {
       p.hand = [];
       p.bet = 0;
@@ -600,12 +607,21 @@ class PokerRoom {
       .filter(p => !p.folded && !p.allIn && p.chips > 0)
       .sort((a, b) => a.seat - b.seat);
 
-    // 若没有任何玩家可以继续行动（都全下或弃牌），自动把公共牌发完并摊牌
+    // 若没有任何玩家可以继续行动（都全下或弃牌），每隔 DEAL_DELAY_MS 发一档公共牌直到摊牌
     if (activePlayers.length === 0) {
-      while (this.gameState !== 'showdown' && this.gameState !== 'ended') {
-        this.advancePhase();
+      const room = this;
+      const delayMs = CONFIG.DEAL_DELAY_MS || 800;
+      function scheduleNextDeal() {
+        setTimeout(() => {
+          if (room.paused) return;
+          room.advancePhase();
+          io.to(room.roomCode).emit('gameState', room.getGameState());
+          if (room.gameState !== 'showdown' && room.gameState !== 'ended') {
+            scheduleNextDeal();
+          }
+        }, delayMs);
       }
-      io.to(this.roomCode).emit('gameState', this.getGameState());
+      scheduleNextDeal();
       return;
     }
 
@@ -620,7 +636,17 @@ class PokerRoom {
     }
 
     if (this.shouldAdvancePhase()) {
-      this.advancePhase();
+      const room = this;
+      const delayMs = CONFIG.DEAL_DELAY_MS || 800;
+      setTimeout(() => {
+        if (room.paused) return;
+        room.advancePhase();
+        if (room.gameState !== 'ended' && room.gameState !== 'waiting') {
+          io.to(room.roomCode).emit('gameState', room.getGameState());
+          room.handleBotTurn();
+        }
+      }, delayMs);
+      return;
     }
 
     io.to(this.roomCode).emit('gameState', this.getGameState());
@@ -748,12 +774,23 @@ class PokerRoom {
     return allBet;
   }
 
-  /** 发公共牌前烧一张牌（防止作弊） */
+  /** 发公共牌前烧一张牌（丢弃，不放入 communityCards） */
   burnCard() {
     if (this.deck.length > 0) this.deck.pop();
   }
 
+  /**
+   * 公共牌标准流程：翻牌前烧 1 张 → 发 3 张；转牌前烧 1 张 → 发 1 张；河牌前烧 1 张 → 发 1 张。
+   * 发下一档公共牌前若只剩 1 位未弃牌玩家，直接摊牌不再发牌。
+   */
   advancePhase() {
+    const stillIn = Object.values(this.players).filter(p => !p.folded);
+    if (stillIn.length < 2) {
+      this.gameState = 'showdown';
+      this.determineWinner();
+      return;
+    }
+
     switch (this.gameState) {
       case 'preflop':
         this.gameState = 'flop';
@@ -780,7 +817,12 @@ class PokerRoom {
   }
 
   /**
-   * 按每档下注额拆成边池。返回 [{ amount, eligible: [player] }]，eligible 为该档中有资格参与该池的玩家（下注>=该档）
+   * 边池计算（严格按递归层级）：
+   * 1. 将未弃牌玩家按本局投入 p.bet 从少到多得到各档 level
+   * 2. 主池：最小档 × 投入>=该档的人数；参与者为所有投入>=该档的玩家
+   * 3. 后续边池：每档 (level - 上一档) × 投入>=该档的人数，参与者为投入>=该档的玩家
+   * 4. 分配时从最小池开始，在该池参与者中比牌，胜者得该池；多人牌力相同则平分
+   * 例：A(10) B(25) C(25) D(40) → 主池40(A,B,C,D)、边池1:45(B,C,D)、边池2:15(D)
    */
   buildSidePots() {
     const activePlayers = Object.values(this.players).filter(p => !p.folded);
@@ -1226,20 +1268,17 @@ io.on('connection', (socket) => {
   socket.on('sendPhrase', (payload) => {
     const room = rooms[socket.roomCode];
     if (!room) return;
-    const toSocketId = payload && payload.toSocketId;
     const phraseId = payload && payload.phraseId;
-    if (!toSocketId || !phraseId || !PHRASE_IDS.includes(phraseId)) return;
+    if (!phraseId || !PHRASE_IDS.includes(phraseId)) return;
     const now = Date.now();
     if (phraseCooldowns[socket.id] && now - phraseCooldowns[socket.id] < PHRASE_COOLDOWN_MS) return;
     phraseCooldowns[socket.id] = now;
     const fromPlayer = room.players[socket.id];
-    const toPlayer = room.players[toSocketId];
-    if (!fromPlayer || !toPlayer) return;
+    if (!fromPlayer) return;
     io.to(room.roomCode).emit('phrase', {
       fromSocketId: socket.id,
       fromNickname: fromPlayer.nickname,
-      toSocketId: toSocketId,
-      toSeat: toPlayer.seat,
+      fromSeat: fromPlayer.seat,
       phraseId: phraseId
     });
   });

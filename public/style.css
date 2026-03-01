@@ -1988,10 +1988,10 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   100% { opacity: 0; transform: scale(0.95); }
 }
 
-/* 右下角短语按钮 */
+/* 右下角短语按钮（上移 60px） */
 .phrase-bubble-btn {
   position: fixed;
-  bottom: 20px;
+  bottom: 80px;
   right: 20px;
   width: 48px;
   height: 48px;
@@ -2015,10 +2015,10 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   display: none;
 }
 
-/* 短语面板 */
+/* 短语面板（在短语按钮上方） */
 .phrase-panel {
   position: fixed;
-  bottom: 80px;
+  bottom: 140px;
   right: 20px;
   width: 280px;
   max-height: 70vh;
@@ -2111,6 +2111,13 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0;
+}
+
+.phrase-list-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  max-height: 50vh;
 }
 
 .phrase-item-btn {

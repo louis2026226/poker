@@ -909,10 +909,11 @@ socket.on('emote', function(data) {
 socket.on('phrase', function(data) {
   var myPlayer = currentGameState && currentGameState.players ? currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) : null;
   var mySeatIndex = myPlayer ? myPlayer.seat : 0;
-  var displaySeat = (data.toSeat - mySeatIndex + 5) % 5;
+  var displaySeat = (data.fromSeat - mySeatIndex + 5) % 5;
   var phrase = PHRASES.find(function(p) { return p.id === data.phraseId; });
   var text = phrase ? i18n(phrase.key) : data.phraseId;
-  showPhraseBubble(displaySeat, text, data.fromNickname);
+  var showNickname = data.fromSocketId !== mySocketId ? data.fromNickname : null;
+  showPhraseBubble(displaySeat, text, showNickname, 3000);
 });
 
 /** 渲染结算列表（表格行），支持传入结果数组，用于 gameOver 与实时刷新 */
@@ -1766,7 +1767,8 @@ function renderSeats(gameState) {
           cardsEl.appendChild(createCardElement(card, true));
         });
       } else {
-        for (var i = 0; i < 2; i++) {
+        var otherHandCount = (player.hand && player.hand.length) ? player.hand.length : 2;
+        for (var i = 0; i < otherHandCount; i++) {
           var delayBack = handFlyIn ? dealIndex * 120 : 0;
           var cardEl = createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack });
           cardsEl.appendChild(cardEl);
@@ -2155,7 +2157,7 @@ function showEmoji(seat, emoji) {
   }, 3000);
 }
 
-function showPhraseBubble(displaySeat, text, fromNickname) {
+function showPhraseBubble(displaySeat, text, fromNickname, durationMs) {
   var seatEl = document.getElementById('seat-' + displaySeat);
   var container = document.getElementById('phraseBubbleContainer');
   if (!seatEl || !container) return;
@@ -2166,7 +2168,7 @@ function showPhraseBubble(displaySeat, text, fromNickname) {
   popup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
   popup.style.top = (rect.top - 8) + 'px';
   container.appendChild(popup);
-  var duration = 4000;
+  var duration = typeof durationMs === 'number' ? durationMs : 3000;
   setTimeout(function() {
     popup.classList.add('fade-out');
     setTimeout(function() { popup.remove(); }, 320);
@@ -2197,13 +2199,7 @@ function openPhrasePanel() {
   var panel = document.getElementById('phrasePanel');
   if (!panel) return;
   panel.classList.remove('hidden');
-  renderPhrasePanelTarget();
-  renderPhraseList(phrasePanelCategory);
-  var tabs = panel.querySelectorAll('.phrase-tab');
-  tabs.forEach(function(t) {
-    t.classList.toggle('active', t.dataset.category === phrasePanelCategory);
-    t.textContent = i18n('phraseCategory' + t.dataset.category.charAt(0).toUpperCase() + t.dataset.category.slice(1));
-  });
+  renderPhraseListAll();
 }
 
 function closePhrasePanel() {
@@ -2220,35 +2216,18 @@ function closePhraseWheel() {
   phraseWheelTargetSocketId = null;
 }
 
-function renderPhrasePanelTarget() {
-  var select = document.getElementById('phraseTargetSelect');
-  if (!select) return;
-  select.innerHTML = '<option value="">—</option>';
-  if (!currentGameState || !currentGameState.players) return;
-  currentGameState.players.forEach(function(p) {
-    if (p.socketId === mySocketId) return;
-    var opt = document.createElement('option');
-    opt.value = p.socketId;
-    opt.textContent = p.nickname || p.socketId;
-    select.appendChild(opt);
-  });
-}
-
-function renderPhraseList(category) {
+function renderPhraseListAll() {
   var listEl = document.getElementById('phraseList');
   if (!listEl) return;
   listEl.innerHTML = '';
-  var items = PHRASES.filter(function(p) { return p.category === category; });
-  items.forEach(function(p) {
+  PHRASES.forEach(function(p) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'phrase-item-btn';
     btn.textContent = i18n(p.key);
     btn.dataset.phraseId = p.id;
     btn.addEventListener('click', function() {
-      var toSocketId = document.getElementById('phraseTargetSelect').value;
-      if (!toSocketId) return;
-      socket.emit('sendPhrase', { toSocketId: toSocketId, phraseId: p.id });
+      socket.emit('sendPhrase', { phraseId: p.id });
       closePhrasePanel();
     });
     listEl.appendChild(btn);
@@ -2268,7 +2247,7 @@ function openPhraseWheel(toSocketId) {
     btn.textContent = i18n(p.key);
     btn.dataset.phraseId = p.id;
     btn.addEventListener('click', function() {
-      if (phraseWheelTargetSocketId) socket.emit('sendPhrase', { toSocketId: phraseWheelTargetSocketId, phraseId: p.id });
+      socket.emit('sendPhrase', { phraseId: p.id });
       closePhraseWheel();
     });
     wheel.appendChild(btn);
@@ -2279,17 +2258,8 @@ function setupPhraseUI() {
   var phraseBtn = document.getElementById('phraseBubbleBtn');
   var panelClose = document.getElementById('phrasePanelClose');
   var panel = document.getElementById('phrasePanel');
-  var tabs = panel ? panel.querySelectorAll('.phrase-tab') : [];
   if (phraseBtn) phraseBtn.addEventListener('click', function() { openPhrasePanel(); });
   if (panelClose) panelClose.addEventListener('click', closePhrasePanel);
-  tabs.forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      phrasePanelCategory = tab.dataset.category;
-      panel.querySelectorAll('.phrase-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.category === phrasePanelCategory); });
-      tab.textContent = i18n('phraseCategory' + phrasePanelCategory.charAt(0).toUpperCase() + phrasePanelCategory.slice(1));
-      renderPhraseList(phrasePanelCategory);
-    });
-  });
   var gameRoom = document.getElementById('gameRoom');
   if (gameRoom) {
     gameRoom.addEventListener('mousedown', function(e) {
