@@ -1969,14 +1969,15 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   content: '';
   position: absolute;
   bottom: -6px;
-  left: 16px;
+  left: 50%;
+  margin-left: -6px;
   border: 6px solid transparent;
   border-top-color: rgba(0, 0, 0, 0.85);
 }
 
 @keyframes phraseBubbleIn {
-  0% { opacity: 0; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: translateX(-50%) scale(0.9); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 .phrase-bubble-popup.fade-out {
@@ -1984,8 +1985,8 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
 }
 
 @keyframes phraseBubbleOut {
-  0% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.95); }
+  0% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
 }
 
 /* 右下角短语按钮（上移 60px） */

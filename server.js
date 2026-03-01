@@ -71,7 +71,7 @@ const emoteCooldowns = {};
 // 互动短语冷却（玩家ID -> 上次发送时间）
 const phraseCooldowns = {};
 const PHRASE_COOLDOWN_MS = 3000;
-const PHRASE_IDS = ['niceHand', 'ggWp', 'sameOldTrick', 'yourTell', 'revengeTime', 'dontBeNit'];
+const PHRASE_IDS = ['niceHand', 'ggWp', 'sameOldTrick', 'yourTell', 'revengeTime', 'dontBeNit', 'readTellsComePlay'];
 
 // 玩家最后活跃时间（用于心跳）
 const playerLastActive = {};

@@ -252,6 +252,7 @@ var I18N = {
   phraseYourTell: { zh: '你暴露马脚了。', en: 'Your tell is showing.' },
   phraseRevengeTime: { zh: '复仇时间到！', en: 'Revenge time!' },
   phraseDontBeNit: { zh: '别那么紧！', en: "Don't be a nit!" },
+  phraseReadTellsComePlay: { zh: '我会读牌！来啊，一起打牌', en: "I read tells! Come on, let's play." },
   phraseCategoryGeneral: { zh: '通用', en: 'General' },
   phraseCategoryAction: { zh: '行动', en: 'Action' },
   phraseCategoryComment: { zh: '评论', en: 'Comment' },
@@ -263,7 +264,8 @@ const PHRASES = [
   { id: 'sameOldTrick', category: 'comment', key: 'phraseSameOldTrick' },
   { id: 'yourTell', category: 'comment', key: 'phraseYourTell' },
   { id: 'revengeTime', category: 'action', key: 'phraseRevengeTime' },
-  { id: 'dontBeNit', category: 'comment', key: 'phraseDontBeNit' }
+  { id: 'dontBeNit', category: 'comment', key: 'phraseDontBeNit' },
+  { id: 'readTellsComePlay', category: 'social', key: 'phraseReadTellsComePlay' }
 ];
 
 function getCurrentLang() {
@@ -913,7 +915,7 @@ socket.on('phrase', function(data) {
   var phrase = PHRASES.find(function(p) { return p.id === data.phraseId; });
   var text = phrase ? i18n(phrase.key) : data.phraseId;
   var showNickname = data.fromSocketId !== mySocketId ? data.fromNickname : null;
-  showPhraseBubble(displaySeat, text, showNickname, 3000);
+  showPhraseBubble(displaySeat, text, showNickname, 2500);
 });
 
 /** 渲染结算列表（表格行），支持传入结果数组，用于 gameOver 与实时刷新 */
@@ -2165,10 +2167,11 @@ function showPhraseBubble(displaySeat, text, fromNickname, durationMs) {
   var popup = document.createElement('div');
   popup.className = 'phrase-bubble-popup';
   popup.textContent = (fromNickname ? fromNickname + ': ' : '') + text;
-  popup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
-  popup.style.top = (rect.top - 8) + 'px';
+  popup.style.left = (rect.left + rect.width / 2) + 'px';
+  popup.style.top = (rect.top - 52) + 'px';
+  popup.style.transform = 'translateX(-50%)';
   container.appendChild(popup);
-  var duration = typeof durationMs === 'number' ? durationMs : 3000;
+  var duration = typeof durationMs === 'number' ? durationMs : 2500;
   setTimeout(function() {
     popup.classList.add('fade-out');
     setTimeout(function() { popup.remove(); }, 320);
@@ -2227,6 +2230,7 @@ function renderPhraseListAll() {
     btn.textContent = i18n(p.key);
     btn.dataset.phraseId = p.id;
     btn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('sendPhrase', { phraseId: p.id });
       closePhrasePanel();
     });
@@ -2247,6 +2251,7 @@ function openPhraseWheel(toSocketId) {
     btn.textContent = i18n(p.key);
     btn.dataset.phraseId = p.id;
     btn.addEventListener('click', function() {
+      playSound('button');
       socket.emit('sendPhrase', { phraseId: p.id });
       closePhraseWheel();
     });
@@ -2258,7 +2263,7 @@ function setupPhraseUI() {
   var phraseBtn = document.getElementById('phraseBubbleBtn');
   var panelClose = document.getElementById('phrasePanelClose');
   var panel = document.getElementById('phrasePanel');
-  if (phraseBtn) phraseBtn.addEventListener('click', function() { openPhrasePanel(); });
+  if (phraseBtn) phraseBtn.addEventListener('click', function() { playSound('button'); openPhrasePanel(); });
   if (panelClose) panelClose.addEventListener('click', closePhrasePanel);
   var gameRoom = document.getElementById('gameRoom');
   if (gameRoom) {
