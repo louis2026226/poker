@@ -1,0 +1,43 @@
+---
+description: 当用户要求回滚到 v1.0.13 时，按此规则执行
+alwaysApply: false
+---
+
+# 回滚到 v1.0.13（较完善版本）
+
+## 何时执行
+
+当用户说「回滚到 v1.0.13」「恢复到 v1.0.13」「用 v1.0.13 备份」等时，按下面方式回滚。
+
+## 方式一：用 Git 标签（推荐）
+
+在项目根目录（poker-repo）执行：
+
+```bash
+git fetch origin tag backup-v1.0.13-complete
+git checkout backup-v1.0.13-complete
+```
+
+或若标签已在本地：
+
+```bash
+git checkout backup-v1.0.13-complete
+```
+
+此时工作区会处于「分离头指针」状态，对应的是 v1.0.13 的代码。若要在该版本上继续开发，可新建分支：
+
+```bash
+git checkout -b from-v1.0.13
+```
+
+## 方式二：用 ZIP 备份
+
+若 Git 不可用或用户指定用 zip，从以下路径解压覆盖（或解压到新目录再替换）：
+
+- 备份路径：`C:\Users\Administrator\.cursor\worktrees\louis-poker-git\poker-repo-backup-v1.0.13.zip`
+
+解压后得到当时项目的完整快照，版本为 1.0.13。
+
+## 回滚后
+
+如需再次部署到 Railway 和阿里云，需先切回 main 或合并/推送当前分支，再按项目部署流程执行 push 与 deploy_backup.ps1。
