@@ -1282,6 +1282,11 @@ function animatePotAmount(fromVal, toVal) {
 function updateGameState(gameState) {
   updateGameStatus(gameState);
   var newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
+  // 牌局进行中：用服务端 pot 与玩家 bet 之和取大，防止乱序或漏更新导致底池少显示
+  if (gameState.players && Array.isArray(gameState.players) && gameState.gameState !== 'ended' && gameState.gameState !== 'waiting') {
+    var sumFromBets = gameState.players.reduce(function(s, p) { return s + (Number(p.bet) || 0); }, 0);
+    if (sumFromBets > newPot) newPot = sumFromBets;
+  }
   var prevPot = _lastPotValue;
   var isResetPhase = gameState.gameState === 'ended' || gameState.gameState === 'preflop' || gameState.gameState === 'waiting';
   if (newPot > prevPot) {

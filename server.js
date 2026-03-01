@@ -431,7 +431,7 @@ class PokerRoom {
 
   /** 用当前所有玩家 bet 之和同步 this.pot，避免漂移 */
   syncPotFromBets() {
-    const sum = Object.values(this.players).reduce((s, p) => s + (p.bet || 0), 0);
+    const sum = Object.values(this.players).reduce((s, p) => s + (Number(p.bet) || 0), 0);
     this.pot = sum;
   }
 
@@ -607,7 +607,7 @@ class PokerRoom {
 
   playerBet(player, amount) {
     const actualBet = Math.min(amount, player.chips);
-    player.bet += actualBet;
+    player.bet = (Number(player.bet) || 0) + actualBet;
     player.chips -= actualBet;
     this.playerBets[player.socketId] = player.bet;
     if (player.bet > this.currentBet) {
@@ -1270,8 +1270,9 @@ class PokerRoom {
 
   getGameState() {
     this.syncPotFromBets();
-    const potFromBets = this.pot;
-    const potToSend = (this.gameState === 'waiting' || this.gameState === 'ended') ? 0 : potFromBets;
+    // 下发的底池始终用当前 bet 之和现场计算，避免任何时序导致少发
+    const potSum = Object.values(this.players).reduce((s, p) => s + (Number(p.bet) || 0), 0);
+    const potToSend = (this.gameState === 'waiting' || this.gameState === 'ended') ? 0 : potSum;
     return {
       roomCode: this.roomCode,
       hostId: this.hostId,
