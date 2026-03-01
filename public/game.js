@@ -115,11 +115,64 @@ var I18N = {
   call: { zh: '跟注', en: 'Call' },
   raise: { zh: '加注', en: 'Raise' },
   allIn: { zh: '全下', en: 'All in' },
-  startGame: { zh: '开始游戏', en: 'Start game' }
+  startGame: { zh: '开始游戏', en: 'Start game' },
+  startGameLoading: { zh: '开始中...', en: 'Starting...' },
+  createRoomLoading: { zh: '创建中...', en: 'Creating...' },
+  statusWaiting: { zh: '等待玩家加入...', en: 'Waiting for players...' },
+  statusWaitingCount: { zh: '等待玩家加入 (%s/5)', en: 'Waiting (%s/5)' },
+  statusPreflop: { zh: '翻牌前', en: 'Pre-flop' },
+  statusFlop: { zh: '翻牌圈', en: 'Flop' },
+  statusTurn: { zh: '转牌圈', en: 'Turn' },
+  statusRiver: { zh: '河牌圈', en: 'River' },
+  statusShowdown: { zh: '摊牌', en: 'Showdown' },
+  statusEnded: { zh: '游戏结束', en: 'Game over' },
+  currentBetLabel: { zh: '当前下注: ', en: 'Current bet: ' },
+  actionFolded: { zh: '已弃牌', en: 'Folded' },
+  actionCheckDisplay: { zh: '看牌', en: 'Check' },
+  betLabel: { zh: '下注: ', en: 'Bet: ' },
+  callAmount: { zh: '跟注 %s', en: 'Call %s' },
+  chipsFloat: { zh: '筹码 ', en: 'Chips ' },
+  smallBlind: { zh: '小盲注', en: 'Small blind' },
+  bigBlind: { zh: '大盲注', en: 'Big blind' },
+  bet: { zh: '下注', en: 'Bet' },
+  allInShort: { zh: '全压', en: 'All in' },
+  win: { zh: '获胜', en: 'Win' },
+  settlementTime: { zh: '时间：', en: 'Time: ' },
+  settlementDuration: { zh: '耗时：', en: 'Duration: ' },
+  afterBetRemain: { zh: '下注后剩余: ', en: 'After bet: ' },
+  chipsUnit: { zh: ' 筹码', en: ' chips' },
+  roomCodeCopied: { zh: '房间号已复制: ', en: 'Room code copied: ' },
+  errNotConnected: { zh: '未连接服务器，请刷新页面重试', en: 'Not connected. Please refresh.' },
+  errEnterNickname: { zh: '请输入昵称', en: 'Enter nickname' },
+  errEnterNicknameAndRoom: { zh: '请输入昵称和房间号', en: 'Enter nickname and room code' },
+  errEnter5DigitRoom: { zh: '请输入5位房间号', en: 'Enter 5-digit room code' },
+  errRequestTimeout: { zh: '请求超时，请检查房间号与网络后重试', en: 'Request timeout. Check room code and network.' },
+  errJoinFailed: { zh: '加入房间失败', en: 'Join failed' },
+  errCreateFailed: { zh: '创建房间失败', en: 'Create room failed' },
+  errStartFailed: { zh: '无法开始游戏，请稍后重试', en: 'Cannot start game. Try again later.' },
+  errConnectFailed: { zh: '无法连接服务器，请确认地址正确或稍后重试', en: 'Cannot connect. Check address or try later.' },
+  aiSuggestedAction: { zh: '建议动作', en: 'Suggested action' },
+  applySuggestion: { zh: '采用建议', en: 'Apply' },
+  aiReasoningDefault: { zh: 'AI基于当前牌面分析得出的建议', en: 'AI suggestion based on current board' },
+  aiAnalyzing: { zh: '分析中...', en: 'Analyzing...' },
+  aiAnalyzingBoard: { zh: 'AI正在分析牌面...', en: 'AI analyzing board...' },
+  aiSuggest: { zh: 'AI建议', en: 'AI suggest' },
+  meLabel: { zh: ' (我)', en: ' (me)' }
 };
 
 function getCurrentLang() {
   return currentLang;
+}
+
+function i18n(key) {
+  var t = I18N[key];
+  return (t && t[currentLang]) ? t[currentLang] : key;
+}
+
+function i18nF(key) {
+  var s = i18n(key);
+  for (var i = 1; i < arguments.length; i++) s = String(s).replace('%s', arguments[i]);
+  return s;
 }
 
 function setCurrentLang(lang) {
@@ -144,9 +197,13 @@ function applyLang() {
   var versionEl = document.getElementById('versionLabel');
   if (versionEl) {
     var sha = versionEl.getAttribute('data-version-sha') || '';
-    versionEl.textContent = (I18N.versionPrefix && I18N.versionPrefix[lang] ? I18N.versionPrefix[lang] : '当前版本：') + sha;
+    versionEl.textContent = i18n('versionPrefix') + sha;
   }
   setSettlementModalTitle();
+  if (gameRoomPage && !gameRoomPage.classList.contains('hidden') && currentGameState) {
+    updateGameStatus(currentGameState);
+    updateGameState(currentGameState);
+  }
 }
 
 // 玩家数据结构
@@ -337,37 +394,37 @@ function setupEventListeners() {
     createRoomBtn.addEventListener('click', function() {
       console.log('Create room clicked');
       if (!socket.connected) {
-        alert('未连接服务器，请刷新页面重试');
+        alert(i18n('errNotConnected'));
         return;
       }
       const nickname = nicknameInput.value.trim();
       if (!nickname) {
-        alert('请输入昵称');
+        alert(i18n('errEnterNickname'));
         return;
       }
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert(TIP_MIN_CHIPS);
+        alert(i18n('tipMinChips'));
         return;
       }
       saveNickname(nickname);
       createRoomBtn.disabled = true;
-      createRoomBtn.textContent = '创建中...';
+      createRoomBtn.textContent = i18n('createRoomLoading');
       var timeout = setTimeout(function() {
         createRoomBtn.disabled = false;
-        createRoomBtn.textContent = '创建房间';
-        alert('请求超时，请检查网络后重试');
+        createRoomBtn.textContent = i18n('createRoom');
+        alert(i18n('errRequestTimeout'));
       }, 15000);
       socket.emit('createRoom', { nickname: nickname, chips: playerStats.chips }, function(response) {
         clearTimeout(timeout);
         createRoomBtn.disabled = false;
-        createRoomBtn.textContent = '创建房间';
+        createRoomBtn.textContent = i18n('createRoom');
         if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert(response && response.message ? response.message : '创建房间失败');
+          alert(response && response.message ? response.message : i18n('errCreateFailed'));
         }
       });
     });
@@ -385,8 +442,7 @@ function setupEventListeners() {
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        var lang = getCurrentLang();
-        alert((I18N.tipMinChips && I18N.tipMinChips[lang]) || '最少携带500筹码才可入座');
+        alert(i18n('tipMinChips'));
         return;
       }
       joinForm.classList.remove('hidden');
@@ -398,45 +454,44 @@ function setupEventListeners() {
     confirmJoinBtn.addEventListener('click', function() {
       console.log('Confirm join clicked');
       if (!socket.connected) {
-        alert('未连接服务器，请刷新页面重试');
+        alert(i18n('errNotConnected'));
         return;
       }
       const nickname = nicknameInput.value.trim();
       const roomCode = roomCodeInput.value.trim();
       
       if (!nickname || !roomCode) {
-        alert('请输入昵称和房间号');
+        alert(i18n('errEnterNicknameAndRoom'));
         return;
       }
       
       if (roomCode.length !== 5) {
-        alert('请输入5位房间号');
+        alert(i18n('errEnter5DigitRoom'));
         return;
       }
-      var lang = getCurrentLang();
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert((I18N.tipMinChips && I18N.tipMinChips[lang]) || '最少携带500筹码才可入座');
+        alert(i18n('tipMinChips'));
         return;
       }
       saveNickname(nickname);
       confirmJoinBtn.disabled = true;
-      confirmJoinBtn.textContent = (I18N.joining && I18N.joining[lang]) || '加入中...';
+      confirmJoinBtn.textContent = i18n('joining');
       var timeout = setTimeout(function() {
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = (I18N.confirmJoin && I18N.confirmJoin[lang]) || '确认加入';
-        alert('请求超时，请检查房间号与网络后重试');
+        confirmJoinBtn.textContent = i18n('confirmJoin');
+        alert(i18n('errRequestTimeout'));
       }, 15000);
       socket.emit('joinRoom', roomCode, { nickname: nickname, chips: playerStats.chips }, function(response) {
         clearTimeout(timeout);
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = (I18N.confirmJoin && I18N.confirmJoin[lang]) || '确认加入';
+        confirmJoinBtn.textContent = i18n('confirmJoin');
         if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
           displayRoomCode.textContent = response.roomCode;
           showPage('game');
         } else {
-          alert(response && response.message ? response.message : '加入房间失败');
+          alert(response && response.message ? response.message : i18n('errJoinFailed'));
         }
       });
     });
@@ -509,7 +564,7 @@ function setupEventListeners() {
           ? (currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) || {}).chips
           : playerStats.chips;
         if (typeof myChips !== 'number' || myChips < MIN_SEAT_CHIPS) {
-          alert(TIP_MIN_CHIPS);
+          alert(i18n('tipMinChips'));
           return;
         }
         socket.emit('restartGame', function(response) {
@@ -575,12 +630,12 @@ function setupEventListeners() {
   if (startGameBtn) {
     startGameBtn.addEventListener('click', function() {
       startGameBtn.disabled = true;
-      startGameBtn.textContent = '开始中...';
+      startGameBtn.textContent = i18n('startGameLoading');
       socket.emit('startGame', function(response) {
         if (!response || !response.success) {
           startGameBtn.disabled = false;
-          startGameBtn.textContent = '开始游戏';
-          alert(response && response.message ? response.message : '无法开始游戏，请稍后重试');
+          startGameBtn.textContent = i18n('startGame');
+          alert(response && response.message ? response.message : i18n('errStartFailed'));
         } else {
           // 开始游戏成功后隐藏按钮，等下一次牌局结束/等待时再由 updateBotButton 控制显示
           startGameBtn.classList.add('hidden');
@@ -609,7 +664,7 @@ socket.on('disconnect', function(reason) {
 });
 socket.on('connect_error', function(err) {
   console.log('Connect error:', err.message);
-  alert('无法连接服务器，请确认地址正确或稍后重试');
+  alert(i18n('errConnectFailed'));
 });
 
 socket.on('gameState', function(gameState) {
@@ -720,19 +775,17 @@ function renderSettlementList(results) {
 
 /** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题，并控制「恢复游戏」按钮显隐（仅暂停时显示）。使用当前语言。 */
 function setSettlementModalTitle() {
-  var lang = getCurrentLang();
   var titleEl = document.getElementById('settlementModalTitle');
   var subEl = document.getElementById('settlementModalSubtitle');
   if (titleEl) {
     if (_settlementReason === 'paused') {
-      var who = _pausedByNickname || (I18N.someonePaused && I18N.someonePaused[lang]) || '有人';
-      var tpl = (I18N.settlementTitlePaused && I18N.settlementTitlePaused[lang]) || '%s暂停游戏';
-      titleEl.textContent = tpl.replace('%s', who);
+      var who = _pausedByNickname || i18n('someonePaused');
+      titleEl.textContent = i18nF('settlementTitlePaused', who);
     } else {
-      titleEl.textContent = (I18N.settlementTitleEnded && I18N.settlementTitleEnded[lang]) || '游戏已结束';
+      titleEl.textContent = i18n('settlementTitleEnded');
     }
   }
-  if (subEl && I18N.settlementSubtitle && I18N.settlementSubtitle[lang]) subEl.textContent = I18N.settlementSubtitle[lang];
+  if (subEl) subEl.textContent = i18n('settlementSubtitle');
   if (resumeGameBtn) resumeGameBtn.style.display = _settlementReason === 'paused' ? '' : 'none';
 }
 
@@ -743,15 +796,15 @@ function renderSettlementLog(actions, meta) {
     if (!logEl) return;
     var lines = [];
     var actionTextMap = {
-      'small-blind': '小盲注',
-      'big-blind': '大盲注',
-      'bet': '下注',
-      'raise': '加注',
-      'call': '跟注',
-      'check': '过牌',
-      'fold': '弃牌',
-      'all-in': '全压',
-      'win': '获胜'
+      'small-blind': i18n('smallBlind'),
+      'big-blind': i18n('bigBlind'),
+      'bet': i18n('bet'),
+      'raise': i18n('raise'),
+      'call': i18n('call'),
+      'check': i18n('check'),
+      'fold': i18n('fold'),
+      'all-in': i18n('allInShort'),
+      'win': i18n('win')
     };
     (actions || []).forEach(function(a, idx) {
       var label = actionTextMap[a.action] || a.action;
@@ -770,8 +823,8 @@ function renderSettlementLog(actions, meta) {
       durationStr = formatDuration(meta.durationSeconds);
     }
     var metaParts = [];
-    if (timeStr) metaParts.push('时间：' + timeStr);
-    if (durationStr) metaParts.push('耗时：' + durationStr);
+    if (timeStr) metaParts.push(i18n('settlementTime') + timeStr);
+    if (durationStr) metaParts.push(i18n('settlementDuration') + durationStr);
     logEl.innerHTML =
       '<div>' + lines.join('<br>') + '</div>' +
       (metaParts.length ? '<div class="settlement-log-meta">' + metaParts.join('　') + '</div>' : '');
@@ -902,7 +955,7 @@ function showRoundResultFloats(results) {
       floatEl.className = 'round-result-float';
 
       var sign = delta > 0 ? '+' : '';
-      floatEl.textContent = '筹码 ' + sign + delta;
+      floatEl.textContent = i18n('chipsFloat') + sign + delta;
       if (delta < 0) {
         floatEl.classList.add('negative');
       }
@@ -980,7 +1033,7 @@ function updateGameState(gameState) {
   }
   
   if (gameState.currentBet > 0) {
-    currentBetDisplay.textContent = '当前下注: ' + gameState.currentBet;
+    currentBetDisplay.textContent = i18n('currentBetLabel') + gameState.currentBet;
   } else {
     currentBetDisplay.textContent = '';
   }
@@ -995,21 +1048,21 @@ function updateGameState(gameState) {
 }
 
 function updateGameStatus(gameState) {
-  const statusMap = {
-    'waiting': '等待玩家加入...',
-    'preflop': '翻牌前',
-    'flop': '翻牌圈',
-    'turn': '转牌圈',
-    'river': '河牌圈',
-    'showdown': '摊牌',
-    'ended': '游戏结束'
+  const statusKeyMap = {
+    'waiting': 'statusWaiting',
+    'preflop': 'statusPreflop',
+    'flop': 'statusFlop',
+    'turn': 'statusTurn',
+    'river': 'statusRiver',
+    'showdown': 'statusShowdown',
+    'ended': 'statusEnded'
   };
-  
   const playerCount = gameState.players.length;
   if (gameState.gameState === 'waiting') {
-    gameStatus.textContent = '等待玩家加入 (' + playerCount + '/5)';
+    gameStatus.textContent = i18nF('statusWaitingCount', playerCount);
   } else {
-    gameStatus.textContent = statusMap[gameState.gameState] || gameState.gameState;
+    var key = statusKeyMap[gameState.gameState];
+    gameStatus.textContent = key ? i18n(key) : gameState.gameState;
   }
 }
 
@@ -1457,7 +1510,7 @@ function renderSeats(gameState) {
     var betEl = seatEl.querySelector('.player-bet');
     var statusEl = seatEl.querySelector('.player-status');
     
-    var displayName = player.nickname + (player.socketId === mySocketId ? ' (我)' : '');
+    var displayName = player.nickname + (player.socketId === mySocketId ? i18n('meLabel') : '');
     // 👑 标记庄家：始终跟随当前 dealerSeat，而不是房主
     if (typeof gameState.dealerSeat === 'number' && player.seat === gameState.dealerSeat) {
       displayName += ' 👑';
@@ -1466,7 +1519,7 @@ function renderSeats(gameState) {
     chipsEl.innerHTML = '<span class=\"chip-icon\"></span>' + player.chips;
     
     if (player.bet > 0) {
-      betEl.textContent = '下注: ' + player.bet;
+      betEl.textContent = i18n('betLabel') + player.bet;
     }
     
     var gameStateValue = currentGameState ? currentGameState.gameState : 'waiting';
@@ -1535,14 +1588,9 @@ function renderSeats(gameState) {
 }
 
 function getActionText(action) {
-  var actions = {
-    'fold': '已弃牌',
-    'check': '看牌',
-    'call': '跟注',
-    'raise': '加注',
-    'all-in': '全下'
-  };
-  return actions[action] || action;
+  var keyMap = { 'fold': 'actionFolded', 'check': 'actionCheckDisplay', 'call': 'call', 'raise': 'raise', 'all-in': 'allIn' };
+  var key = keyMap[action];
+  return key ? i18n(key) : action;
 }
 
 // 更新行动倒计时光圈位置（放在当前行动玩家头像上方）
@@ -1628,13 +1676,13 @@ function updateActionPanel(gameState) {
     checkBtn.style.display = 'inline-block';
     callBtn.disabled = true;
     callBtn.style.display = 'none';
-    checkBtn.textContent = '过牌';
+    checkBtn.textContent = i18n('check');
   } else {
     checkBtn.disabled = true;
     checkBtn.style.display = 'none';
     callBtn.disabled = false;
     callBtn.style.display = 'inline-block';
-    callBtn.textContent = '跟注 ' + toCall;
+    callBtn.textContent = i18nF('callAmount', toCall);
   }
   
   var minRaise = Math.max(gameState.currentBet * 2, gameState.config.BIG_BLIND);
@@ -1694,7 +1742,7 @@ function updateBotButton(gameState) {
     if (gameState.gameState === 'waiting') {
       startGameBtn.classList.toggle('hidden', !canStart);
       startGameBtn.disabled = !canStart;
-      if (canStart) startGameBtn.textContent = '开始游戏';
+      if (canStart) startGameBtn.textContent = i18n('startGame');
     } else {
       startGameBtn.classList.add('hidden');
     }
@@ -1937,7 +1985,7 @@ function showBetPreview() {
   var totalBet = callAmount + betAmount;
   var remainingChips = myPlayer.chips - totalBet;
   
-  previewChips.innerHTML = '下注后剩余: <span class="' + (remainingChips < 0 ? 'text-danger' : 'text-success') + '">' + remainingChips + '</span> 筹码';
+  previewChips.innerHTML = i18n('afterBetRemain') + '<span class="' + (remainingChips < 0 ? 'text-danger' : 'text-success') + '">' + remainingChips + '</span>' + i18n('chipsUnit');
 }
 
 // ============ 复制房间号 ============
@@ -1945,7 +1993,7 @@ function copyRoomCode() {
   var roomCode = document.getElementById('displayRoomCode').textContent;
   if (roomCode && roomCode !== '-----') {
     navigator.clipboard.writeText(roomCode).then(function() {
-      alert('房间号已复制: ' + roomCode);
+      alert(i18n('roomCodeCopied') + roomCode);
     }).catch(function() {
       var input = document.createElement('input');
       input.value = roomCode;
@@ -1953,7 +2001,7 @@ function copyRoomCode() {
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
-      alert('房间号已复制: ' + roomCode);
+      alert(i18n('roomCodeCopied') + roomCode);
     });
   }
 }
@@ -1968,16 +2016,16 @@ function requestAISuggestion() {
   // 显示加载状态
   aiAssistBtn.disabled = true;
   aiAssistBtn.classList.add('loading');
-  aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>分析中...</span>';
+  aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>' + i18n('aiAnalyzing') + '</span>';
   
   aiSuggestionPanel.classList.remove('hidden');
-  aiSuggestionContent.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><span class="ai-loading-text">AI正在分析牌面...</span></div>';
+  aiSuggestionContent.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><span class="ai-loading-text">' + i18n('aiAnalyzingBoard') + '</span></div>';
   
   // 请求AI建议
   socket.emit('getAISuggestion', function(response) {
     aiAssistBtn.disabled = false;
     aiAssistBtn.classList.remove('loading');
-    aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>AI建议</span>';
+    aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>' + i18n('aiSuggest') + '</span>';
     
     if (response && response.success && response.decision) {
       displayAISuggestion(response.decision);
@@ -1993,39 +2041,39 @@ function displayAISuggestion(decision) {
   
   switch (decision.action) {
     case 'fold':
-      actionText = '弃牌 (Fold)';
+      actionText = i18n('fold');
       actionClass = 'fold';
       break;
     case 'check':
-      actionText = '过牌 (Check)';
+      actionText = i18n('check');
       actionClass = 'check';
       break;
     case 'call':
-      actionText = '跟注 (Call)';
+      actionText = i18n('call');
       actionClass = 'call';
       break;
     case 'raise':
-      actionText = '加注 (Raise)';
+      actionText = i18n('raise');
       actionClass = 'raise';
       break;
     case 'all-in':
-      actionText = '全下 (All In)';
+      actionText = i18n('allIn');
       actionClass = 'all-in';
       break;
     default:
-      actionText = decision.action || '过牌';
+      actionText = decision.action ? (I18N[decision.action] && I18N[decision.action][getCurrentLang()] ? I18N[decision.action][getCurrentLang()] : decision.action) : i18n('check');
       actionClass = 'check';
   }
   
-  var reasoning = decision.reasoning || 'AI基于当前牌面分析得出的建议';
+  var reasoning = decision.reasoning || i18n('aiReasoningDefault');
   
   var html = '<div class="ai-action-result">' +
-    '<div class="ai-action-label">建议动作</div>' +
+    '<div class="ai-action-label">' + i18n('aiSuggestedAction') + '</div>' +
     '<div class="ai-action-value ' + actionClass + '">' + actionText + '</div>' +
     '</div>' +
     '<div class="ai-reasoning">' + reasoning + '</div>' +
     '<div style="text-align: center; margin-top: 10px;">' +
-    '<button class="btn btn-primary" onclick="applyAISuggestion(\'' + decision.action + '\')">采用建议</button>' +
+    '<button class="btn btn-primary" onclick="applyAISuggestion(\'' + decision.action + '\')">' + i18n('applySuggestion') + '</button>' +
     '</div>';
   
   if (aiSuggestionContent) {
