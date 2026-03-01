@@ -159,9 +159,6 @@ const STORAGE_KEY = 'poker_nickname';
 const STATS_KEY = 'poker_player_stats';
 const LANG_STORAGE_KEY = 'poker_lang';
 
-// 入座最少携带筹码
-const MIN_SEAT_CHIPS = 500;
-
 // 当前语言 'zh' | 'en'
 let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(LANG_STORAGE_KEY)) || 'zh';
 
@@ -193,7 +190,9 @@ var I18N = {
   settlementTitlePaused: { zh: '%s暂停游戏', en: '%s paused' },
   settlementTitleEnded: { zh: '游戏已结束', en: 'Game over' },
   someonePaused: { zh: '有人', en: 'Someone' },
-  tipMinChips: { zh: '最少携带500筹码才可入座', en: 'Need at least 500 chips to join' },
+  createRoomBlindsHint: { zh: '大盲注：%s · 加入此房间需至少携带 %s 筹码', en: 'Big blind: %s · Min buy-in: %s chips to join' },
+  fastModeLabel: { zh: '快速模式（倒计时 8 秒）', en: 'Fast mode (8s turn timer)' },
+  joinRoomMinChips: { zh: '本房间最低要求 %s 筹码，您当前拥有 %s 筹码', en: 'This room requires at least %s chips (you have %s)' },
   joining: { zh: '加入中...', en: 'Joining...' },
   fold: { zh: '弃牌', en: 'Fold' },
   check: { zh: '过牌', en: 'Check' },
@@ -237,12 +236,6 @@ var I18N = {
   errCreateFailed: { zh: '创建房间失败', en: 'Create room failed' },
   errStartFailed: { zh: '无法开始游戏，请稍后重试', en: 'Cannot start game. Try again later.' },
   errConnectFailed: { zh: '无法连接服务器，请确认地址正确或稍后重试', en: 'Cannot connect. Check address or try later.' },
-  aiSuggestedAction: { zh: '建议动作', en: 'Suggested action' },
-  applySuggestion: { zh: '采用建议', en: 'Apply' },
-  aiReasoningDefault: { zh: 'AI基于当前牌面分析得出的建议', en: 'AI suggestion based on current board' },
-  aiAnalyzing: { zh: '分析中...', en: 'Analyzing...' },
-  aiAnalyzingBoard: { zh: 'AI正在分析牌面...', en: 'AI analyzing board...' },
-  aiSuggest: { zh: 'AI建议', en: 'AI suggest' },
   meLabel: { zh: ' (我)', en: ' (me)' },
   soundOn: { zh: '打开音效', en: 'Sound on' },
   soundOff: { zh: '关闭音效', en: 'Sound off' },
@@ -312,6 +305,7 @@ function applyLang() {
     updateGameStatus(currentGameState);
     updateGameState(currentGameState);
   }
+  if (typeof updateCreateRoomBlindsHint === 'function') updateCreateRoomBlindsHint();
 }
 
 // 玩家数据结构
@@ -329,7 +323,7 @@ let createRoomBtn, joinRoomBtn, confirmJoinBtn, joinForm;
 let displayRoomCode, gameStatus, leaveRoomBtn, settlementBtn;
 let potAmount, communityCardsEl, currentBetDisplay;
 let actionPanel, actionText, foldBtn, checkBtn, callBtn, raiseBtn, allInBtn;
-let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent, startGameBtn;
+let aiAssistBtn, startGameBtn;
 let raiseSlider, raiseAmountPanel, raiseAmountDisplay;
 let gameOverModal, settlementList, resumeGameBtn, myCardsEl;
 /** 最近一次结算数据，用于结算弹窗内实时刷新 */
@@ -367,8 +361,6 @@ function initDOMElements() {
   allInBtn = document.getElementById('allInBtn');
   aiAssistBtn = document.getElementById('ai-assist-btn');
   startGameBtn = document.getElementById('startGameBtn');
-  aiSuggestionPanel = document.getElementById('ai-suggestion-panel');
-  aiSuggestionContent = document.getElementById('ai-suggestion-content');
   raiseSlider = document.getElementById('raiseSlider');
   raiseAmountPanel = document.getElementById('raiseAmountPanel');
   raiseAmountDisplay = document.getElementById('raiseAmountDisplay');
@@ -376,6 +368,8 @@ function initDOMElements() {
   settlementList = document.getElementById('settlementList');
   resumeGameBtn = document.getElementById('resumeGameBtn');
   myCardsEl = document.getElementById('myCards');
+  window.smallBlindSelectEl = document.getElementById('smallBlindSelect');
+  window.createRoomBlindsHintEl = document.getElementById('createRoomBlindsHint');
   
   console.log('DOM elements initialized');
   console.log('createRoomBtn:', createRoomBtn);
@@ -504,8 +498,32 @@ function showPage(page) {
   }
 }
 
+function getCreateRoomBlindConfig() {
+  var sb = 10;
+  var select = window.smallBlindSelectEl;
+  if (select) {
+    var v = parseInt(select.value, 10);
+    if (!isNaN(v)) sb = v;
+  }
+  var bb = sb * 2;
+  var minBuyIn = bb * 100;
+  return { smallBlind: sb, bigBlind: bb, minBuyIn: minBuyIn };
+}
+
+function updateCreateRoomBlindsHint() {
+  var hintEl = window.createRoomBlindsHintEl;
+  if (!hintEl) return;
+  var c = getCreateRoomBlindConfig();
+  hintEl.textContent = i18nF('createRoomBlindsHint', String(c.bigBlind), String(c.minBuyIn));
+}
+
 // ============ 事件监听 ============
 function setupEventListeners() {
+  if (window.smallBlindSelectEl) {
+    window.smallBlindSelectEl.addEventListener('change', updateCreateRoomBlindsHint);
+    updateCreateRoomBlindsHint();
+  }
+
   // 创建房间
   if (createRoomBtn) {
     createRoomBtn.addEventListener('click', function() {
@@ -524,8 +542,10 @@ function setupEventListeners() {
         alert(i18n('errNicknameTooLong'));
         return;
       }
-      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert(i18n('tipMinChips'));
+      var cfg = getCreateRoomBlindConfig();
+      var myChips = playerStats.chips || 0;
+      if (myChips < cfg.minBuyIn) {
+        alert(i18nF('joinRoomMinChips', String(cfg.minBuyIn), String(myChips)));
         return;
       }
       saveNickname(nickname);
@@ -536,7 +556,9 @@ function setupEventListeners() {
         createRoomBtn.textContent = i18n('createRoom');
         alert(i18n('errRequestTimeout'));
       }, 15000);
-      socket.emit('createRoom', { nickname: nickname, chips: playerStats.chips }, function(response) {
+      var fastModeEl = document.getElementById('fastModeCheckbox');
+      var fastMode = fastModeEl ? !!fastModeEl.checked : false;
+      socket.emit('createRoom', { nickname: nickname, chips: myChips, smallBlind: cfg.smallBlind, fastMode: fastMode }, function(response) {
         clearTimeout(timeout);
         createRoomBtn.disabled = false;
         createRoomBtn.textContent = i18n('createRoom');
@@ -561,14 +583,10 @@ function setupEventListeners() {
     });
   }
 
-  // 加入房间按钮：点击时先判定筹码是否至少 500
+  // 加入房间按钮：最低筹码由服务端按房间 minBuyIn 校验
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {
       playSound('button');
-      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert(i18n('tipMinChips'));
-        return;
-      }
       joinForm.classList.remove('hidden');
     });
   }
@@ -595,10 +613,6 @@ function setupEventListeners() {
       }
       if (roomCode.length !== 5) {
         alert(i18n('errEnter5DigitRoom'));
-        return;
-      }
-      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert(i18n('tipMinChips'));
         return;
       }
       saveNickname(nickname);
@@ -712,8 +726,10 @@ function setupEventListeners() {
         var myChips = (currentGameState && currentGameState.players)
           ? (currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) || {}).chips
           : playerStats.chips;
-        if (typeof myChips !== 'number' || myChips < MIN_SEAT_CHIPS) {
-          alert(i18n('tipMinChips'));
+        var roomMinBuyIn = (currentGameState && currentGameState.config && typeof currentGameState.config.minBuyIn === 'number')
+          ? currentGameState.config.minBuyIn : 0;
+        if (typeof myChips !== 'number' || myChips < roomMinBuyIn) {
+          alert(i18nF('joinRoomMinChips', String(roomMinBuyIn), String(myChips)));
           return;
         }
         socket.emit('restartGame', function(response) {
@@ -829,6 +845,12 @@ socket.on('gameState', function(gameState) {
   if (isNewDeal) {
     _lastCommunityCardsLength = 0;
   }
+  if (gameState.gameState === 'preflop' || gameState.gameState === 'ended' || gameState.gameState === 'waiting') {
+    _showdownRevealedSeats = {};
+  }
+  if (prevState && prevState.gameState !== 'showdown' && gameState.gameState === 'showdown') {
+    _showdownRevealedSeats = {};
+  }
   /* 牌局结束或新一局开始时清空白色线框内停留的筹码 */
   if (gameState.gameState === 'ended' || isNewDeal) {
     clearPotChips();
@@ -882,6 +904,16 @@ socket.on('roomUpdate', function(gameState) {
   currentGameState = gameState;
   updateGameState(gameState);
   refreshSettlementModalIfOpen(gameState);
+});
+
+socket.on('showdownReveal', function(data) {
+  if (data && typeof data.seat === 'number') {
+    _showdownRevealedSeats[data.seat] = Array.isArray(data.hand) ? data.hand : [];
+    if (currentGameState) {
+      renderSeats(currentGameState);
+    }
+    playSound('card');
+  }
 });
 
 /** 结算弹窗打开时，用最新房间状态刷新玩家当前筹码（实时显示）。暂停状态下也刷新，以便有人离开等时更新列表。 */
@@ -1231,16 +1263,8 @@ function updateGameState(gameState) {
     currentBetDisplay.textContent = '';
   }
   
-  // 模拟真实发牌节奏：下注/过牌后停顿 0.8 秒再发下一街的公共牌
-  var newCardsLen = (gameState.communityCards && gameState.communityCards.length) || 0;
-  var prevCardsLen = _lastCommunityCardsLength;
-  if (newCardsLen > prevCardsLen) {
-    setTimeout(function() {
-      renderCommunityCards(gameState.communityCards);
-    }, 800);
-  } else {
-    renderCommunityCards(gameState.communityCards);
-  }
+  // 公共牌由服务端按节奏分步推送，客户端收到即渲染（每张新牌有飞入动画与间隔）
+  renderCommunityCards(gameState.communityCards);
   renderSeats(gameState);
   showBigHandBadges(gameState);
   updateActionPanel(gameState);
@@ -1271,12 +1295,17 @@ function updateGameStatus(gameState) {
 var _lastCommunityCardsLength = 0;
 var _lastGameStateForPot = null;
 var _isNewDealPreflop = false;
+/** 摊牌阶段按顺序亮牌：仅当该座位已收到 showdownReveal 时才显示手牌 */
+var _showdownRevealedSeats = {};
 
+// 每张新公共牌的出场间隔（毫秒），与服务端 DEAL_FLOP_CARD / DEAL_TURN_CARD / DEAL_RIVER_CARD 节奏一致
+var COMMUNITY_CARD_STAGGER_MS = 380;
 function renderCommunityCards(cards) {
   communityCardsEl.innerHTML = '';
+  var prevLen = _lastCommunityCardsLength;
   cards.forEach(function(card, index) {
-    var isNewCard = index >= _lastCommunityCardsLength;
-    var delay = isNewCard ? (index - _lastCommunityCardsLength) * 80 : 0;
+    var isNewCard = index >= prevLen;
+    var delay = isNewCard ? (index - prevLen) * COMMUNITY_CARD_STAGGER_MS : 0;
     var cardEl = createCardElement(card, true, {
       flyIn: isNewCard,
       flyDelay: delay,
@@ -1764,8 +1793,12 @@ function renderSeats(gameState) {
           }
           dealIndex++;
         });
-      } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
+      } else if (gameState.gameState === 'ended') {
         player.hand.forEach(function(card) {
+          cardsEl.appendChild(createCardElement(card, true));
+        });
+      } else if (gameState.gameState === 'showdown' && _showdownRevealedSeats[player.seat]) {
+        (_showdownRevealedSeats[player.seat] || []).forEach(function(card) {
           cardsEl.appendChild(createCardElement(card, true));
         });
       } else {
@@ -1971,7 +2004,11 @@ function startActionTimer(gameState) {
     return;
   }
 
-  actionTimeLeft = 12;
+  var timeoutMs = (gameState.config && typeof gameState.config.actionTimeoutMs === 'number')
+    ? gameState.config.actionTimeoutMs : 12000;
+  var totalSeconds = Math.max(1, timeoutMs / 1000);
+  actionTimeLeft = totalSeconds;
+  window._actionTimerTotalSeconds = totalSeconds;
 
   // 找到当前行动玩家对应的座位与外框，用于绘制顺时针进度条
   countdownSeatEl = null;
@@ -2017,12 +2054,13 @@ function startActionTimer(gameState) {
     progressCircle.style.strokeDasharray = circumference;
     progressCircle.style.strokeDashoffset = '0';
   }
-  if (timerTextEl) timerTextEl.textContent = '12';
+  if (timerTextEl) timerTextEl.textContent = Math.ceil(totalSeconds);
   _actionTimerIsMyTurn = !!(myPlayer && gameState.currentPlayerSeat === myPlayer.seat);
 
   actionTimer = setInterval(function() {
     actionTimeLeft -= 0.02;
-    var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
+    var total = window._actionTimerTotalSeconds || 12;
+    var ratio = Math.max(0, Math.min(1, actionTimeLeft / total));
     var urgent = actionTimeLeft <= 5 && actionTimeLeft > 0;
 
     if (countdownInfoEl) {
@@ -2344,134 +2382,6 @@ function copyRoomCode() {
       alert(i18n('roomCodeCopied') + roomCode);
     });
   }
-}
-
-// ============ AI建议功能 ============
-function requestAISuggestion() {
-  if (!aiAssistBtn || !aiSuggestionPanel || !aiSuggestionContent) {
-    console.log('AI elements not found');
-    return;
-  }
-  
-  // 显示加载状态
-  aiAssistBtn.disabled = true;
-  aiAssistBtn.classList.add('loading');
-  aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>' + i18n('aiAnalyzing') + '</span>';
-  
-  aiSuggestionPanel.classList.remove('hidden');
-  aiSuggestionContent.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><span class="ai-loading-text">' + i18n('aiAnalyzingBoard') + '</span></div>';
-  
-  // 请求AI建议
-  socket.emit('getAISuggestion', function(response) {
-    aiAssistBtn.disabled = false;
-    aiAssistBtn.classList.remove('loading');
-    aiAssistBtn.innerHTML = '<span class="ai-icon">🤖</span><span>' + i18n('aiSuggest') + '</span>';
-    
-    if (response && response.success && response.decision) {
-      displayAISuggestion(response.decision);
-    } else {
-      showAIError(response?.message || '获取建议失败');
-    }
-  });
-}
-
-function displayAISuggestion(decision) {
-  var actionText = '';
-  var actionClass = '';
-  
-  switch (decision.action) {
-    case 'fold':
-      actionText = i18n('fold');
-      actionClass = 'fold';
-      break;
-    case 'check':
-      actionText = i18n('check');
-      actionClass = 'check';
-      break;
-    case 'call':
-      actionText = i18n('call');
-      actionClass = 'call';
-      break;
-    case 'raise':
-      actionText = i18n('raise');
-      actionClass = 'raise';
-      break;
-    case 'all-in':
-      actionText = i18n('allIn');
-      actionClass = 'all-in';
-      break;
-    default:
-      actionText = decision.action ? (I18N[decision.action] && I18N[decision.action][getCurrentLang()] ? I18N[decision.action][getCurrentLang()] : decision.action) : i18n('check');
-      actionClass = 'check';
-  }
-  
-  var reasoning = decision.reasoning || i18n('aiReasoningDefault');
-  
-  var html = '<div class="ai-action-result">' +
-    '<div class="ai-action-label">' + i18n('aiSuggestedAction') + '</div>' +
-    '<div class="ai-action-value ' + actionClass + '">' + actionText + '</div>' +
-    '</div>' +
-    '<div class="ai-reasoning">' + reasoning + '</div>' +
-    '<div style="text-align: center; margin-top: 10px;">' +
-    '<button class="btn btn-primary" onclick="applyAISuggestion(\'' + decision.action + '\')">' + i18n('applySuggestion') + '</button>' +
-    '</div>';
-  
-  if (aiSuggestionContent) {
-    aiSuggestionContent.innerHTML = html;
-  }
-}
-
-function applyAISuggestion(action) {
-  console.log('Applying AI suggestion:', action);
-  
-  // 关闭建议面板
-  closeAISuggestion();
-  
-  // 根据建议执行动作
-  switch (action) {
-    case 'fold':
-      if (foldBtn && !foldBtn.disabled) {
-        foldBtn.click();
-      }
-      break;
-    case 'check':
-      if (checkBtn && !checkBtn.disabled) {
-        checkBtn.click();
-      }
-      break;
-    case 'call':
-      if (callBtn && !callBtn.disabled) {
-        callBtn.click();
-      }
-      break;
-    case 'raise':
-      if (raiseBtn && !raiseBtn.disabled) {
-        raiseBtn.click();
-      }
-      break;
-    case 'all-in':
-      if (allInBtn && !allInBtn.disabled) {
-        allInBtn.click();
-      }
-      break;
-  }
-}
-
-function closeAISuggestion() {
-  if (aiSuggestionPanel) {
-    aiSuggestionPanel.classList.add('hidden');
-  }
-}
-
-function showAIError(message) {
-  if (aiSuggestionContent) {
-    aiSuggestionContent.innerHTML = '<div class="ai-error">' + message + '</div>';
-  }
-  
-  // 3秒后自动关闭
-  setTimeout(function() {
-    closeAISuggestion();
-  }, 3000);
 }
 
 function loadVersionLabel() {

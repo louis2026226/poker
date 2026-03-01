@@ -42,12 +42,29 @@
                  autocomplete="off" tabindex="1">
         </div>
         
-        <button id="createRoomBtn" class="btn btn-primary" tabindex="2" 
-                aria-label="创建新房间" data-i18n="createRoom">创建房间</button>
+        <div id="createRoomBlock" class="create-room-block" role="group" aria-label="创建房间设置">
+          <label class="create-room-label" for="smallBlindSelect" data-i18n="smallBlind">小盲注</label>
+          <select id="smallBlindSelect" class="create-room-select" aria-label="选择小盲注" tabindex="2">
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+            <option value="5000">5000</option>
+          </select>
+          <p id="createRoomBlindsHint" class="create-room-hint" aria-live="polite">大盲注：20 · 加入此房间需至少携带 2000 筹码</p>
+          <label class="create-room-option" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+            <input type="checkbox" id="fastModeCheckbox" aria-label="快速模式">
+            <span data-i18n="fastModeLabel">快速模式（倒计时 8 秒）</span>
+          </label>
+          <button id="createRoomBtn" class="btn btn-primary" tabindex="3" 
+                  aria-label="创建新房间" data-i18n="createRoom">创建房间</button>
+        </div>
         <div class="lobby-buttons-row">
           <button id="getChipsBtn" class="btn btn-secondary" tabindex="3" 
                   aria-label="获取筹码" data-i18n="getChips">获取筹码</button>
-          <button id="joinRoomBtn" class="btn btn-secondary" tabindex="4" 
+          <button id="joinRoomBtn" class="btn btn-secondary" tabindex="5" 
                   aria-label="加入已有房间" data-i18n="joinRoom">加入房间</button>
         </div>
         <div class="version-label" id="versionLabel" aria-label="版本" data-version-sha="">...</div>
@@ -56,8 +73,8 @@
           <input type="text" id="roomCode" placeholder="请输入5位房间号" maxlength="5" 
                  data-i18n-placeholder="roomCodePlaceholder"
                  aria-required="true" aria-label="请输入5位房间号"
-                 autocomplete="off" tabindex="5">
-          <button id="confirmJoinBtn" class="btn btn-primary" tabindex="6" 
+                 autocomplete="off" tabindex="6">
+          <button id="confirmJoinBtn" class="btn btn-primary" tabindex="7" 
                   aria-label="确认加入房间" data-i18n="confirmJoin">确认加入</button>
         </div>
       </div>

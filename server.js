@@ -56,8 +56,30 @@ const CONFIG = {
   BIG_BLIND: 20,
   MAX_SEATS: 5,
   ROOM_CODE_LENGTH: 5,
-  DEAL_DELAY_MS: 800  // 玩家操作后延迟多久再发下一阶段牌（翻牌/转牌/河牌）
+  BLIND_OPTIONS: [10, 50, 100, 200, 500, 1000, 5000],
+  BUYIN_MULTIPLIER: 100,   // 最低带入 = 大盲 × 100
+  // 行动超时（毫秒）：正常 12 秒，快速模式 8 秒
+  ACTION_TIMEOUT_NORMAL: 12000,
+  ACTION_TIMEOUT_FAST: 8000
 };
+
+// 牌局节奏与仪式感延时配置（毫秒），快速模式会按 FAST_FACTOR 缩放
+const ROUND_TIMING_CONFIG = {
+  AFTER_PLAYER_ACTION: 800,
+  BEFORE_FLOP: 300,
+  DEAL_FLOP_CARD: 400,
+  AFTER_FLOP: 500,
+  BEFORE_TURN: 300,
+  DEAL_TURN_CARD: 600,
+  AFTER_TURN: 500,
+  BEFORE_RIVER: 300,
+  DEAL_RIVER_CARD: 800,
+  AFTER_RIVER: 500,
+  BEFORE_SHOWDOWN: 800,
+  PLAYER_SHOW_CARD: 1200,
+  POT_TRANSITION: 800
+};
+const ROUND_TIMING_FAST_FACTOR = 0.6; // 快速模式时所有延时乘以此系数
 
 // 扑克牌相关
 const SUITS = ['♠', '♥', '♦', '♣'];
@@ -79,7 +101,6 @@ const playerLastActive = {};
 // 心跳配置
 const HEARTBEAT_INTERVAL = 5000;
 const DISCONNECT_TIMEOUT = 20000;
-const ACTION_TIMEOUT = 10000;
 
 // 生成房间代码
 function generateRoomCode() {
@@ -356,9 +377,34 @@ function compareHands(hand1, hand2) {
   return 0;
 }
 
+/** 根据房间是否快速模式返回当前延时配置（毫秒） */
+function getRoundTiming(room) {
+  const factor = (room && room.fastMode) ? ROUND_TIMING_FAST_FACTOR : 1;
+  const t = ROUND_TIMING_CONFIG;
+  return {
+    AFTER_PLAYER_ACTION: Math.round(t.AFTER_PLAYER_ACTION * factor),
+    BEFORE_FLOP: Math.round(t.BEFORE_FLOP * factor),
+    DEAL_FLOP_CARD: Math.round(t.DEAL_FLOP_CARD * factor),
+    AFTER_FLOP: Math.round(t.AFTER_FLOP * factor),
+    BEFORE_TURN: Math.round(t.BEFORE_TURN * factor),
+    DEAL_TURN_CARD: Math.round(t.DEAL_TURN_CARD * factor),
+    AFTER_TURN: Math.round(t.AFTER_TURN * factor),
+    BEFORE_RIVER: Math.round(t.BEFORE_RIVER * factor),
+    DEAL_RIVER_CARD: Math.round(t.DEAL_RIVER_CARD * factor),
+    AFTER_RIVER: Math.round(t.AFTER_RIVER * factor),
+    BEFORE_SHOWDOWN: Math.round(t.BEFORE_SHOWDOWN * factor),
+    PLAYER_SHOW_CARD: Math.round(t.PLAYER_SHOW_CARD * factor),
+    POT_TRANSITION: Math.round(t.POT_TRANSITION * factor)
+  };
+}
+
+function getActionTimeoutMs(room) {
+  return (room && room.fastMode) ? CONFIG.ACTION_TIMEOUT_FAST : CONFIG.ACTION_TIMEOUT_NORMAL;
+}
+
 // PokerRoom 类
 class PokerRoom {
-  constructor(roomCode, hostId) {
+  constructor(roomCode, hostId, smallBlind = 10, fastMode = false) {
     this.roomCode = roomCode;
     this.hostId = hostId;
     this.players = {};
@@ -376,6 +422,10 @@ class PokerRoom {
     this.handStartTime = null;
     this.handActions = [];
     this.paused = false;
+    this.smallBlind = smallBlind;
+    this.bigBlind = smallBlind * 2;
+    this.minBuyIn = this.bigBlind * (CONFIG.BUYIN_MULTIPLIER || 100);
+    this.fastMode = !!fastMode;
   }
 
   canJoin() {
@@ -397,7 +447,7 @@ class PokerRoom {
     if (seat === -1) return null;
     const chips = (typeof initialChips === 'number' && initialChips > 0)
       ? initialChips
-      : CONFIG.INITIAL_CHIPS;
+      : (isBot ? this.minBuyIn : CONFIG.INITIAL_CHIPS);
     this.players[socketId] = {
       socketId,
       nickname,
@@ -496,12 +546,12 @@ class PokerRoom {
     const smallBlindPlayer = Object.values(this.players).find(p => p.seat === this.smallBlindSeat);
     const bigBlindPlayer = Object.values(this.players).find(p => p.seat === this.bigBlindSeat);
     if (smallBlindPlayer) {
-      this.playerBet(smallBlindPlayer, CONFIG.SMALL_BLIND);
-      this.logHandAction(smallBlindPlayer, 'small-blind', CONFIG.SMALL_BLIND);
+      this.playerBet(smallBlindPlayer, this.smallBlind);
+      this.logHandAction(smallBlindPlayer, 'small-blind', this.smallBlind);
     }
     if (bigBlindPlayer) {
-      this.playerBet(bigBlindPlayer, CONFIG.BIG_BLIND);
-      this.logHandAction(bigBlindPlayer, 'big-blind', CONFIG.BIG_BLIND);
+      this.playerBet(bigBlindPlayer, this.bigBlind);
+      this.logHandAction(bigBlindPlayer, 'big-blind', this.bigBlind);
     }
 
     // 记录本手开始时每人筹码，用于结算时计算 netChange
@@ -607,19 +657,21 @@ class PokerRoom {
       .filter(p => !p.folded && !p.allIn && p.chips > 0)
       .sort((a, b) => a.seat - b.seat);
 
-    // 若没有任何玩家可以继续行动（都全下或弃牌），每隔 DEAL_DELAY_MS 发一档公共牌直到摊牌
+    // 若没有任何玩家可以继续行动（都全下或弃牌），按节奏发完剩余公共牌再摊牌
     if (activePlayers.length === 0) {
       const room = this;
-      const delayMs = CONFIG.DEAL_DELAY_MS || 800;
+      const T = getRoundTiming(room);
       function scheduleNextDeal() {
-        setTimeout(() => {
+        room.runDealSequenceWithDelays(() => {
           if (room.paused) return;
-          room.advancePhase();
           io.to(room.roomCode).emit('gameState', room.getGameState());
-          if (room.gameState !== 'showdown' && room.gameState !== 'ended') {
+          if (room.gameState === 'river') {
+            room.gameState = 'showdown';
+            room.determineWinner();
+          } else if (room.gameState !== 'showdown' && room.gameState !== 'ended') {
             scheduleNextDeal();
           }
-        }, delayMs);
+        });
       }
       scheduleNextDeal();
       return;
@@ -637,15 +689,13 @@ class PokerRoom {
 
     if (this.shouldAdvancePhase()) {
       const room = this;
-      const delayMs = CONFIG.DEAL_DELAY_MS || 800;
-      setTimeout(() => {
+      room.runDealSequenceWithDelays(() => {
         if (room.paused) return;
-        room.advancePhase();
         if (room.gameState !== 'ended' && room.gameState !== 'waiting') {
           io.to(room.roomCode).emit('gameState', room.getGameState());
           room.handleBotTurn();
         }
-      }, delayMs);
+      });
       return;
     }
 
@@ -730,9 +780,9 @@ class PokerRoom {
           break;
         case 'raise': {
           // 将规则决策转换为合法的总下注额
-          const minRaiseTotal = Math.max(this.currentBet * 2, CONFIG.BIG_BLIND);
+          const minRaiseTotal = Math.max(this.currentBet * 2, this.bigBlind);
           const maxTotal = botPlayer.bet + botPlayer.chips;
-          const suggestedTotal = this.currentBet + CONFIG.BIG_BLIND;
+          const suggestedTotal = this.currentBet + this.bigBlind;
           const targetTotal = Math.min(maxTotal, Math.max(minRaiseTotal, suggestedTotal));
 
           if (targetTotal <= botPlayer.bet) {
@@ -761,7 +811,8 @@ class PokerRoom {
       const success = this.playerAction(botPlayer.socketId, action, amount);
       if (success) {
         io.to(this.roomCode).emit('gameState', this.getGameState());
-        this.nextAction();
+        const afterMs = getRoundTiming(this).AFTER_PLAYER_ACTION;
+        setTimeout(() => { this.nextAction(); }, afterMs);
       }
     }, thinkTime);
   }
@@ -779,8 +830,111 @@ class PokerRoom {
     if (this.deck.length > 0) this.deck.pop();
   }
 
+  /** 新街道开始：设置当前行动位为庄家左侧第一个可行动玩家 */
+  setFirstToActForStreet() {
+    const seats = Object.values(this.players).map(p => p.seat).sort((a, b) => a - b);
+    if (seats.length === 0) return;
+    const dealerIdx = seats.indexOf(this.dealerSeat);
+    if (dealerIdx === -1) {
+      this.currentPlayerSeat = seats[0];
+      return;
+    }
+    for (let i = 1; i <= seats.length; i++) {
+      const seat = seats[(dealerIdx + i) % seats.length];
+      const p = Object.values(this.players).find(pl => pl.seat === seat);
+      if (p && !p.folded && (p.chips > 0 || p.allIn)) {
+        this.currentPlayerSeat = seat;
+        return;
+      }
+    }
+  }
+
   /**
-   * 公共牌标准流程：翻牌前烧 1 张 → 发 3 张；转牌前烧 1 张 → 发 1 张；河牌前烧 1 张 → 发 1 张。
+   * 带仪式感延时的发牌：按 ROUND_TIMING 分步发公共牌并多次 emit，最后执行 done。
+   * 仅处理 preflop→flop, flop→turn, turn→river；river→showdown 由 determineWinner 处理。
+   */
+  runDealSequenceWithDelays(doneCallback) {
+    const room = this;
+    if (room.paused) return;
+    const stillIn = Object.values(room.players).filter(p => !p.folded);
+    if (stillIn.length < 2) {
+      room.gameState = 'showdown';
+      room.determineWinner();
+      return;
+    }
+    const T = getRoundTiming(room);
+
+    function runAfter(ms, fn) {
+      if (ms <= 0) return fn();
+      return setTimeout(fn, ms);
+    }
+
+    if (room.gameState === 'preflop') {
+      runAfter(T.BEFORE_FLOP, () => {
+        if (room.paused) return;
+        room.gameState = 'flop';
+        room.burnCard();
+        room.communityCards.push(room.deck.pop());
+        io.to(room.roomCode).emit('gameState', room.getGameState());
+        runAfter(T.DEAL_FLOP_CARD, () => {
+          if (room.paused) return;
+          room.communityCards.push(room.deck.pop());
+          io.to(room.roomCode).emit('gameState', room.getGameState());
+          runAfter(T.DEAL_FLOP_CARD, () => {
+            if (room.paused) return;
+            room.communityCards.push(room.deck.pop());
+            io.to(room.roomCode).emit('gameState', room.getGameState());
+            runAfter(T.AFTER_FLOP, () => {
+              if (room.paused) return;
+              room.currentBet = 0;
+              room.setFirstToActForStreet();
+              if (typeof doneCallback === 'function') doneCallback();
+            });
+          });
+        });
+      });
+      return;
+    }
+
+    if (room.gameState === 'flop') {
+      runAfter(T.BEFORE_TURN, () => {
+        if (room.paused) return;
+        room.gameState = 'turn';
+        room.burnCard();
+        room.communityCards.push(room.deck.pop());
+        io.to(room.roomCode).emit('gameState', room.getGameState());
+        runAfter(T.AFTER_TURN, () => {
+          if (room.paused) return;
+          room.currentBet = 0;
+          room.setFirstToActForStreet();
+          if (typeof doneCallback === 'function') doneCallback();
+        });
+      });
+      return;
+    }
+
+    if (room.gameState === 'turn') {
+      runAfter(T.BEFORE_RIVER, () => {
+        if (room.paused) return;
+        room.gameState = 'river';
+        room.burnCard();
+        room.communityCards.push(room.deck.pop());
+        io.to(room.roomCode).emit('gameState', room.getGameState());
+        runAfter(T.AFTER_RIVER, () => {
+          if (room.paused) return;
+          room.currentBet = 0;
+          room.setFirstToActForStreet();
+          if (typeof doneCallback === 'function') doneCallback();
+        });
+      });
+      return;
+    }
+
+    if (typeof doneCallback === 'function') doneCallback();
+  }
+
+  /**
+   * 公共牌标准流程（无延时，用于兼容或快速路径）：翻牌前烧 1 张 → 发 3 张；转牌前烧 1 张 → 发 1 张；河牌前烧 1 张 → 发 1 张。
    * 发下一档公共牌前若只剩 1 位未弃牌玩家，直接摊牌不再发牌。
    */
   advancePhase() {
@@ -856,16 +1010,10 @@ class PokerRoom {
     return winners;
   }
 
-  determineWinner() {
+  /** 摊牌后执行彩池分配并结束本局（供延时摊牌流程调用） */
+  _applyShowdownAndEnd() {
     const activePlayers = Object.values(this.players).filter(p => !p.folded);
-    if (activePlayers.length === 1) {
-      activePlayers[0].chips += this.pot;
-      this.endHand();
-      return;
-    }
-
     let sidePots = this.buildSidePots();
-    // 边池为空但底池>0（异常：如 bet 被误清空）时，将整池按牌力分给未弃牌玩家
     if (sidePots.length === 0 && this.pot > 0) {
       const winners = this.getWinnersForEligible(activePlayers);
       const amount = this.pot;
@@ -878,40 +1026,23 @@ class PokerRoom {
           winner.chips += winAmount + (index < remainder ? 1 : 0);
         });
       }
-      this.gameState = 'ended';
-      io.to(this.roomCode).emit('gameState', this.getGameState());
-      const hadBust = this.emitGameOverIfBust();
-      if (this._manualSettlement) {
-        this.emitGameOver([]);
-        this._manualSettlement = false;
-        return;
-      }
-      if (!hadBust) {
-        setTimeout(() => {
-          const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
-          if (playersWithChips.length >= 2) this.startNewHand();
-        }, 1500);
-      }
-      return;
-    }
-
-    for (const { amount, eligible } of sidePots) {
-      const winners = this.getWinnersForEligible(eligible);
-      if (winners.length === 1) {
-        winners[0].chips += amount;
-      } else {
-        const winAmount = Math.floor(amount / winners.length);
-        const remainder = amount % winners.length;
-        winners.forEach((winner, index) => {
-          winner.chips += winAmount + (index < remainder ? 1 : 0);
-        });
+    } else {
+      for (const { amount, eligible } of sidePots) {
+        const winners = this.getWinnersForEligible(eligible);
+        if (winners.length === 1) {
+          winners[0].chips += amount;
+        } else {
+          const winAmount = Math.floor(amount / winners.length);
+          const remainder = amount % winners.length;
+          winners.forEach((winner, index) => {
+            winner.chips += winAmount + (index < remainder ? 1 : 0);
+          });
+        }
       }
     }
-
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     const hadBust = this.emitGameOverIfBust();
-
     if (this._manualSettlement) {
       this.emitGameOver([]);
       this._manualSettlement = false;
@@ -920,11 +1051,49 @@ class PokerRoom {
     if (!hadBust) {
       setTimeout(() => {
         const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
-        if (playersWithChips.length >= 2) {
-          this.startNewHand();
-        }
+        if (playersWithChips.length >= 2) this.startNewHand();
       }, 1500);
     }
+  }
+
+  determineWinner() {
+    const activePlayers = Object.values(this.players).filter(p => !p.folded);
+    if (activePlayers.length === 1) {
+      activePlayers[0].chips += this.pot;
+      this.endHand();
+      return;
+    }
+
+    const room = this;
+    const T = getRoundTiming(room);
+    // 先广播摊牌阶段，再按节奏亮牌、彩池分配
+    io.to(room.roomCode).emit('gameState', room.getGameState());
+
+    const sorted = activePlayers.slice().sort((a, b) => a.seat - b.seat);
+    function revealNext(idx) {
+      if (idx >= sorted.length) {
+        setTimeout(() => {
+          if (room.paused) return;
+          room._applyShowdownAndEnd();
+        }, T.POT_TRANSITION);
+        return;
+      }
+      const p = sorted[idx];
+      io.to(room.roomCode).emit('showdownReveal', { seat: p.seat, nickname: p.nickname, hand: p.hand || [] });
+      setTimeout(() => {
+        if (room.paused) return;
+        revealNext(idx + 1);
+      }, T.PLAYER_SHOW_CARD);
+    }
+
+    setTimeout(() => {
+      if (room.paused) return;
+      if (sorted.length === 0) {
+        room._applyShowdownAndEnd();
+        return;
+      }
+      revealNext(0);
+    }, T.BEFORE_SHOWDOWN);
   }
 
   endHand() {
@@ -1064,7 +1233,15 @@ class PokerRoom {
       communityCards: this.communityCards,
       dealerSeat: this.dealerSeat,
       currentPlayerSeat: this.currentPlayerSeat,
-      config: CONFIG,
+      config: Object.assign({}, CONFIG, {
+        SMALL_BLIND: this.smallBlind,
+        BIG_BLIND: this.bigBlind,
+        smallBlind: this.smallBlind,
+        bigBlind: this.bigBlind,
+        minBuyIn: this.minBuyIn,
+        fastMode: this.fastMode,
+        actionTimeoutMs: getActionTimeoutMs(this)
+      }),
       players: Object.values(this.players)
     };
   }
@@ -1079,18 +1256,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('createRoom', (nicknameOrPayload, callback) => {
-    const roomCode = generateRoomCode();
-    const room = new PokerRoom(roomCode, socket.id);
-    rooms[roomCode] = room;
-
     const isPayload = nicknameOrPayload && typeof nicknameOrPayload === 'object';
     const playerName = isPayload ? (nicknameOrPayload.nickname || '玩家') : (nicknameOrPayload || '玩家');
     const initialChips = isPayload && typeof nicknameOrPayload.chips === 'number' ? nicknameOrPayload.chips : null;
+    let smallBlind = CONFIG.SMALL_BLIND;
+    if (isPayload && typeof nicknameOrPayload.smallBlind === 'number' && CONFIG.BLIND_OPTIONS.includes(nicknameOrPayload.smallBlind)) {
+      smallBlind = nicknameOrPayload.smallBlind;
+    }
+    const fastMode = isPayload && !!nicknameOrPayload.fastMode;
+    const roomCode = generateRoomCode();
+    const room = new PokerRoom(roomCode, socket.id, smallBlind, fastMode);
+    rooms[roomCode] = room;
+
+    if (initialChips != null && initialChips < room.minBuyIn) {
+      delete rooms[roomCode];
+      callback({ success: false, message: `创建房间需至少携带 ${room.minBuyIn} 筹码（当前 ${initialChips}）` });
+      return;
+    }
     const player = room.addPlayer(socket.id, playerName, false, initialChips);
     socket.join(roomCode);
     socket.roomCode = roomCode;
 
-    callback({ success: true, roomCode, player: { ...player, isHost: true } });
+    callback({ success: true, roomCode, player: { ...player, isHost: true }, config: { smallBlind: room.smallBlind, bigBlind: room.bigBlind, minBuyIn: room.minBuyIn, fastMode: room.fastMode, actionTimeoutMs: getActionTimeoutMs(room) } });
     io.to(roomCode).emit('roomUpdate', room.getGameState());
   });
 
@@ -1109,6 +1296,12 @@ io.on('connection', (socket) => {
     const isPayload = nicknameOrPayload && typeof nicknameOrPayload === 'object';
     const playerName = isPayload ? (nicknameOrPayload.nickname || '玩家') : (nicknameOrPayload || '玩家');
     const initialChips = isPayload && typeof nicknameOrPayload.chips === 'number' ? nicknameOrPayload.chips : null;
+    const chipsToUse = initialChips != null ? initialChips : CONFIG.INITIAL_CHIPS;
+    if (chipsToUse < room.minBuyIn) {
+      callback({ success: false, message: `本房间最低要求 ${room.minBuyIn} 筹码，您当前拥有 ${chipsToUse} 筹码` });
+      return;
+    }
+
     const player = room.addPlayer(socket.id, playerName, false, initialChips);
     if (!player) {
       callback({ success: false, message: '无法加入房间' });
@@ -1194,56 +1387,12 @@ io.on('connection', (socket) => {
           autoTrigger: true
         });
       }
-      room.nextAction();
+      const afterMs = getRoundTiming(room).AFTER_PLAYER_ACTION;
+      setTimeout(() => { room.nextAction(); }, afterMs);
       callback({ success: true });
     } else {
       callback({ success: false, message: '无效的动作' });
     }
-  });
-
-  // AI建议事件 - 获取AI决策辅助
-  socket.on('getAISuggestion', (callback) => {
-    const room = rooms[socket.roomCode];
-    if (!room) {
-      callback({ success: false, message: '房间不存在' });
-      return;
-    }
-
-    const player = room.players[socket.id];
-    if (!player) {
-      callback({ success: false, message: '玩家不在房间中' });
-      return;
-    }
-
-    // 构建游戏状态
-    const gameState = {
-      pot: room.pot,
-      currentBet: room.currentBet,
-      communityCards: room.communityCards,
-      gameState: room.gameState,
-      playerChips: player.chips,
-      playerPosition: player.seat
-    };
-
-    // 获取AI决策（优先使用API，如果失败则使用规则决策）
-    pokerAI.getAIDecision(gameState, socket.id).then(decision => {
-      callback({
-        success: true,
-        decision: decision
-      });
-    }).catch(err => {
-      // API失败时使用本地规则决策
-      const ruleDecision = pokerAI.getRuleBasedDecision(gameState, player);
-      callback({
-        success: true,
-        decision: {
-          action: ruleDecision.action,
-          amount: ruleDecision.amount,
-          reasoning: ruleDecision.reasoning,
-          isLocal: true
-        }
-      });
-    });
   });
 
   socket.on('emote', (emoji) => {
