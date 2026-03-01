@@ -43,17 +43,13 @@
         </div>
         
         <div id="createRoomBlock" class="create-room-block" role="group" aria-label="创建房间设置">
-          <label class="create-room-label" for="smallBlindSelect"><span class="chip-icon-inline" aria-hidden="true"></span><span data-i18n="smallBlind">小盲注</span></label>
+          <label class="create-room-label" for="smallBlindSelect">
+            <img src="chip.png" alt="" class="chip-icon-inline chip-icon-img" onerror="this.style.display='none';var s=this.nextElementSibling;if(s)s.style.display='inline-block';">
+            <svg class="chip-icon-inline chip-icon-fallback" style="display:none" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="url(#chipGrad)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><defs><radialGradient id="chipGrad"><stop offset="0%" stop-color="#ffd700"/><stop offset="70%" stop-color="#b8860b"/><stop offset="100%" stop-color="#8b6914"/></radialGradient></defs></svg>
+            <span data-i18n="smallBlind">小盲注</span></label>
           <select id="smallBlindSelect" class="create-room-select" aria-label="选择小盲注" tabindex="2">
-            <option value="10">🪙 10</option>
-            <option value="50">🪙 50</option>
-            <option value="100">🪙 100</option>
-            <option value="200">🪙 200</option>
-            <option value="500">🪙 500</option>
-            <option value="1000">🪙 1000</option>
-            <option value="5000">🪙 5000</option>
+            <!-- 选项文案由 JS 根据语言生成：小盲 10（大盲 20，最少携带 2K 筹码） -->
           </select>
-          <p id="createRoomBlindsHint" class="create-room-hint" aria-live="polite">大盲注：20 · 加入此房间需至少携带 2000 筹码</p>
           <div class="create-room-option">
             <label class="create-room-fast-mode">
               <input type="checkbox" id="fastModeCheckbox" aria-label="快速模式">

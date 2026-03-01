@@ -190,7 +190,7 @@ var I18N = {
   settlementTitlePaused: { zh: '%s暂停游戏', en: '%s paused' },
   settlementTitleEnded: { zh: '游戏已结束', en: 'Game over' },
   someonePaused: { zh: '有人', en: 'Someone' },
-  createRoomBlindsHint: { zh: '大盲注：%s · 加入此房间需至少携带 %s 筹码', en: 'Big blind: %s · Min buy-in: %s chips to join' },
+  createRoomOptionLabel: { zh: '小盲 %s（大盲 %s，最少携带 %s 筹码）', en: 'SB %s (BB %s, min %s chips)' },
   fastModeLabel: { zh: '快速模式（倒计时 8 秒）', en: 'Fast mode (8s turn timer)' },
   joinRoomMinChips: { zh: '本房间最低要求 %s 筹码，您当前拥有 %s 筹码', en: 'This room requires at least %s chips (you have %s)' },
   joining: { zh: '加入中...', en: 'Joining...' },
@@ -305,7 +305,7 @@ function applyLang() {
     updateGameStatus(currentGameState);
     updateGameState(currentGameState);
   }
-  if (typeof updateCreateRoomBlindsHint === 'function') updateCreateRoomBlindsHint();
+  if (typeof updateCreateRoomSelectOptions === 'function') updateCreateRoomSelectOptions();
 }
 
 // 玩家数据结构
@@ -369,7 +369,6 @@ function initDOMElements() {
   resumeGameBtn = document.getElementById('resumeGameBtn');
   myCardsEl = document.getElementById('myCards');
   window.smallBlindSelectEl = document.getElementById('smallBlindSelect');
-  window.createRoomBlindsHintEl = document.getElementById('createRoomBlindsHint');
   
   console.log('DOM elements initialized');
   console.log('createRoomBtn:', createRoomBtn);
@@ -533,19 +532,27 @@ function getCreateRoomBlindConfig() {
   return { smallBlind: sb, bigBlind: bb, minBuyIn: minBuyIn };
 }
 
-function updateCreateRoomBlindsHint() {
-  var hintEl = window.createRoomBlindsHintEl;
-  if (!hintEl) return;
-  var c = getCreateRoomBlindConfig();
-  hintEl.textContent = '\uD83E\uDDE9 ' + i18nF('createRoomBlindsHint', formatChips(c.bigBlind), formatChips(c.minBuyIn));
+var CREATE_ROOM_BLIND_VALUES = [10, 50, 100, 200, 500, 1000, 5000];
+
+function updateCreateRoomSelectOptions() {
+  var select = window.smallBlindSelectEl;
+  if (!select) return;
+  var currentValue = parseInt(select.value, 10) || 10;
+  select.innerHTML = '';
+  CREATE_ROOM_BLIND_VALUES.forEach(function(sb) {
+    var bb = sb * 2;
+    var minBuyIn = bb * 100;
+    var opt = document.createElement('option');
+    opt.value = String(sb);
+    opt.textContent = i18nF('createRoomOptionLabel', String(sb), String(bb), formatChips(minBuyIn));
+    select.appendChild(opt);
+  });
+  select.value = String(currentValue);
 }
 
 // ============ 事件监听 ============
 function setupEventListeners() {
-  if (window.smallBlindSelectEl) {
-    window.smallBlindSelectEl.addEventListener('change', updateCreateRoomBlindsHint);
-    updateCreateRoomBlindsHint();
-  }
+  updateCreateRoomSelectOptions();
 
   // 创建房间
   if (createRoomBtn) {

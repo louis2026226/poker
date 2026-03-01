@@ -163,32 +163,11 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
 
 .create-room-label .chip-icon-inline {
   display: inline-block;
-  width: 1em;
-  height: 1em;
-  margin-right: 4px;
-  vertical-align: -0.15em;
-  background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.3);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
-}
-
-.create-room-hint {
-  font-size: 13px;
-  color: #ffd700;
-  background: rgba(255, 215, 0, 0.12);
-  padding: 8px 12px;
-  border-radius: 8px;
-  border-left: 3px solid #ff8c00;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.create-room-hint::before {
-  content: "⚠";
-  font-size: 14px;
-  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 .create-room-option {
