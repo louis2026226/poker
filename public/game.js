@@ -229,6 +229,7 @@ var I18N = {
   roomCodeCopied: { zh: '房间号已复制: ', en: 'Room code copied: ' },
   errNotConnected: { zh: '未连接服务器，请刷新页面重试', en: 'Not connected. Please refresh.' },
   errEnterNickname: { zh: '请输入昵称', en: 'Enter nickname' },
+  errNicknameTooLong: { zh: '昵称最多可输入10个字符', en: 'Nickname at most 10 characters' },
   errEnterNicknameAndRoom: { zh: '请输入昵称和房间号', en: 'Enter nickname and room code' },
   errEnter5DigitRoom: { zh: '请输入5位房间号', en: 'Enter 5-digit room code' },
   errRequestTimeout: { zh: '请求超时，请检查房间号与网络后重试', en: 'Request timeout. Check room code and network.' },
@@ -492,6 +493,10 @@ function setupEventListeners() {
         alert(i18n('errEnterNickname'));
         return;
       }
+      if (nickname.length > 10) {
+        alert(i18n('errNicknameTooLong'));
+        return;
+      }
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
         alert(i18n('tipMinChips'));
         return;
@@ -557,7 +562,10 @@ function setupEventListeners() {
         alert(i18n('errEnterNicknameAndRoom'));
         return;
       }
-      
+      if (nickname.length > 10) {
+        alert(i18n('errNicknameTooLong'));
+        return;
+      }
       if (roomCode.length !== 5) {
         alert(i18n('errEnter5DigitRoom'));
         return;
@@ -1489,8 +1497,6 @@ function animatePotChips(prevState, nextState) {
     if (typeof prevState.pot !== 'number' || typeof nextState.pot !== 'number') return;
     if (nextState.pot <= prevState.pot) return;
 
-    playSound('bet');
-
     var potIconEl = document.getElementById('potIcon');
     if (potIconEl) {
       potIconEl.classList.remove('pot-icon-pop');
@@ -1536,6 +1542,7 @@ function animatePotChips(prevState, nextState) {
     var selfPlayer = nextState.players.find(function(p) { return p.socketId === mySocketId; });
     var mySeatIndex = selfPlayer ? selfPlayer.seat : 0;
 
+    var playerIndex = 0;
     nextState.players.forEach(function(p) {
       if (!p || !p.socketId) return;
       var prev = prevById[p.socketId];
@@ -1545,6 +1552,11 @@ function animatePotChips(prevState, nextState) {
       var prevChips = prev.chips || 0;
       var currChips = p.chips || 0;
       if (currBet <= prevBet && currChips >= prevChips) return;
+
+      (function(idx) {
+        setTimeout(function() { playSound('bet'); }, idx * 120);
+      })(playerIndex);
+      playerIndex++;
 
       var displaySeat = (p.seat - mySeatIndex + 5) % 5;
       var seatEl = document.getElementById('seat-' + displaySeat);
