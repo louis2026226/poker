@@ -164,6 +164,12 @@
         </div>
       </div>
 
+      <!-- 开始游戏按钮：牌桌正中间，仅等待开局时显示 -->
+      <div class="start-game-wrap" id="startGameWrap">
+        <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
+                tabindex="12" aria-label="开始游戏">开始游戏</button>
+      </div>
+
       <!-- 公共牌区 -->
       <div class="community-area" role="region" aria-label="公共牌区和底池">
         <div class="community-cards" id="communityCards" aria-label="公共牌"></div>
@@ -200,8 +206,6 @@
         <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
         <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
       </div>
-      <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
-              tabindex="12" aria-label="开始游戏">开始游戏</button>
     </div>
   </div>
 

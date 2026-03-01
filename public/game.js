@@ -1434,20 +1434,18 @@ function updateBotButton(gameState) {
 
   aiAssistBtn.disabled = !canAddBot;
 
-  // 开始游戏按钮：房主且人数 >= 2 且在 waiting/ended 状态
+  // 开始游戏按钮：仅房主在「等待开局」时显示，每把结束后不弹出（不在此处显示）
   if (startGameBtn) {
     const activePlayers = gameState.players.filter(function(p) { return p.chips > 0; });
     const canStart =
       socket.id === gameState.hostId &&
       activePlayers.length >= 2 &&
-      (gameState.gameState === 'waiting' || gameState.gameState === 'ended');
+      gameState.gameState === 'waiting';
 
-    if (gameState.gameState === 'waiting' || gameState.gameState === 'ended') {
+    if (gameState.gameState === 'waiting') {
       startGameBtn.classList.toggle('hidden', !canStart);
       startGameBtn.disabled = !canStart;
-      if (canStart) {
-        startGameBtn.textContent = '开始游戏';
-      }
+      if (canStart) startGameBtn.textContent = '开始游戏';
     } else {
       startGameBtn.classList.add('hidden');
     }

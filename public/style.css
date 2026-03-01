@@ -355,14 +355,17 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   justify-content: center;
 }
 
-.start-game-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
-  margin-bottom: 0;
+.start-game-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 90;
+  pointer-events: none;
 }
 
-.start-game-btn {
+.start-game-wrap .start-game-btn {
+  pointer-events: auto;
   min-width: 150px;
   margin: 0;
 }
