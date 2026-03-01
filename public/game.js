@@ -245,8 +245,26 @@ var I18N = {
   aiSuggest: { zh: 'AI建议', en: 'AI suggest' },
   meLabel: { zh: ' (我)', en: ' (me)' },
   soundOn: { zh: '打开音效', en: 'Sound on' },
-  soundOff: { zh: '关闭音效', en: 'Sound off' }
+  soundOff: { zh: '关闭音效', en: 'Sound off' },
+  phraseNiceHand: { zh: '好牌！', en: 'Nice hand!' },
+  phraseGgWp: { zh: '打得好，朋友。', en: 'GG WP.' },
+  phraseSameOldTrick: { zh: '老套路了？', en: 'Same old trick?' },
+  phraseYourTell: { zh: '你暴露马脚了。', en: 'Your tell is showing.' },
+  phraseRevengeTime: { zh: '复仇时间到！', en: 'Revenge time!' },
+  phraseDontBeNit: { zh: '别那么紧！', en: "Don't be a nit!" },
+  phraseCategoryGeneral: { zh: '通用', en: 'General' },
+  phraseCategoryAction: { zh: '行动', en: 'Action' },
+  phraseCategoryComment: { zh: '评论', en: 'Comment' },
+  phraseCategorySocial: { zh: '社交', en: 'Social' }
 };
+const PHRASES = [
+  { id: 'niceHand', category: 'general', key: 'phraseNiceHand' },
+  { id: 'ggWp', category: 'social', key: 'phraseGgWp' },
+  { id: 'sameOldTrick', category: 'comment', key: 'phraseSameOldTrick' },
+  { id: 'yourTell', category: 'comment', key: 'phraseYourTell' },
+  { id: 'revengeTime', category: 'action', key: 'phraseRevengeTime' },
+  { id: 'dontBeNit', category: 'comment', key: 'phraseDontBeNit' }
+];
 
 function getCurrentLang() {
   return currentLang;
@@ -468,13 +486,18 @@ function finishGame(won, finalChips) {
 }
 
 function showPage(page) {
+  var phraseBtn = document.getElementById('phraseBubbleBtn');
   if (page === 'lobby') {
     lobbyPage.classList.remove('hidden');
     gameRoomPage.classList.add('hidden');
+    if (phraseBtn) phraseBtn.classList.add('hidden');
+    closePhrasePanel();
+    closePhraseWheel();
     stopBGM();
   } else {
     lobbyPage.classList.add('hidden');
     gameRoomPage.classList.remove('hidden');
+    if (phraseBtn) phraseBtn.classList.remove('hidden');
     startBGM();
   }
 }
@@ -881,6 +904,15 @@ socket.on('hostChanged', function(data) {
 
 socket.on('emote', function(data) {
   showEmoji(data.seat, data.emoji);
+});
+
+socket.on('phrase', function(data) {
+  var myPlayer = currentGameState && currentGameState.players ? currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) : null;
+  var mySeatIndex = myPlayer ? myPlayer.seat : 0;
+  var displaySeat = (data.toSeat - mySeatIndex + 5) % 5;
+  var phrase = PHRASES.find(function(p) { return p.id === data.phraseId; });
+  var text = phrase ? i18n(phrase.key) : data.phraseId;
+  showPhraseBubble(displaySeat, text, data.fromNickname);
 });
 
 /** 渲染结算列表（表格行），支持传入结果数组，用于 gameOver 与实时刷新 */
@@ -1625,7 +1657,8 @@ function renderSeats(gameState) {
     if (seatEl) {
       seatEl.classList.remove('active', 'folded', 'all-in', 'winner', 'my-seat', 'other-seat', 'in-game');
       seatEl.classList.add('empty');
-      
+      delete seatEl.dataset.socketId;
+
       var nameEl = seatEl.querySelector('.player-name');
       var chipsEl = seatEl.querySelector('.player-chips');
       var betEl = seatEl.querySelector('.player-bet');
@@ -1674,7 +1707,8 @@ function renderSeats(gameState) {
     } else {
       seatEl.classList.add('other-seat');
     }
-    
+    seatEl.dataset.socketId = player.socketId || '';
+
     var nameEl = seatEl.querySelector('.player-name');
     var chipsEl = seatEl.querySelector('.player-chips');
     var cardsEl = seatEl.querySelector('.player-cards');
@@ -2121,6 +2155,24 @@ function showEmoji(seat, emoji) {
   }, 3000);
 }
 
+function showPhraseBubble(displaySeat, text, fromNickname) {
+  var seatEl = document.getElementById('seat-' + displaySeat);
+  var container = document.getElementById('phraseBubbleContainer');
+  if (!seatEl || !container) return;
+  var rect = seatEl.getBoundingClientRect();
+  var popup = document.createElement('div');
+  popup.className = 'phrase-bubble-popup';
+  popup.textContent = (fromNickname ? fromNickname + ': ' : '') + text;
+  popup.style.left = (rect.left + rect.width / 2 - 80) + 'px';
+  popup.style.top = (rect.top - 8) + 'px';
+  container.appendChild(popup);
+  var duration = 4000;
+  setTimeout(function() {
+    popup.classList.add('fade-out');
+    setTimeout(function() { popup.remove(); }, 320);
+  }, duration);
+}
+
 function toggleEmojiPanel() {
   var panel = document.getElementById('emojiPopupPanel');
   if (panel) {
@@ -2133,6 +2185,148 @@ function toggleEmojiPanel() {
       panel.style.display = 'none';
     }
   }
+}
+
+// ============ 互动短语 ============
+var phrasePanelCategory = 'general';
+var phraseWheelTargetSocketId = null;
+var phraseLongPressTimer = null;
+var phraseLongPressTargetSocketId = null;
+
+function openPhrasePanel() {
+  var panel = document.getElementById('phrasePanel');
+  if (!panel) return;
+  panel.classList.remove('hidden');
+  renderPhrasePanelTarget();
+  renderPhraseList(phrasePanelCategory);
+  var tabs = panel.querySelectorAll('.phrase-tab');
+  tabs.forEach(function(t) {
+    t.classList.toggle('active', t.dataset.category === phrasePanelCategory);
+    t.textContent = i18n('phraseCategory' + t.dataset.category.charAt(0).toUpperCase() + t.dataset.category.slice(1));
+  });
+}
+
+function closePhrasePanel() {
+  var panel = document.getElementById('phrasePanel');
+  if (panel) panel.classList.add('hidden');
+}
+
+function closePhraseWheel() {
+  var wheel = document.getElementById('phraseWheel');
+  if (wheel) {
+    wheel.classList.add('hidden');
+    wheel.innerHTML = '';
+  }
+  phraseWheelTargetSocketId = null;
+}
+
+function renderPhrasePanelTarget() {
+  var select = document.getElementById('phraseTargetSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">—</option>';
+  if (!currentGameState || !currentGameState.players) return;
+  currentGameState.players.forEach(function(p) {
+    if (p.socketId === mySocketId) return;
+    var opt = document.createElement('option');
+    opt.value = p.socketId;
+    opt.textContent = p.nickname || p.socketId;
+    select.appendChild(opt);
+  });
+}
+
+function renderPhraseList(category) {
+  var listEl = document.getElementById('phraseList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  var items = PHRASES.filter(function(p) { return p.category === category; });
+  items.forEach(function(p) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'phrase-item-btn';
+    btn.textContent = i18n(p.key);
+    btn.dataset.phraseId = p.id;
+    btn.addEventListener('click', function() {
+      var toSocketId = document.getElementById('phraseTargetSelect').value;
+      if (!toSocketId) return;
+      socket.emit('sendPhrase', { toSocketId: toSocketId, phraseId: p.id });
+      closePhrasePanel();
+    });
+    listEl.appendChild(btn);
+  });
+}
+
+function openPhraseWheel(toSocketId) {
+  phraseWheelTargetSocketId = toSocketId;
+  var wheel = document.getElementById('phraseWheel');
+  if (!wheel) return;
+  wheel.classList.remove('hidden');
+  wheel.innerHTML = '';
+  PHRASES.forEach(function(p) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'phrase-item-btn';
+    btn.textContent = i18n(p.key);
+    btn.dataset.phraseId = p.id;
+    btn.addEventListener('click', function() {
+      if (phraseWheelTargetSocketId) socket.emit('sendPhrase', { toSocketId: phraseWheelTargetSocketId, phraseId: p.id });
+      closePhraseWheel();
+    });
+    wheel.appendChild(btn);
+  });
+}
+
+function setupPhraseUI() {
+  var phraseBtn = document.getElementById('phraseBubbleBtn');
+  var panelClose = document.getElementById('phrasePanelClose');
+  var panel = document.getElementById('phrasePanel');
+  var tabs = panel ? panel.querySelectorAll('.phrase-tab') : [];
+  if (phraseBtn) phraseBtn.addEventListener('click', function() { openPhrasePanel(); });
+  if (panelClose) panelClose.addEventListener('click', closePhrasePanel);
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      phrasePanelCategory = tab.dataset.category;
+      panel.querySelectorAll('.phrase-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.category === phrasePanelCategory); });
+      tab.textContent = i18n('phraseCategory' + phrasePanelCategory.charAt(0).toUpperCase() + phrasePanelCategory.slice(1));
+      renderPhraseList(phrasePanelCategory);
+    });
+  });
+  var gameRoom = document.getElementById('gameRoom');
+  if (gameRoom) {
+    gameRoom.addEventListener('mousedown', function(e) {
+      var seat = e.target.closest('.seat.other-seat');
+      if (!seat) return;
+      var sid = seat.dataset.socketId;
+      if (!sid) return;
+      phraseLongPressTargetSocketId = sid;
+      phraseLongPressTimer = setTimeout(function() {
+        phraseLongPressTimer = null;
+        openPhraseWheel(sid);
+      }, 500);
+    });
+    gameRoom.addEventListener('mouseup', function() { clearPhraseLongPress(); });
+    gameRoom.addEventListener('mouseleave', function() { clearPhraseLongPress(); });
+  }
+  document.addEventListener('touchstart', function(e) {
+    var seat = e.target.closest('.seat.other-seat');
+    if (!seat) return;
+    var sid = seat.dataset.socketId;
+    if (!sid) return;
+    phraseLongPressTargetSocketId = sid;
+    phraseLongPressTimer = setTimeout(function() {
+      phraseLongPressTimer = null;
+      openPhraseWheel(sid);
+    }, 500);
+  }, { passive: true });
+  document.addEventListener('touchend', function() { clearPhraseLongPress(); });
+  document.addEventListener('touchcancel', function() { clearPhraseLongPress(); });
+}
+
+function clearPhraseLongPress() {
+  if (phraseLongPressTimer) {
+    clearTimeout(phraseLongPressTimer);
+    phraseLongPressTimer = null;
+  }
+  phraseLongPressTargetSocketId = null;
 }
 
 // ============ 心跳 ============
@@ -2329,6 +2523,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadNickname();
   setupEventListeners();
   setupEmojiButtons();
+  setupPhraseUI();
   startHeartbeat();
   applyLang();
   loadVersionLabel();

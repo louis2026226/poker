@@ -67,6 +67,10 @@ const rooms = {};
 
 // 表情冷却（玩家ID -> 上次发送时间）
 const emoteCooldowns = {};
+// 互动短语冷却（玩家ID -> 上次发送时间）
+const phraseCooldowns = {};
+const PHRASE_COOLDOWN_MS = 3000;
+const PHRASE_IDS = ['niceHand', 'ggWp', 'sameOldTrick', 'yourTell', 'revengeTime', 'dontBeNit'];
 
 // 玩家最后活跃时间（用于心跳）
 const playerLastActive = {};
@@ -439,14 +443,20 @@ class PokerRoom {
       return;
     }
 
+    // 清空上一局手牌，并按标准顺序发底牌：每人一张、共发两轮
     activePlayers.forEach(p => {
-      p.hand = [this.deck.pop(), this.deck.pop()];
+      p.hand = [];
       p.bet = 0;
       p.folded = false;
       p.allIn = false;
       p.action = null;
       this.playerBets[p.socketId] = 0;
     });
+    for (let round = 0; round < 2; round++) {
+      for (const p of activePlayers) {
+        p.hand.push(this.deck.pop());
+      }
+    }
 
     const seats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     // 庄家顺序：第一手用最小座位号，其后从上一手庄家顺时针找下一个仍有筹码的玩家
@@ -740,18 +750,26 @@ class PokerRoom {
     return allBet;
   }
 
+  /** 发公共牌前烧一张牌（防止作弊） */
+  burnCard() {
+    if (this.deck.length > 0) this.deck.pop();
+  }
+
   advancePhase() {
     switch (this.gameState) {
       case 'preflop':
         this.gameState = 'flop';
+        this.burnCard();
         for (let i = 0; i < 3; i++) this.communityCards.push(this.deck.pop());
         break;
       case 'flop':
         this.gameState = 'turn';
+        this.burnCard();
         this.communityCards.push(this.deck.pop());
         break;
       case 'turn':
         this.gameState = 'river';
+        this.burnCard();
         this.communityCards.push(this.deck.pop());
         break;
       case 'river':
@@ -890,8 +908,11 @@ class PokerRoom {
       return;
     }
     this._manualSettlement = true;
+    // 补发公共牌时也按规则烧牌：翻牌前烧1发3，转牌前烧1发1，河牌前烧1发1
     while (this.communityCards.length < 5 && this.deck.length > 0) {
-      this.communityCards.push(this.deck.pop());
+      this.burnCard();
+      const need = Math.min(5 - this.communityCards.length, this.communityCards.length === 0 ? 3 : 1);
+      for (let i = 0; i < need && this.deck.length > 0; i++) this.communityCards.push(this.deck.pop());
     }
     this.gameState = 'showdown';
     io.to(this.roomCode).emit('gameState', this.getGameState());
@@ -1177,6 +1198,27 @@ io.on('connection', (socket) => {
         seat: player.seat
       });
     }
+  });
+
+  socket.on('sendPhrase', (payload) => {
+    const room = rooms[socket.roomCode];
+    if (!room) return;
+    const toSocketId = payload && payload.toSocketId;
+    const phraseId = payload && payload.phraseId;
+    if (!toSocketId || !phraseId || !PHRASE_IDS.includes(phraseId)) return;
+    const now = Date.now();
+    if (phraseCooldowns[socket.id] && now - phraseCooldowns[socket.id] < PHRASE_COOLDOWN_MS) return;
+    phraseCooldowns[socket.id] = now;
+    const fromPlayer = room.players[socket.id];
+    const toPlayer = room.players[toSocketId];
+    if (!fromPlayer || !toPlayer) return;
+    io.to(room.roomCode).emit('phrase', {
+      fromSocketId: socket.id,
+      fromNickname: fromPlayer.nickname,
+      toSocketId: toSocketId,
+      toSeat: toPlayer.seat,
+      phraseId: phraseId
+    });
   });
 
   socket.on('restartGame', (callback) => {
