@@ -419,7 +419,11 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   pointer-events: none;
 }
 
+/* 打赏按钮已隐藏 */
 .dealer-wrap .dealer-tip-btn {
+  display: none !important;
+}
+.dealer-wrap .dealer-tip-btn.dealer-tip-btn-visible {
   pointer-events: auto;
   margin-top: 0;
   padding: 6px 14px;

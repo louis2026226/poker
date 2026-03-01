@@ -17,6 +17,8 @@ let actionTimer = null;
 let countdownSeatEl = null;
 let countdownInfoEl = null;
 let actionTimeLeft = 12;
+/** 当前倒计时是否为本玩家回合（用于超时时可靠触发自动弃牌） */
+let _actionTimerIsMyTurn = false;
 let emojiLastTime = 0;
 const EMOJI_COOLDOWN = 20000;
 
@@ -1016,9 +1018,6 @@ var _lastGameStateForPot = null;
 var _isNewDealPreflop = false;
 
 function renderCommunityCards(cards) {
-  if (cards.length > 0) {
-    playSound('card');
-  }
   communityCardsEl.innerHTML = '';
   cards.forEach(function(card, index) {
     var isNewCard = index >= _lastCommunityCardsLength;
@@ -1029,7 +1028,10 @@ function renderCommunityCards(cards) {
       extraClass: 'card-board'
     });
     communityCardsEl.appendChild(cardEl);
-    if (isNewCard) scheduleCardFlyFromDealer(cardEl, delay);
+    if (isNewCard) {
+      scheduleCardFlyFromDealer(cardEl, delay);
+      (function(d) { setTimeout(function() { playSound('card'); }, d); })(delay);
+    }
   });
   _lastCommunityCardsLength = cards.length;
 }
@@ -1495,7 +1497,10 @@ function renderSeats(gameState) {
             extraClass: 'card-my'
           });
           cardsEl.appendChild(cardEl);
-          if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delay);
+          if (handFlyIn) {
+            scheduleCardFlyFromDealer(cardEl, delay);
+            (function(d) { setTimeout(function() { playSound('card'); }, d); })(delay);
+          }
           dealIndex++;
         });
       } else if (gameState.gameState === 'showdown' || gameState.gameState === 'ended') {
@@ -1507,7 +1512,10 @@ function renderSeats(gameState) {
           var delayBack = handFlyIn ? dealIndex * 120 : 0;
           var cardEl = createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack });
           cardsEl.appendChild(cardEl);
-          if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delayBack);
+          if (handFlyIn) {
+            scheduleCardFlyFromDealer(cardEl, delayBack);
+            (function(d) { setTimeout(function() { playSound('card'); }, d); })(delayBack);
+          }
           dealIndex++;
         }
       }
@@ -1516,7 +1524,10 @@ function renderSeats(gameState) {
         var delayBack2 = handFlyIn ? dealIndex * 120 : 0;
         var cardEl = createCardElement({}, false, { flyIn: handFlyIn, flyDelay: delayBack2 });
         cardsEl.appendChild(cardEl);
-        if (handFlyIn) scheduleCardFlyFromDealer(cardEl, delayBack2);
+        if (handFlyIn) {
+          scheduleCardFlyFromDealer(cardEl, delayBack2);
+          (function(d) { setTimeout(function() { playSound('card'); }, d); })(delayBack2);
+        }
         dealIndex++;
       }
     }
@@ -1750,6 +1761,7 @@ function startActionTimer(gameState) {
     progressCircle.style.strokeDashoffset = '0';
   }
   if (timerTextEl) timerTextEl.textContent = '12';
+  _actionTimerIsMyTurn = !!(myPlayer && gameState.currentPlayerSeat === myPlayer.seat);
 
   actionTimer = setInterval(function() {
     actionTimeLeft -= 0.02;
@@ -1775,24 +1787,29 @@ function startActionTimer(gameState) {
     }
 
     if (actionTimeLeft <= 0) {
+      var wasMyTurn = _actionTimerIsMyTurn;
+      var state = currentGameState;
+      var sid = mySocketId;
       stopActionTimer();
+      _actionTimerIsMyTurn = false;
 
-      // 只有当前行动玩家的客户端在超时时自动弃牌
+      if (!wasMyTurn || !state || !sid || !socket.connected) return;
+
       var myPlayer = null;
-      if (currentGameState && currentGameState.players) {
-        for (var i = 0; i < currentGameState.players.length; i++) {
-          if (currentGameState.players[i].socketId === mySocketId) {
-            myPlayer = currentGameState.players[i];
+      if (state.players) {
+        for (var i = 0; i < state.players.length; i++) {
+          if (state.players[i].socketId === sid) {
+            myPlayer = state.players[i];
             break;
           }
         }
       }
       var isMyTurn = myPlayer &&
-        currentGameState &&
-        currentGameState.currentPlayerSeat === myPlayer.seat &&
+        state.currentPlayerSeat === myPlayer.seat &&
         !myPlayer.folded &&
         myPlayer.chips > 0 &&
-        currentGameState.gameState !== 'ended';
+        state.gameState !== 'ended' &&
+        !state.paused;
 
       if (isMyTurn) {
         socket.emit('playerAction', 'fold', 0, function(response) {
@@ -1810,6 +1827,7 @@ function startActionTimer(gameState) {
 }
 
 function stopActionTimer() {
+  _actionTimerIsMyTurn = false;
   if (actionTimer) {
     clearInterval(actionTimer);
     actionTimer = null;
