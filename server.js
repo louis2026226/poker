@@ -262,12 +262,12 @@ function evaluateFiveCards(cards) {
     };
   }
 
-  // 同花
+  // 同花（比牌用 5 张牌面值从高到低，不用 unique 以便正确比踢脚）
   if (isFlush) {
     return {
       type: 'flush',
       category: 5,
-      ranks: uniqueValuesDesc,
+      ranks: values.slice(0, 5),
       cards: sorted
     };
   }
@@ -585,14 +585,12 @@ class PokerRoom {
       }
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
-      this.emitGameOverIfBust();
+      const hadBust = this.emitGameOverIfBust();
+      if (!hadBust) this.emitGameOver([]);
 
-      // 1.5秒后开始新局
       setTimeout(() => {
         const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
-        if (playersWithChips.length >= 2) {
-          this.startNewHand();
-        }
+        if (playersWithChips.length >= 2) this.startNewHand();
       }, 1500);
       return;
     }
@@ -777,8 +775,8 @@ class PokerRoom {
         this.determineWinner();
         return;
     }
+    // 只重置当前街道的下注目标，不清空 p.bet（本局总投入，摊牌时用于边池计算）
     this.currentBet = 0;
-    Object.values(this.players).forEach(p => p.bet = 0);
   }
 
   /**
@@ -805,7 +803,7 @@ class PokerRoom {
     if (eligiblePlayers.length === 1) return eligiblePlayers;
     const withHands = eligiblePlayers.map(p => ({
       player: p,
-      hand: evaluateHand(p.hand, this.communityCards)
+      hand: evaluateHand(p.hand || [], this.communityCards || [])
     })).sort((a, b) => compareHands(b.hand, a.hand));
     const winners = [withHands[0].player];
     for (let i = 1; i < withHands.length; i++) {
@@ -824,9 +822,34 @@ class PokerRoom {
       return;
     }
 
-    const sidePots = this.buildSidePots();
-    if (sidePots.length === 0) {
-      this.endHand();
+    let sidePots = this.buildSidePots();
+    // 边池为空但底池>0（异常：如 bet 被误清空）时，将整池按牌力分给未弃牌玩家
+    if (sidePots.length === 0 && this.pot > 0) {
+      const winners = this.getWinnersForEligible(activePlayers);
+      const amount = this.pot;
+      if (winners.length === 1) {
+        winners[0].chips += amount;
+      } else {
+        const winAmount = Math.floor(amount / winners.length);
+        const remainder = amount % winners.length;
+        winners.forEach((winner, index) => {
+          winner.chips += winAmount + (index < remainder ? 1 : 0);
+        });
+      }
+      this.gameState = 'ended';
+      io.to(this.roomCode).emit('gameState', this.getGameState());
+      const hadBust = this.emitGameOverIfBust();
+      if (this._manualSettlement) {
+        this.emitGameOver([]);
+        this._manualSettlement = false;
+        return;
+      }
+      if (!hadBust) {
+        setTimeout(() => {
+          const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
+          if (playersWithChips.length >= 2) this.startNewHand();
+        }, 1500);
+      }
       return;
     }
 
