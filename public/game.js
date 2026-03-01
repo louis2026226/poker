@@ -404,10 +404,10 @@ function saveNickname(nickname) {
 function animateStatChips(fromVal, toVal) {
   var chipsEl = document.getElementById('statChips');
   if (!chipsEl) return;
-  var start = typeof fromVal === 'number' ? fromVal : (parseInt(chipsEl.textContent, 10) || 0);
+  var start = typeof fromVal === 'number' ? fromVal : parseChipsDisplay(chipsEl.textContent);
   var end = typeof toVal === 'number' ? toVal : start;
   if (start === end) {
-    chipsEl.textContent = end;
+    chipsEl.textContent = formatChips(end);
     return;
   }
   var duration = 280;
@@ -418,7 +418,7 @@ function animateStatChips(fromVal, toVal) {
     var t = Math.min(1, elapsed / duration);
     t = 1 - Math.pow(1 - t, 2);
     var current = Math.round(start + (end - start) * t);
-    chipsEl.textContent = current;
+    chipsEl.textContent = formatChips(current);
     if (t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
@@ -441,7 +441,7 @@ function updatePlayerStatsDisplay(opts) {
     if (chipsAnimate && chipsEl && typeof chipsFrom === 'number' && typeof chipsTo === 'number') {
       animateStatChips(chipsFrom, chipsTo);
     } else if (!skipChips && chipsEl) {
-      chipsEl.textContent = playerStats.chips;
+      chipsEl.textContent = formatChips(playerStats.chips);
     }
     if (winRateEl) winRateEl.textContent = playerStats.winRate + '%';
     if (gamesEl) gamesEl.textContent = playerStats.gamesPlayed;
@@ -450,7 +450,7 @@ function updatePlayerStatsDisplay(opts) {
 
 function updatePlayerChips(chips) {
   var chipsEl = document.getElementById('statChips');
-  var prev = (chipsEl && parseInt(chipsEl.textContent, 10)) || 0;
+  var prev = parseChipsDisplay(chipsEl && chipsEl.textContent);
   playerStats.chips = chips;
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
@@ -473,7 +473,7 @@ function finishGame(won, finalChips) {
     localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
   } catch (e) {}
   var chipsEl = document.getElementById('statChips');
-  var prev = (chipsEl && parseInt(chipsEl.textContent, 10)) || 0;
+  var prev = parseChipsDisplay(chipsEl && chipsEl.textContent);
   if (finalChips > prev) {
     updatePlayerStatsDisplay({ chipsAnimate: true, chipsFrom: prev, chipsTo: finalChips });
   } else {
@@ -498,6 +498,29 @@ function showPage(page) {
   }
 }
 
+/** 筹码显示：≥100万为 1M / 1.5M，≥1000 为 1K / 1.5K，否则原数字 */
+function formatChips(n) {
+  if (typeof n !== 'number' || !isFinite(n)) return '0';
+  if (n >= 1000000) {
+    var m = n / 1000000;
+    return (m % 1 === 0 ? m : m.toFixed(1).replace(/\.0$/, '')) + 'M';
+  }
+  if (n >= 1000) {
+    var k = n / 1000;
+    return (k % 1 === 0 ? k : k.toFixed(1).replace(/\.0$/, '')) + 'K';
+  }
+  return String(Math.floor(n));
+}
+
+/** 解析显示用的筹码字符串（如 1M、1.5K）为数字，用于动画起点 */
+function parseChipsDisplay(str) {
+  if (str == null) return 0;
+  str = String(str).trim();
+  if (/M$/i.test(str)) return Math.round(parseFloat(str) * 1000000) || 0;
+  if (/K$/i.test(str)) return Math.round(parseFloat(str) * 1000) || 0;
+  return parseInt(str, 10) || 0;
+}
+
 function getCreateRoomBlindConfig() {
   var sb = 10;
   var select = window.smallBlindSelectEl;
@@ -514,7 +537,7 @@ function updateCreateRoomBlindsHint() {
   var hintEl = window.createRoomBlindsHintEl;
   if (!hintEl) return;
   var c = getCreateRoomBlindConfig();
-  hintEl.textContent = i18nF('createRoomBlindsHint', String(c.bigBlind), String(c.minBuyIn));
+  hintEl.textContent = '\uD83E\uDDE9 ' + i18nF('createRoomBlindsHint', formatChips(c.bigBlind), formatChips(c.minBuyIn));
 }
 
 // ============ 事件监听 ============
@@ -854,6 +877,7 @@ socket.on('gameState', function(gameState) {
   /* 牌局结束或新一局开始时清空白色线框内停留的筹码 */
   if (gameState.gameState === 'ended' || isNewDeal) {
     clearPotChips();
+    _lastPotValue = 0;
   }
   if (_lastGameStateForPot) {
     animatePotChips(_lastGameStateForPot, gameState);
@@ -1223,13 +1247,14 @@ function updateLocalStatsOnGameEnd(prevState, nextState) {
   }
 }
 
-// 底池数字滚动动画（增加时从旧值滚到新值）
+// 底池数字滚动动画（增加时从旧值滚到新值），使用 _lastPotValue 避免与格式/动画不同步
 function animatePotAmount(fromVal, toVal) {
   if (!potAmount) return;
-  var start = typeof fromVal === 'number' ? fromVal : (parseInt(potAmount.textContent, 10) || 0);
+  var start = typeof fromVal === 'number' ? fromVal : _lastPotValue;
   var end = typeof toVal === 'number' ? toVal : start;
+  _lastPotValue = end;
   if (start === end) {
-    potAmount.textContent = end;
+    potAmount.textContent = formatChips(end);
     return;
   }
   var duration = 280;
@@ -1240,7 +1265,7 @@ function animatePotAmount(fromVal, toVal) {
     var t = Math.min(1, elapsed / duration);
     t = 1 - Math.pow(1 - t, 2);
     var current = Math.round(start + (end - start) * t);
-    potAmount.textContent = current;
+    potAmount.textContent = formatChips(current);
     if (t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
@@ -1249,16 +1274,17 @@ function animatePotAmount(fromVal, toVal) {
 // ============ 游戏逻辑 ============
 function updateGameState(gameState) {
   updateGameStatus(gameState);
-  var prevPot = parseInt(potAmount.textContent, 10) || 0;
   var newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
+  var prevPot = _lastPotValue;
   if (newPot > prevPot) {
     animatePotAmount(prevPot, newPot);
   } else {
-    potAmount.textContent = newPot;
+    _lastPotValue = newPot;
+    potAmount.textContent = formatChips(newPot);
   }
   
   if (gameState.currentBet > 0) {
-    currentBetDisplay.textContent = i18n('currentBetLabel') + gameState.currentBet;
+    currentBetDisplay.textContent = i18n('currentBetLabel') + formatChips(gameState.currentBet);
   } else {
     currentBetDisplay.textContent = '';
   }
@@ -1294,6 +1320,7 @@ function updateGameStatus(gameState) {
 
 var _lastCommunityCardsLength = 0;
 var _lastGameStateForPot = null;
+var _lastPotValue = 0;
 var _isNewDealPreflop = false;
 /** 摊牌阶段按顺序亮牌：仅当该座位已收到 showdownReveal 时才显示手牌 */
 var _showdownRevealedSeats = {};
@@ -1753,10 +1780,10 @@ function renderSeats(gameState) {
       displayName += ' 👑';
     }
     nameEl.innerHTML = displayName;
-    chipsEl.innerHTML = '<span class=\"chip-icon\"></span>' + player.chips;
+    chipsEl.innerHTML = '<span class="chip-icon"></span>' + formatChips(player.chips);
     
     if (player.bet > 0) {
-      betEl.textContent = i18n('betLabel') + player.bet;
+      betEl.textContent = i18n('betLabel') + formatChips(player.bet);
     }
     
     var gameStateValue = currentGameState ? currentGameState.gameState : 'waiting';
@@ -2205,10 +2232,17 @@ function showPhraseBubble(displaySeat, text, fromNickname, durationMs) {
   var popup = document.createElement('div');
   popup.className = 'phrase-bubble-popup';
   popup.textContent = (fromNickname ? fromNickname + ': ' : '') + text;
-  popup.style.left = (rect.left + rect.width / 2) + 'px';
+  var centerX = rect.left + rect.width / 2;
+  popup.style.left = centerX + 'px';
   popup.style.top = (rect.top - 52) + 'px';
   popup.style.transform = 'translateX(-50%)';
   container.appendChild(popup);
+  var w = popup.offsetWidth;
+  var pad = 8;
+  var minLeft = pad + w / 2;
+  var maxLeft = (window.innerWidth || document.documentElement.clientWidth) - w / 2 - pad;
+  if (centerX < minLeft) popup.style.left = minLeft + 'px';
+  else if (centerX > maxLeft) popup.style.left = maxLeft + 'px';
   var duration = typeof durationMs === 'number' ? durationMs : 2500;
   setTimeout(function() {
     popup.classList.add('fade-out');
