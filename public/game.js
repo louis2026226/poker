@@ -73,6 +73,10 @@ const STORAGE_KEY = 'poker_nickname';
 const STATS_KEY = 'poker_player_stats';
 const LANG_STORAGE_KEY = 'poker_lang';
 
+// 入座最少携带筹码
+const MIN_SEAT_CHIPS = 500;
+const TIP_MIN_CHIPS = '最少携带500筹码才可入座';
+
 // 当前语言 'zh' | 'en'
 let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(LANG_STORAGE_KEY)) || 'zh';
 
@@ -264,6 +268,10 @@ function setupEventListeners() {
         alert('请输入昵称');
         return;
       }
+      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
+        alert(TIP_MIN_CHIPS);
+        return;
+      }
       saveNickname(nickname);
       createRoomBtn.disabled = true;
       createRoomBtn.textContent = '创建中...';
@@ -316,7 +324,10 @@ function setupEventListeners() {
         alert('请输入5位房间号');
         return;
       }
-      
+      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
+        alert(TIP_MIN_CHIPS);
+        return;
+      }
       saveNickname(nickname);
       confirmJoinBtn.disabled = true;
       confirmJoinBtn.textContent = '加入中...';
@@ -381,6 +392,13 @@ function setupEventListeners() {
   // 再来一局
   if (newGameBtn) {
     newGameBtn.addEventListener('click', function() {
+      var myChips = (currentGameState && currentGameState.players)
+        ? (currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) || {}).chips
+        : playerStats.chips;
+      if (typeof myChips !== 'number' || myChips < MIN_SEAT_CHIPS) {
+        alert(TIP_MIN_CHIPS);
+        return;
+      }
       gameOverModal.classList.add('hidden');
       socket.emit('restartGame', function(response) {
         if (response.success) {
