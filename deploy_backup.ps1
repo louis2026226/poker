@@ -27,6 +27,13 @@ param(
 $ErrorActionPreference = "Stop"
 $LocalRoot = $PSScriptRoot
 
+# 若主仓库 public 下有 button.mp3，先复制到当前 public，保证部署时带上
+$MainRepoButton = "C:\Users\Administrator\louis-poker-git\public\button.mp3"
+if (Test-Path $MainRepoButton) {
+    Copy-Item $MainRepoButton -Destination (Join-Path $LocalRoot "public\button.mp3") -Force
+    Write-Host "已从主仓库复制 button.mp3 到当前 public" -ForegroundColor Cyan
+}
+
 Write-Host "备用环境同步 -> $Server : $RemotePath" -ForegroundColor Cyan
 
 function Invoke-Scp {

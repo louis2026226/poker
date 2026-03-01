@@ -52,16 +52,53 @@ function initAudio() {
     loadAudio('over', '/over.mp3');
   }
   if (!audioCache.button) {
-    loadAudio('button', '/button');
+    loadAudio('button', getButtonSoundUrl());
+  }
+}
+
+// 相对当前页面的按钮音效 URL，兼容根路径与子路径部署
+function getButtonSoundUrl() {
+  try {
+    var path = (typeof window !== 'undefined' && window.location && window.location.pathname) || '';
+    if (!path || path === '/' || path === '/index.html') return 'button.mp3';
+    var dir = path.charAt(path.length - 1) === '/' ? path : path.substring(0, path.lastIndexOf('/') + 1);
+    return dir + 'button.mp3';
+  } catch (e) { return 'button.mp3'; }
+}
+
+function playButtonSound() {
+  try {
+    initAudio();
+    var tpl = audioCache.button;
+    if (tpl) {
+      var a = tpl.cloneNode();
+      a.volume = 1;
+      a.play().catch(function(err) {
+        console.warn('playButtonSound clone failed:', err && err.message);
+        try { new Audio(getButtonSoundUrl()).play(); } catch (e2) {}
+      });
+    } else {
+      var url = getButtonSoundUrl();
+      var a = new Audio(url);
+      a.volume = 1;
+      a.play().catch(function(err) {
+        console.warn('playButtonSound failed:', url, err && err.message);
+      });
+    }
+  } catch (e) {
+    console.warn('playButtonSound error', e);
   }
 }
 
 function playSound(type) {
   try {
     initAudio();
+    if (type === 'button') {
+      playButtonSound();
+      return;
+    }
     var tpl = audioCache[type];
     if (!tpl) return;
-    // clone 一份，避免快速连击时被打断
     var audio = tpl.cloneNode();
     audio.play().catch(function(err) {
       console.log('playSound error', type, err && err.message);
@@ -69,6 +106,40 @@ function playSound(type) {
   } catch (e) {
     console.log('Audio error:', e);
   }
+}
+
+// BGM 背景音乐：音量 30%，进入房间播放，暂停或离开房间停止
+var bgmAudio = null;
+var BGM_VOLUME = 0.3;
+
+function getBgmUrl() {
+  try {
+    var path = (typeof window !== 'undefined' && window.location && window.location.pathname) || '';
+    if (!path || path === '/' || path === '/index.html') return 'BGM.mp3';
+    var dir = path.charAt(path.length - 1) === '/' ? path : path.substring(0, path.lastIndexOf('/') + 1);
+    return dir + 'BGM.mp3';
+  } catch (e) { return 'BGM.mp3'; }
+}
+
+function startBGM() {
+  try {
+    if (!bgmAudio) {
+      bgmAudio = new Audio(getBgmUrl());
+      bgmAudio.loop = true;
+      bgmAudio.volume = BGM_VOLUME;
+    }
+    bgmAudio.currentTime = 0;
+    bgmAudio.play().catch(function(err) { console.warn('BGM play failed', err && err.message); });
+  } catch (e) { console.warn('startBGM error', e); }
+}
+
+function stopBGM() {
+  try {
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+    }
+  } catch (e) {}
 }
 
 // Socket.IO 连接
@@ -386,9 +457,11 @@ function showPage(page) {
   if (page === 'lobby') {
     lobbyPage.classList.remove('hidden');
     gameRoomPage.classList.add('hidden');
+    stopBGM();
   } else {
     lobbyPage.classList.add('hidden');
     gameRoomPage.classList.remove('hidden');
+    startBGM();
   }
 }
 
@@ -516,6 +589,7 @@ function setupEventListeners() {
   }
 
   function doLeaveRoom() {
+    stopBGM();
     socket.emit('leaveRoom', function(res) {
       var chips = (res && res.success && typeof res.finalChips === 'number')
         ? res.finalChips
@@ -570,6 +644,7 @@ function setupEventListeners() {
           if (response && response.success && response.gameState) {
             currentGameState = response.gameState;
             updateGameState(currentGameState);
+            startBGM();
           } else if (response && response.message) {
             alert(response.message);
           }
@@ -586,6 +661,7 @@ function setupEventListeners() {
           if (response.success) {
             currentGameState = response.gameState;
             updateGameState(currentGameState);
+            startBGM();
           }
         });
       }
@@ -852,6 +928,7 @@ function renderSettlementLog(actions, meta) {
 }
 
 socket.on('gamePaused', function(data) {
+  stopBGM();
   _settlementReason = 'paused';
   _pausedByNickname = (data.pausedBy && String(data.pausedBy).trim()) ? String(data.pausedBy).trim() : '';
   var results = data.results || [];
@@ -2179,6 +2256,10 @@ document.addEventListener('DOMContentLoaded', function() {
   startHeartbeat();
   applyLang();
   loadVersionLabel();
+  // 提前预加载按钮音效，便于首击能响
+  if (typeof getButtonSoundUrl === 'function') {
+    loadAudio('button', getButtonSoundUrl());
+  }
   showPage('lobby');
   console.log('Initialization complete');
 });
