@@ -138,12 +138,18 @@ let playerStats = {
 // ============ DOM 元素 ============
 let lobbyPage, gameRoomPage, nicknameInput, roomCodeInput;
 let createRoomBtn, joinRoomBtn, confirmJoinBtn, joinForm;
-let displayRoomCode, gameStatus, leaveRoomBtn;
+let displayRoomCode, gameStatus, leaveRoomBtn, settlementBtn;
 let potAmount, communityCardsEl, currentBetDisplay;
 let actionPanel, actionText, foldBtn, checkBtn, callBtn, raiseBtn, allInBtn;
 let aiAssistBtn, aiSuggestionPanel, aiSuggestionContent, startGameBtn;
 let raiseSlider, raiseAmountPanel, raiseAmountDisplay;
-let gameOverModal, settlementList, newGameBtn, myCardsEl;
+let gameOverModal, settlementList, resumeGameBtn, myCardsEl;
+/** 最近一次结算数据，用于结算弹窗内实时刷新 */
+var _lastSettlementData = null;
+/** 结算弹窗来源：'paused' = 点击结算暂停，'ended' = 有人破产等游戏结束 */
+var _settlementReason = 'ended';
+/** 点击结算暂停时，发起暂停的玩家昵称（用于标题「某某暂停游戏」） */
+var _pausedByNickname = '';
 
 // ============ 初始化函数 ============
 function initDOMElements() {
@@ -158,6 +164,7 @@ function initDOMElements() {
   displayRoomCode = document.getElementById('displayRoomCode');
   gameStatus = document.getElementById('gameStatus');
   leaveRoomBtn = document.getElementById('leaveRoomBtn');
+  settlementBtn = document.getElementById('settlementBtn');
   potAmount = document.getElementById('potAmount');
   communityCardsEl = document.getElementById('communityCards');
   currentBetDisplay = document.getElementById('currentBetDisplay');
@@ -177,7 +184,7 @@ function initDOMElements() {
   raiseAmountDisplay = document.getElementById('raiseAmountDisplay');
   gameOverModal = document.getElementById('gameOverModal');
   settlementList = document.getElementById('settlementList');
-  newGameBtn = document.getElementById('newGameBtn');
+  resumeGameBtn = document.getElementById('resumeGameBtn');
   myCardsEl = document.getElementById('myCards');
   
   console.log('DOM elements initialized');
@@ -209,39 +216,85 @@ function saveNickname(nickname) {
   updatePlayerStatsDisplay();
 }
 
-function updatePlayerStatsDisplay() {
+// 主界面筹码数字滚动动画（增加时从旧值滚到新值）
+function animateStatChips(fromVal, toVal) {
+  var chipsEl = document.getElementById('statChips');
+  if (!chipsEl) return;
+  var start = typeof fromVal === 'number' ? fromVal : (parseInt(chipsEl.textContent, 10) || 0);
+  var end = typeof toVal === 'number' ? toVal : start;
+  if (start === end) {
+    chipsEl.textContent = end;
+    return;
+  }
+  var duration = 280;
+  var startTime = null;
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    var elapsed = timestamp - startTime;
+    var t = Math.min(1, elapsed / duration);
+    t = 1 - Math.pow(1 - t, 2);
+    var current = Math.round(start + (end - start) * t);
+    chipsEl.textContent = current;
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function updatePlayerStatsDisplay(opts) {
   const statsPanel = document.getElementById('playerStats');
   const nicknameEl = document.getElementById('statNickname');
   const chipsEl = document.getElementById('statChips');
   const winRateEl = document.getElementById('statWinRate');
   const gamesEl = document.getElementById('statGames');
-  
+  const skipChips = opts && opts.skipChips;
+  const chipsAnimate = opts && opts.chipsAnimate;
+  const chipsFrom = opts && opts.chipsFrom;
+  const chipsTo = opts && opts.chipsTo;
+
   if (statsPanel && playerStats.nickname) {
     statsPanel.classList.remove('hidden');
     if (nicknameEl) nicknameEl.textContent = playerStats.nickname;
-    if (chipsEl) chipsEl.textContent = playerStats.chips;
+    if (chipsAnimate && chipsEl && typeof chipsFrom === 'number' && typeof chipsTo === 'number') {
+      animateStatChips(chipsFrom, chipsTo);
+    } else if (!skipChips && chipsEl) {
+      chipsEl.textContent = playerStats.chips;
+    }
     if (winRateEl) winRateEl.textContent = playerStats.winRate + '%';
     if (gamesEl) gamesEl.textContent = playerStats.gamesPlayed;
   }
 }
 
 function updatePlayerChips(chips) {
+  var chipsEl = document.getElementById('statChips');
+  var prev = (chipsEl && parseInt(chipsEl.textContent, 10)) || 0;
   playerStats.chips = chips;
-  localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
-  updatePlayerStatsDisplay();
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
+  } catch (e) {}
+  if (chips > prev) {
+    updatePlayerStatsDisplay({ skipChips: true, chipsAnimate: true, chipsFrom: prev, chipsTo: chips });
+  } else {
+    updatePlayerStatsDisplay();
+  }
 }
 
 function finishGame(won, finalChips) {
   playerStats.gamesPlayed++;
-  if (won) {
-    playerStats.gamesWon++;
-  }
+  if (won) playerStats.gamesWon++;
   playerStats.chips = finalChips;
-  playerStats.winRate = playerStats.gamesPlayed >= 10 
-    ? Math.round((playerStats.gamesWon / playerStats.gamesPlayed) * 100) 
+  playerStats.winRate = playerStats.gamesPlayed >= 10
+    ? Math.round((playerStats.gamesWon / playerStats.gamesPlayed) * 100)
     : 0;
-  localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
-  updatePlayerStatsDisplay();
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(playerStats));
+  } catch (e) {}
+  var chipsEl = document.getElementById('statChips');
+  var prev = (chipsEl && parseInt(chipsEl.textContent, 10)) || 0;
+  if (finalChips > prev) {
+    updatePlayerStatsDisplay({ chipsAnimate: true, chipsFrom: prev, chipsTo: finalChips });
+  } else {
+    updatePlayerStatsDisplay();
+  }
 }
 
 function showPage(page) {
@@ -390,6 +443,18 @@ function setupEventListeners() {
     leaveRoomBtn.addEventListener('click', doLeaveRoom);
   }
 
+  if (settlementBtn) {
+    settlementBtn.addEventListener('click', function() {
+      socket.emit('requestSettlement', function(res) {
+        if (res && res.success) {
+          // 服务端会发 gameOver，由 gameOver 逻辑弹结算界面
+        } else if (res && res.error) {
+          alert(res.error);
+        }
+      });
+    });
+  }
+
   var leaveRoomFromModalBtn = document.getElementById('leaveRoomFromModalBtn');
   if (leaveRoomFromModalBtn) {
     leaveRoomFromModalBtn.addEventListener('click', function() {
@@ -398,23 +463,34 @@ function setupEventListeners() {
     });
   }
   
-  // 再来一局
-  if (newGameBtn) {
-    newGameBtn.addEventListener('click', function() {
-      var myChips = (currentGameState && currentGameState.players)
-        ? (currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) || {}).chips
-        : playerStats.chips;
-      if (typeof myChips !== 'number' || myChips < MIN_SEAT_CHIPS) {
-        alert(TIP_MIN_CHIPS);
-        return;
-      }
+  // 恢复游戏：若为暂停则恢复当前局，若为结束则开始下一局
+  if (resumeGameBtn) {
+    resumeGameBtn.addEventListener('click', function() {
       gameOverModal.classList.add('hidden');
-      socket.emit('restartGame', function(response) {
-        if (response.success) {
-          currentGameState = response.gameState;
-          updateGameState(currentGameState);
+      if (_settlementReason === 'paused') {
+        socket.emit('resumeGame', function(response) {
+          if (response && response.success && response.gameState) {
+            currentGameState = response.gameState;
+            updateGameState(currentGameState);
+          } else if (response && response.message) {
+            alert(response.message);
+          }
+        });
+      } else {
+        var myChips = (currentGameState && currentGameState.players)
+          ? (currentGameState.players.find(function(p) { return p.socketId === mySocketId; }) || {}).chips
+          : playerStats.chips;
+        if (typeof myChips !== 'number' || myChips < MIN_SEAT_CHIPS) {
+          alert(TIP_MIN_CHIPS);
+          return;
         }
-      });
+        socket.emit('restartGame', function(response) {
+          if (response.success) {
+            currentGameState = response.gameState;
+            updateGameState(currentGameState);
+          }
+        });
+      }
     });
   }
   
@@ -559,6 +635,7 @@ socket.on('gameState', function(gameState) {
   updateGameState(gameState);
   _lastGameStateForPot = gameState;
   updateLocalStatsOnGameEnd(prevState, gameState);
+  refreshSettlementModalIfOpen(gameState);
 });
 
 socket.on('roomUpdate', function(gameState) {
@@ -566,11 +643,23 @@ socket.on('roomUpdate', function(gameState) {
   if (gameState.gameState === 'preflop' && (!currentGameState || currentGameState.gameState === 'ended' || currentGameState.gameState === 'waiting')) {
     _lastCommunityCardsLength = 0;
   }
-  // roomUpdate 不触发新一手发牌动画，避免与 gameState 重复
   _isNewDealPreflop = false;
   currentGameState = gameState;
   updateGameState(gameState);
+  refreshSettlementModalIfOpen(gameState);
 });
+
+/** 结算弹窗打开时，用最新房间状态刷新玩家当前筹码（实时显示）。暂停状态下也刷新，以便有人离开等时更新列表。 */
+function refreshSettlementModalIfOpen(gameState) {
+  if (!gameOverModal || gameOverModal.classList.contains('hidden') || !_lastSettlementData || !_lastSettlementData.results) return;
+  if (!gameState.paused && gameState.gameState !== 'ended' && gameState.gameState !== 'waiting') return;
+  if (!gameState.players || !gameState.players.length) return;
+  gameState.players.forEach(function(p) {
+    var r = _lastSettlementData.results.find(function(x) { return (x.nickname || '') === (p.nickname || ''); });
+    if (r) r.finalChips = p.chips;
+  });
+  renderSettlementList(_lastSettlementData.results);
+}
 
 socket.on('playerLeft', function(data) {
   console.log('Player left:', data.nickname);
@@ -584,81 +673,113 @@ socket.on('emote', function(data) {
   showEmoji(data.seat, data.emoji);
 });
 
+/** 渲染结算列表（表格行），支持传入结果数组，用于 gameOver 与实时刷新 */
+function renderSettlementList(results) {
+  if (!settlementList) return;
+  settlementList.innerHTML = '';
+  (results || []).forEach(function(r) {
+    var tr = document.createElement('tr');
+    if (r.netChange > 0) tr.classList.add('winner');
+    else if (r.netChange < 0) tr.classList.add('loser');
+    var netText = (typeof r.netChange === 'number' && r.netChange > 0) ? '+' + r.netChange : (r.netChange || 0);
+    var changeCls = (r.netChange >= 0) ? 'positive' : 'negative';
+    tr.innerHTML =
+      '<td class="col-nickname">' + (r.nickname || '') + '</td>' +
+      '<td class="col-change ' + changeCls + '">' + netText + '</td>' +
+      '<td class="col-chips">' + (r.finalChips != null ? r.finalChips : '-') + '</td>';
+    settlementList.appendChild(tr);
+  });
+}
+
+/** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题 */
+function setSettlementModalTitle() {
+  var titleEl = document.getElementById('settlementModalTitle');
+  var subEl = document.getElementById('settlementModalSubtitle');
+  if (titleEl) {
+    if (_settlementReason === 'paused') {
+      titleEl.textContent = (_pausedByNickname ? _pausedByNickname : '有人') + '暂停游戏';
+    } else {
+      titleEl.textContent = '游戏已结束';
+    }
+  }
+  if (subEl) subEl.textContent = '当前玩家输赢如下';
+}
+
+/** 渲染结算弹窗内的操作记录区域 */
+function renderSettlementLog(actions, meta) {
+  try {
+    var logEl = document.getElementById('settlementLog');
+    if (!logEl) return;
+    var lines = [];
+    var actionTextMap = {
+      'small-blind': '小盲注',
+      'big-blind': '大盲注',
+      'bet': '下注',
+      'raise': '加注',
+      'call': '跟注',
+      'check': '过牌',
+      'fold': '弃牌',
+      'all-in': '全压',
+      'win': '获胜'
+    };
+    (actions || []).forEach(function(a, idx) {
+      var label = actionTextMap[a.action] || a.action;
+      var amt = (typeof a.amount === 'number' && a.amount !== 0) ? (' ' + a.amount) : '';
+      var sec = (typeof a.elapsedSeconds === 'number') ? a.elapsedSeconds : null;
+      var secText = sec != null ? (' ' + sec + 's') : '';
+      lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt + secText);
+    });
+    var timeStr = '';
+    if (meta && meta.endedAt) {
+      var endedDate = new Date(meta.endedAt);
+      timeStr = endedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    var durationStr = '';
+    if (meta && typeof meta.durationSeconds === 'number') {
+      durationStr = formatDuration(meta.durationSeconds);
+    }
+    var metaParts = [];
+    if (timeStr) metaParts.push('时间：' + timeStr);
+    if (durationStr) metaParts.push('耗时：' + durationStr);
+    logEl.innerHTML =
+      '<div>' + lines.join('<br>') + '</div>' +
+      (metaParts.length ? '<div class="settlement-log-meta">' + metaParts.join('　') + '</div>' : '');
+  } catch (e) {
+    console.log('render settlement log error', e);
+  }
+}
+
+socket.on('gamePaused', function(data) {
+  _settlementReason = 'paused';
+  _pausedByNickname = (data.pausedBy && String(data.pausedBy).trim()) ? String(data.pausedBy).trim() : '';
+  var results = data.results || [];
+  var actions = data.actions || [];
+  var meta = data.meta || {};
+  _lastSettlementData = { results: results.slice(), meta: meta, actions: actions };
+  setSettlementModalTitle();
+  renderSettlementList(results);
+  renderSettlementLog(actions, meta);
+  gameOverModal.classList.remove('hidden');
+});
+
 socket.on('gameOver', function(data) {
+  _settlementReason = 'ended';
   const results = data.results || [];
   const meta = data.meta || {};
   const actions = data.actions || [];
-  settlementList.innerHTML = '';
-  
+  _lastSettlementData = { results: results.slice(), meta: meta, actions: actions };
+
   results.forEach(function(result) {
-    const item = document.createElement('div');
-    item.className = 'settlement-item';
-    
-    if (result.netChange > 0) {
-      item.classList.add('winner');
-    } else if (result.netChange < 0) {
-      item.classList.add('loser');
-    }
-    
     var myNick = (playerStats.nickname || '').trim();
     var resNick = (result.nickname || '').trim();
     if (resNick && myNick && resNick === myNick) {
       finishGame(result.netChange > 0, result.finalChips);
     }
-    
-    const netText = result.netChange > 0 ? '+' + result.netChange : result.netChange;
-    item.innerHTML = '<span class="settlement-nickname">' + result.nickname + '</span><span class="settlement-amount ' + (result.netChange >= 0 ? 'positive' : 'negative') + '">' + netText + '</span>';
-    settlementList.appendChild(item);
   });
-  
-  // 行为记录：本局所有玩家的行为按时间线记录
-  try {
-    var logEl = document.getElementById('settlementLog');
-    if (logEl) {
-      var lines = [];
 
-      var actionTextMap = {
-        'small-blind': '小盲注',
-        'big-blind': '大盲注',
-        'bet': '下注',
-        'raise': '加注',
-        'call': '跟注',
-        'check': '过牌',
-        'fold': '弃牌',
-        'all-in': '全压',
-        'win': '获胜'
-      };
-
-      actions.forEach(function(a, idx) {
-        var label = actionTextMap[a.action] || a.action;
-        var amt = (typeof a.amount === 'number' && a.amount !== 0) ? (' ' + a.amount) : '';
-        var sec = (typeof a.elapsedSeconds === 'number') ? a.elapsedSeconds : null;
-        var secText = sec != null ? (' ' + sec + 's') : '';
-        lines.push((idx + 1) + ' ' + a.nickname + ' ' + label + amt + secText);
-      });
-
-      var timeStr = '';
-      if (meta.endedAt) {
-        var endedDate = new Date(meta.endedAt);
-        timeStr = endedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      }
-
-      var durationStr = '';
-      if (typeof meta.durationSeconds === 'number') {
-        durationStr = formatDuration(meta.durationSeconds);
-      }
-
-      var metaParts = [];
-      if (timeStr) metaParts.push('时间：' + timeStr);
-      if (durationStr) metaParts.push('耗时：' + durationStr);
-
-      logEl.innerHTML =
-        '<div>' + lines.join('<br>') + '</div>' +
-        (metaParts.length ? '<div class=\"settlement-log-meta\">' + metaParts.join('　') + '</div>' : '');
-    }
-  } catch (e) {
-    console.log('render settlement log error', e);
-  }
+  setSettlementModalTitle();
+  renderSettlementList(results);
+  renderSettlementLog(actions, meta);
 
   playSound('over');
   try {
@@ -1388,7 +1509,7 @@ function updateActionTimerPosition(gameState) {
   var timerEl = document.getElementById('actionTimer');
   if (!timerEl) return;
 
-  if (gameState.currentPlayerSeat == null || gameState.currentPlayerSeat === -1 ||
+  if (gameState.paused || gameState.currentPlayerSeat == null || gameState.currentPlayerSeat === -1 ||
       gameState.gameState === 'waiting' || gameState.gameState === 'ended') {
     timerEl.classList.add('hidden');
     return;
@@ -1437,8 +1558,8 @@ function updateActionPanel(gameState) {
     return;
   }
 
-  // 已弃牌、全下或筹码为 0 时不再显示操作
-  if (myPlayer.folded || myPlayer.chips <= 0 || gameState.gameState === 'ended') {
+  // 游戏暂停或已弃牌、全下、筹码为 0、本局已结束时不显示操作
+  if (gameState.paused || myPlayer.folded || myPlayer.chips <= 0 || gameState.gameState === 'ended') {
     disableAllButtons();
     if (raiseAmountPanel) raiseAmountPanel.classList.add('hidden');
     return;
@@ -1544,6 +1665,7 @@ function startActionTimer(gameState) {
   stopActionTimer();
 
   if (!gameState ||
+      gameState.paused ||
       gameState.currentPlayerSeat == null ||
       gameState.currentPlayerSeat === -1 ||
       gameState.gameState === 'waiting' ||
@@ -1912,7 +2034,7 @@ function loadVersionLabel() {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data) {
-          var ver = (data.sha && data.sha.length >= 7) ? data.sha.substring(0, 7) : (data.version || '');
+          var ver = (data.appVersion && String(data.appVersion).trim()) || (data.sha && data.sha.length >= 7 ? data.sha.substring(0, 7) : '') || (data.version || '');
           el.setAttribute('data-version-sha', ver || '');
           applyLang();
         }

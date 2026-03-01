@@ -274,7 +274,15 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   display: none !important;
 }
 
-.game-header #leaveRoomBtn {
+.game-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.game-header #leaveRoomBtn,
+.game-header #settlementBtn {
   flex-shrink: 0;
 }
 
@@ -1185,8 +1193,103 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   background-clip: text;
 }
 
+/* 结算弹窗布局优化 */
+.settlement-modal {
+  max-width: 420px;
+  width: 92%;
+  padding: 24px 28px;
+  text-align: center;
+}
+
+.settlement-title {
+  font-size: 22px;
+  margin: 0 0 6px 0;
+}
+
+.settlement-subtitle {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0 0 16px 0;
+}
+
+.settlement-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.settlement-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.settlement-table th {
+  padding: 10px 12px;
+  text-align: left;
+  color: #ffd700;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.25);
+}
+
+.settlement-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settlement-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.settlement-table tbody tr.winner {
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.settlement-table tbody tr.loser {
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.settlement-table .col-nickname {
+  font-weight: 600;
+  color: #eee;
+}
+
+.settlement-table .col-change.positive {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.settlement-table .col-change.negative {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.settlement-table .col-chips {
+  color: #ccc;
+  font-variant-numeric: tabular-nums;
+}
+
+.settlement-log-wrap {
+  text-align: left;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.settlement-log-wrap summary {
+  cursor: pointer;
+  color: #aaa;
+  padding: 6px 0;
+  user-select: none;
+}
+
+.settlement-log-wrap[open] summary {
+  margin-bottom: 8px;
+}
+
 #settlementList {
-  margin-bottom: 30px;
+  margin-bottom: 0;
 }
 
 .settlement-item {
@@ -1431,6 +1534,25 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
 
   .modal-content h2 {
     font-size: 24px;
+  }
+
+  .settlement-modal {
+    padding: 20px 16px;
+    max-width: 96%;
+  }
+
+  .settlement-title {
+    font-size: 20px;
+  }
+
+  .settlement-subtitle {
+    font-size: 12px;
+  }
+
+  .settlement-table th,
+  .settlement-table td {
+    padding: 8px 10px;
+    font-size: 13px;
   }
 
   .settlement-item {

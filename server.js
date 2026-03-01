@@ -26,7 +26,13 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 版本信息接口：用于首页显示当前部署对应的 Git 提交信息（Railway 用 env，阿里云用 deploy_version.txt）
+// 版本信息接口：用于首页显示版本标签（优先 appVersion），以及 Git 信息（Railway/阿里云）
+const pkgVersion = (function() {
+  try {
+    const pkg = require(path.join(__dirname, 'package.json'));
+    return (pkg && pkg.version) ? pkg.version : '';
+  } catch (e) { return ''; }
+})();
 app.get('/version', (req, res) => {
   const msg = process.env.RAILWAY_GIT_COMMIT_MESSAGE || '';
   let sha = process.env.RAILWAY_GIT_COMMIT_SHA || '';
@@ -36,6 +42,7 @@ app.get('/version', (req, res) => {
     msg ||
     (sha ? `commit ${sha.substring(0, 7)}` : 'local-dev');
   res.json({
+    appVersion: pkgVersion,
     version,
     branch,
     sha: sha ? sha.substring(0, 7) : '',
@@ -357,6 +364,7 @@ class PokerRoom {
     this.locked = false;
     this.handStartTime = null;
     this.handActions = [];
+    this.paused = false;
   }
 
   canJoin() {
@@ -514,6 +522,7 @@ class PokerRoom {
   }
 
   playerAction(socketId, action, amount) {
+    if (this.paused) return false;
     const player = this.players[socketId];
     if (!player || player.seat !== this.currentPlayerSeat) return false;
 
@@ -554,6 +563,7 @@ class PokerRoom {
   }
 
   nextAction() {
+    if (this.paused) return;
     // 存活玩家（未弃牌），用于判断是否只剩一人
     // 注意：这里不能排除已 all-in 或筹码为 0 的玩家，因为他们仍然在本局中有获胜可能
     const alivePlayers = Object.values(this.players).filter(p => !p.folded);
@@ -627,6 +637,7 @@ class PokerRoom {
     const thinkTime = 1000 + Math.floor(Math.random() * 8000);
 
     setTimeout(() => {
+      if (this.paused) return;
       // 再次确认仍然轮到该机器人且游戏仍在进行
       if (
         this.gameState === 'waiting' ||
@@ -793,6 +804,11 @@ class PokerRoom {
     const hadBust = this.emitGameOverIfBust();
 
     // 有人破产时不再自动开新局，由 emitGameOver 清退房间；无人破产时 1.5 秒后开新局
+    if (this._manualSettlement) {
+      this.emitGameOver([]);
+      this._manualSettlement = false;
+      return;
+    }
     if (!hadBust) {
       setTimeout(() => {
         const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
@@ -807,6 +823,54 @@ class PokerRoom {
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     this.emitGameOverIfBust();
+    if (this._manualSettlement) {
+      this.emitGameOver([]);
+      this._manualSettlement = false;
+    }
+  }
+
+  /** 仅暂停游戏并弹出结算界面，不结束本局、不摊牌。pausedByNickname 为点击结算的玩家昵称，会广播给全房间所有人同时弹窗并显示「某某暂停游戏」。 */
+  pauseForSettlement(pausedByNickname) {
+    this.paused = true;
+    const results = Object.values(this.players).map(p => ({
+      nickname: p.nickname,
+      netChange: (this.chipsAtStartOfHand && this.chipsAtStartOfHand[p.socketId] != null)
+        ? (p.chips - this.chipsAtStartOfHand[p.socketId])
+        : 0,
+      finalChips: p.chips
+    }));
+    const actions = Array.isArray(this.handActions) ? this.handActions.slice() : [];
+    const startTs = this.handStartTime || (actions.length ? actions[0].timestamp : Date.now());
+    const actionsWithTime = actions.map(a => ({
+      ...a,
+      elapsedSeconds: Math.max(0, Math.floor((a.timestamp - startTs) / 1000))
+    }));
+    io.to(this.roomCode).emit('gamePaused', {
+      results,
+      actions: actionsWithTime,
+      meta: { paused: true },
+      pausedBy: pausedByNickname || ''
+    });
+    io.to(this.roomCode).emit('gameState', this.getGameState());
+  }
+
+  /** 手动结算：暂停本局并弹出结算界面（不自动开下一局） */
+  settleNow() {
+    if (this.gameState === 'waiting' || this.gameState === 'ended') {
+      if (!this.chipsAtStartOfHand) this.chipsAtStartOfHand = {};
+      Object.values(this.players).forEach(p => {
+        this.chipsAtStartOfHand[p.socketId] = p.chips;
+      });
+      this.emitGameOver([]);
+      return;
+    }
+    this._manualSettlement = true;
+    while (this.communityCards.length < 5 && this.deck.length > 0) {
+      this.communityCards.push(this.deck.pop());
+    }
+    this.gameState = 'showdown';
+    io.to(this.roomCode).emit('gameState', this.getGameState());
+    this.determineWinner();
   }
 
   emitGameOverIfBust() {
@@ -883,6 +947,7 @@ class PokerRoom {
       roomCode: this.roomCode,
       hostId: this.hostId,
       gameState: this.gameState,
+      paused: this.paused,
       pot: this.pot,
       currentBet: this.currentBet,
       communityCards: this.communityCards,
@@ -1095,6 +1160,10 @@ io.on('connection', (socket) => {
       callback({ success: false, message: '只有房主可以重启游戏' });
       return;
     }
+    if (room.paused) {
+      callback({ success: false, message: '游戏已暂停，请点击恢复游戏' });
+      return;
+    }
 
     Object.values(room.players).forEach(p => {
       p.chips = CONFIG.INITIAL_CHIPS;
@@ -1136,6 +1205,34 @@ io.on('connection', (socket) => {
       }
     }
     if (typeof callback === 'function') callback({ success: true, finalChips });
+  });
+
+  socket.on('requestSettlement', (callback) => {
+    const roomCode = socket.roomCode;
+    const room = roomCode ? rooms[roomCode] : null;
+    if (!room || !room.players[socket.id]) {
+      if (typeof callback === 'function') callback({ success: false, error: '未在房间内' });
+      return;
+    }
+    const pausedByNickname = (room.players[socket.id] && room.players[socket.id].nickname) ? room.players[socket.id].nickname.trim() : '';
+    room.pauseForSettlement(pausedByNickname);
+    if (typeof callback === 'function') callback({ success: true });
+  });
+
+  socket.on('resumeGame', (callback) => {
+    const roomCode = socket.roomCode;
+    const room = roomCode ? rooms[roomCode] : null;
+    if (!room || !room.players[socket.id]) {
+      if (typeof callback === 'function') callback({ success: false, message: '未在房间内' });
+      return;
+    }
+    if (!room.paused) {
+      if (typeof callback === 'function') callback({ success: false, message: '游戏未暂停' });
+      return;
+    }
+    room.paused = false;
+    io.to(roomCode).emit('gameState', room.getGameState());
+    if (typeof callback === 'function') callback({ success: true, gameState: room.getGameState() });
   });
 
   socket.on('disconnect', () => {

@@ -77,8 +77,12 @@
               role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
       </div>
       <div class="game-status always-hidden" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
-      <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
-              tabindex="13" aria-label="离开当前房间">离开房间</button>
+      <div class="game-header-buttons">
+        <button id="settlementBtn" class="btn btn-success btn-small" 
+                tabindex="12" aria-label="结算本局">结算</button>
+        <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
+                tabindex="13" aria-label="离开当前房间">离开</button>
+      </div>
     </div>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
@@ -216,15 +220,30 @@
   <!-- 表情显示区域 -->
   <div id="emojiDisplay" class="emoji-display"></div>
 
-  <!-- 游戏结束弹窗 -->
+  <!-- 结算弹窗（游戏暂停，显示当前玩家输赢） -->
   <div id="gameOverModal" class="modal hidden">
-    <div class="modal-content">
-      <h2>🎉 游戏结束</h2>
-      <div id="settlementList"></div>
-      <div id="settlementLog" class="settlement-log"></div>
+    <div class="modal-content settlement-modal">
+      <h2 class="settlement-title" id="settlementModalTitle">本局结算</h2>
+      <p class="settlement-subtitle" id="settlementModalSubtitle">当前玩家输赢如下</p>
+      <div class="settlement-table-wrap">
+        <table class="settlement-table" aria-label="玩家输赢">
+          <thead>
+            <tr>
+              <th>玩家</th>
+              <th>本局输赢</th>
+              <th>当前筹码</th>
+            </tr>
+          </thead>
+          <tbody id="settlementList"></tbody>
+        </table>
+      </div>
+      <details class="settlement-log-wrap">
+        <summary>本局操作记录</summary>
+        <div id="settlementLog" class="settlement-log"></div>
+      </details>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="newGameBtn">再来一局</button>
-        <button class="btn btn-danger btn-small" id="leaveRoomFromModalBtn">离开房间</button>
+        <button class="btn btn-primary" id="resumeGameBtn" aria-label="恢复游戏">恢复游戏</button>
+        <button class="btn btn-danger btn-small" id="leaveRoomFromModalBtn">离开</button>
       </div>
     </div>
   </div>
