@@ -426,6 +426,45 @@ class PokerRoom {
     this.bigBlind = smallBlind * 2;
     this.minBuyIn = this.bigBlind * (CONFIG.BUYIN_MULTIPLIER || 100);
     this.fastMode = !!fastMode;
+    this.actionTimeoutId = null;
+  }
+
+  /** 用当前所有玩家 bet 之和同步 this.pot，避免漂移 */
+  syncPotFromBets() {
+    const sum = Object.values(this.players).reduce((s, p) => s + (p.bet || 0), 0);
+    this.pot = sum;
+  }
+
+  clearActionTimeout() {
+    if (this.actionTimeoutId) {
+      clearTimeout(this.actionTimeoutId);
+      this.actionTimeoutId = null;
+    }
+  }
+
+  /** 当前行动为真人时启动行动超时，超时自动 fold 或 check */
+  scheduleActionTimeout() {
+    this.clearActionTimeout();
+    if (this.paused || this.gameState === 'waiting' || this.gameState === 'ended') return;
+    const currentPlayer = Object.values(this.players).find(p => p.seat === this.currentPlayerSeat);
+    if (!currentPlayer || currentPlayer.isBot) return;
+    const room = this;
+    const seat = this.currentPlayerSeat;
+    const timeoutMs = getActionTimeoutMs(room);
+    this.actionTimeoutId = setTimeout(() => {
+      room.actionTimeoutId = null;
+      if (room.paused || room.gameState === 'waiting' || room.gameState === 'ended') return;
+      const player = Object.values(room.players).find(p => p.seat === seat);
+      if (!player || player.seat !== room.currentPlayerSeat || player.isBot) return;
+      const toCall = room.currentBet - (player.bet || 0);
+      const action = (toCall <= 0 || player.chips <= 0) ? 'check' : 'fold';
+      const ok = room.playerAction(player.socketId, action, 0);
+      if (ok) {
+        io.to(room.roomCode).emit('gameState', room.getGameState());
+        const afterMs = getRoundTiming(room).AFTER_PLAYER_ACTION;
+        setTimeout(() => { room.nextAction(); }, afterMs);
+      }
+    }, timeoutMs);
   }
 
   canJoin() {
@@ -496,6 +535,7 @@ class PokerRoom {
 
     const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
     if (activePlayers.length < 2) {
+      this.clearActionTimeout();
       this.gameState = 'waiting';
       return;
     }
@@ -560,8 +600,9 @@ class PokerRoom {
 
     io.to(this.roomCode).emit('gameState', this.getGameState());
 
-    // 如果首轮就轮到机器人，自动执行机器人操作
+    // 如果首轮就轮到机器人，自动执行机器人操作；否则为真人启动行动超时
     this.handleBotTurn();
+    this.scheduleActionTimeout();
   }
 
   playerBet(player, amount) {
@@ -640,6 +681,7 @@ class PokerRoom {
       if (alivePlayers.length === 1) {
         alivePlayers[0].chips += this.pot;
       }
+      this.clearActionTimeout();
       this.gameState = 'ended';
       io.to(this.roomCode).emit('gameState', this.getGameState());
       const hadBust = this.emitGameOverIfBust();
@@ -694,6 +736,7 @@ class PokerRoom {
         if (room.gameState !== 'ended' && room.gameState !== 'waiting') {
           io.to(room.roomCode).emit('gameState', room.getGameState());
           room.handleBotTurn();
+          room.scheduleActionTimeout();
         }
       });
       return;
@@ -701,8 +744,9 @@ class PokerRoom {
 
     io.to(this.roomCode).emit('gameState', this.getGameState());
 
-    // 如果轮到机器人玩家，自动执行机器人操作
+    // 如果轮到机器人玩家，自动执行机器人操作；否则为真人启动行动超时
     this.handleBotTurn();
+    this.scheduleActionTimeout();
   }
 
   handleBotTurn() {
@@ -717,8 +761,8 @@ class PokerRoom {
 
     if (!botPlayer) return;
 
-    // 模拟思考时间（1-9秒随机），让机器人更有“犹豫感”
-    const thinkTime = 1000 + Math.floor(Math.random() * 8000);
+    const actionTimeoutMs = getActionTimeoutMs(this);
+    const thinkTime = Math.min(1000 + Math.floor(Math.random() * 8000), Math.max(1000, actionTimeoutMs - 500));
 
     setTimeout(() => {
       if (this.paused) return;
@@ -1040,6 +1084,7 @@ class PokerRoom {
         }
       }
     }
+    this.clearActionTimeout();
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     const hadBust = this.emitGameOverIfBust();
@@ -1097,6 +1142,7 @@ class PokerRoom {
   }
 
   endHand() {
+    this.clearActionTimeout();
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     this.emitGameOverIfBust();
@@ -1223,11 +1269,8 @@ class PokerRoom {
   }
 
   getGameState() {
-    const potFromBets = Object.values(this.players).reduce((sum, p) => sum + (p.bet || 0), 0);
-    const pot = (typeof this.pot === 'number' && this.pot >= 0) ? this.pot : 0;
-    if (pot !== potFromBets && this.gameState !== 'waiting') {
-      console.warn('[room %s] pot mismatch: this.pot=%s sum(bets)=%s, using sum(bets)', this.roomCode, this.pot, potFromBets);
-    }
+    this.syncPotFromBets();
+    const potFromBets = this.pot;
     const potToSend = (this.gameState === 'waiting' || this.gameState === 'ended') ? 0 : potFromBets;
     return {
       roomCode: this.roomCode,
@@ -1383,6 +1426,7 @@ io.on('connection', (socket) => {
     const player = room.players[socket.id];
     const success = room.playerAction(socket.id, action, amount);
     if (success) {
+      room.clearActionTimeout();
       io.to(room.roomCode).emit('gameState', room.getGameState());
       if (action === 'all-in' && player) {
         io.to(room.roomCode).emit('emote', {
@@ -1483,6 +1527,7 @@ io.on('connection', (socket) => {
       if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
         const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
         if (activePlayers.length < 2) {
+          room.clearActionTimeout();
           room.gameState = 'waiting';
           io.to(roomCode).emit('gameState', room.getGameState());
         }
@@ -1542,6 +1587,7 @@ io.on('connection', (socket) => {
           if (room.gameState !== 'waiting' && room.gameState !== 'ended') {
             const activePlayers = Object.values(room.players).filter(p => p.chips > 0);
             if (activePlayers.length < 2) {
+              room.clearActionTimeout();
               room.gameState = 'waiting';
               io.to(roomCode).emit('gameState', room.getGameState());
             }
