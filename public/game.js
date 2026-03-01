@@ -1,5 +1,30 @@
 // Louis Poker - 游戏前端逻辑
 
+// ============ 操作/报错日志（便于反馈问题） ============
+var POKER_LOG_MAX = 150;
+var _pokerLogLines = [];
+function pokerLog(tag, detail) {
+  var line = new Date().toISOString() + ' ' + tag + (detail !== undefined ? ' ' + (typeof detail === 'string' ? detail : JSON.stringify(detail)) : '');
+  _pokerLogLines.push(line);
+  if (_pokerLogLines.length > POKER_LOG_MAX) _pokerLogLines.shift();
+  if (typeof console !== 'undefined' && console.log) console.log('[poker]', line);
+}
+function getPokerLogText() {
+  return _pokerLogLines.slice(-POKER_LOG_MAX).join('\n');
+}
+function copyPokerLog() {
+  var text = '--- Louis Poker 客户端日志 ---\n' + getPokerLogText() + '\n--- 结束 ---';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { pokerLog('copyPokerLog', '已复制到剪贴板'); alert('日志已复制，可粘贴到反馈中'); }).catch(function() { fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); pokerLog('copyPokerLog', '已复制(fallback)'); alert('日志已复制，可粘贴到反馈中'); } catch (e) { alert('复制失败，请手动打开浏览器控制台(F12)查看日志'); }
+  document.body.removeChild(ta);
+}
+if (typeof window !== 'undefined') { window.pokerLog = pokerLog; window.copyPokerLog = copyPokerLog; window.getPokerLogText = getPokerLogText; }
+
 // ============ 初始化区域 ============
 // 音效缓存：通过 <audio> 标签播放筹码/发牌等音效
 let audioCache = {
@@ -20,6 +45,8 @@ let countdownInfoEl = null;
 let actionTimeLeft = 12;
 /** 当前倒计时是否为本玩家回合（用于超时时可靠触发自动弃牌） */
 let _actionTimerIsMyTurn = false;
+/** 当前倒计时对应的行动座位，同一回合不重复启动避免倒计时重置 */
+let _actionTimerForSeat = null;
 let emojiLastTime = 0;
 const EMOJI_COOLDOWN = 20000;
 
@@ -777,7 +804,9 @@ function setupEventListeners() {
   if (foldBtn) {
     foldBtn.addEventListener('click', function() {
       playSound('button');
+      pokerLog('playerAction_send', { action: 'fold', amount: 0 });
       socket.emit('playerAction', 'fold', 0, function(response) {
+        pokerLog('playerAction_cb', { action: 'fold', success: response.success, message: response.message });
         if (!response.success) console.log(response.message);
       });
     });
@@ -786,7 +815,9 @@ function setupEventListeners() {
   if (checkBtn) {
     checkBtn.addEventListener('click', function() {
       playSound('button');
+      pokerLog('playerAction_send', { action: 'check', amount: 0 });
       socket.emit('playerAction', 'check', 0, function(response) {
+        pokerLog('playerAction_cb', { action: 'check', success: response.success, message: response.message });
         if (!response.success) console.log(response.message);
       });
     });
@@ -794,7 +825,10 @@ function setupEventListeners() {
   
   if (callBtn) {
     callBtn.addEventListener('click', function() {
+      playSound('button');
+      pokerLog('playerAction_send', { action: 'call', amount: 0 });
       socket.emit('playerAction', 'call', 0, function(response) {
+        pokerLog('playerAction_cb', { action: 'call', success: response.success, message: response.message });
         if (!response.success) console.log(response.message);
       });
     });
@@ -803,7 +837,10 @@ function setupEventListeners() {
   if (raiseBtn) {
     raiseBtn.addEventListener('click', function() {
       const amount = parseInt(raiseSlider.value);
+      playSound('button');
+      pokerLog('playerAction_send', { action: 'raise', amount: amount });
       socket.emit('playerAction', 'raise', amount, function(response) {
+        pokerLog('playerAction_cb', { action: 'raise', success: response.success, message: response.message });
         if (!response.success) console.log(response.message);
       });
     });
@@ -811,7 +848,10 @@ function setupEventListeners() {
   
   if (allInBtn) {
     allInBtn.addEventListener('click', function() {
+      playSound('button');
+      pokerLog('playerAction_send', { action: 'all-in', amount: 0 });
       socket.emit('playerAction', 'all-in', 0, function(response) {
+        pokerLog('playerAction_cb', { action: 'all-in', success: response.success, message: response.message });
         if (!response.success) console.log(response.message);
       });
     });
@@ -853,21 +893,21 @@ function setupEventListeners() {
 
 // ============ Socket.IO 事件 ============
 socket.on('connect', function() {
-  console.log('Connected to server');
+  pokerLog('connect', 'ok');
 });
 socket.on('disconnect', function(reason) {
-  console.log('Disconnected:', reason);
+  pokerLog('disconnect', reason);
   if (createRoomBtn) createRoomBtn.disabled = false;
   if (confirmJoinBtn) confirmJoinBtn.disabled = false;
   applyLang();
 });
 socket.on('connect_error', function(err) {
-  console.log('Connect error:', err.message);
+  pokerLog('connect_error', err && err.message);
   alert(i18n('errConnectFailed'));
 });
 
 socket.on('gameState', function(gameState) {
-  console.log('Game state received');
+  pokerLog('gameState', { phase: gameState.gameState, pot: gameState.pot, currentBet: gameState.currentBet });
 
   var prevState = currentGameState;
   var isNewDeal = gameState.gameState === 'preflop' && (!prevState || prevState.gameState === 'ended' || prevState.gameState === 'waiting');
@@ -1281,11 +1321,13 @@ function animatePotAmount(fromVal, toVal) {
 // ============ 游戏逻辑 ============
 function updateGameState(gameState) {
   updateGameStatus(gameState);
-  var newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
-  // 牌局进行中：用服务端 pot 与玩家 bet 之和取大，防止乱序或漏更新导致底池少显示
-  if (gameState.players && Array.isArray(gameState.players) && gameState.gameState !== 'ended' && gameState.gameState !== 'waiting') {
-    var sumFromBets = gameState.players.reduce(function(s, p) { return s + (Number(p.bet) || 0); }, 0);
-    if (sumFromBets > newPot) newPot = sumFromBets;
+  // 牌局进行中（preflop/flop/turn/river/showdown）一律用玩家 bet 之和作为底池显示，避免跟注/加注后不更新
+  var inHand = gameState.gameState !== 'ended' && gameState.gameState !== 'waiting';
+  var newPot;
+  if (inHand && gameState.players && Array.isArray(gameState.players)) {
+    newPot = gameState.players.reduce(function(s, p) { return s + (Number(p.bet) || 0); }, 0);
+  } else {
+    newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
   }
   var prevPot = _lastPotValue;
   var isResetPhase = gameState.gameState === 'ended' || gameState.gameState === 'preflop' || gameState.gameState === 'waiting';
@@ -2035,16 +2077,23 @@ function updateBotButton(gameState) {
 
 // ============ 倒计时 ============
 function startActionTimer(gameState) {
-  stopActionTimer();
-
   if (!gameState ||
       gameState.paused ||
       gameState.currentPlayerSeat == null ||
       gameState.currentPlayerSeat === -1 ||
       gameState.gameState === 'waiting' ||
       gameState.gameState === 'ended') {
+    stopActionTimer();
+    _actionTimerForSeat = null;
     return;
   }
+
+  // 同一回合已启动过倒计时则不再重置，避免重复收到 gameState 时倒计时回到满格
+  if (actionTimer && _actionTimerForSeat === gameState.currentPlayerSeat) {
+    return;
+  }
+  stopActionTimer();
+  _actionTimerForSeat = gameState.currentPlayerSeat;
 
   var timeoutMs = (gameState.config && typeof gameState.config.actionTimeoutMs === 'number')
     ? gameState.config.actionTimeoutMs : 12000;
@@ -2149,10 +2198,10 @@ function startActionTimer(gameState) {
         !state.paused;
 
       if (isMyTurn) {
+        pokerLog('playerAction_send', { action: 'fold', amount: 0, reason: 'timeout' });
         socket.emit('playerAction', 'fold', 0, function(response) {
-          if (!response.success) {
-            console.log('自动弃牌:', response.message);
-          }
+          pokerLog('playerAction_cb', { action: 'fold', success: response.success, message: response.message, reason: 'timeout' });
+          if (!response.success) console.log('自动弃牌:', response.message);
         });
       }
     }
@@ -2165,6 +2214,7 @@ function startActionTimer(gameState) {
 
 function stopActionTimer() {
   _actionTimerIsMyTurn = false;
+  _actionTimerForSeat = null;
   if (actionTimer) {
     clearInterval(actionTimer);
     actionTimer = null;
@@ -2466,5 +2516,13 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAudio('button', getButtonSoundUrl());
   }
   showPage('lobby');
-  console.log('Initialization complete');
+  pokerLog('init', 'ready');
+  // 全局错误写入日志，便于反馈
+  window.onerror = function(msg, url, line, col, err) {
+    pokerLog('error', { msg: msg, url: url, line: line, col: col, stack: err && err.stack });
+    return false;
+  };
+  window.onunhandledrejection = function(e) {
+    pokerLog('unhandledRejection', { reason: e.reason, stack: e.reason && e.reason.stack });
+  };
 });
