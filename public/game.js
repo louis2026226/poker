@@ -84,11 +84,12 @@ let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(L
 var I18N = {
   subtitle: { zh: '与好友一起畅玩', en: 'Play with friends' },
   statNickname: { zh: '昵称', en: 'Nickname' },
-  statChips: { zh: '金币', en: 'Chips' },
+  statChips: { zh: '筹码', en: 'Chips' },
   statWinRate: { zh: '胜率', en: 'Win rate' },
   statGames: { zh: '场次', en: 'Games' },
   nicknamePlaceholder: { zh: '请输入昵称', en: 'Enter nickname' },
   createRoom: { zh: '创建房间', en: 'Create room' },
+  getChips: { zh: '获取筹码', en: 'Get chips' },
   joinRoom: { zh: '加入房间', en: 'Join room' },
   roomCodePlaceholder: { zh: '请输入5位房间号', en: 'Enter 5-digit room code' },
   confirmJoin: { zh: '确认加入', en: 'Confirm' },
@@ -296,6 +297,14 @@ function setupEventListeners() {
     });
   }
   
+  // 获取筹码：每次点击加 1000
+  var getChipsBtn = document.getElementById('getChipsBtn');
+  if (getChipsBtn) {
+    getChipsBtn.addEventListener('click', function() {
+      updatePlayerChips((playerStats.chips || 0) + 1000);
+    });
+  }
+
   // 加入房间按钮
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {

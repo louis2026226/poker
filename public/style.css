@@ -114,6 +114,17 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   gap: 15px;
 }
 
+.lobby-buttons-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.lobby-buttons-row .btn {
+  flex: 1;
+  min-width: 0;
+}
+
 .input-group input,
 .join-form input {
   width: 100%;
