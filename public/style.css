@@ -286,6 +286,10 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   flex-shrink: 0;
 }
 
+.game-header-right {
+  flex-shrink: 0;
+}
+
 .game-header #settlementBtn {
   flex-shrink: 0;
 }

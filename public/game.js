@@ -75,7 +75,6 @@ const LANG_STORAGE_KEY = 'poker_lang';
 
 // 入座最少携带筹码
 const MIN_SEAT_CHIPS = 500;
-const TIP_MIN_CHIPS = '最少携带500筹码才可入座';
 
 // 当前语言 'zh' | 'en'
 let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem(LANG_STORAGE_KEY)) || 'zh';
@@ -93,7 +92,28 @@ var I18N = {
   joinRoom: { zh: '加入房间', en: 'Join room' },
   roomCodePlaceholder: { zh: '请输入5位房间号', en: 'Enter 5-digit room code' },
   confirmJoin: { zh: '确认加入', en: 'Confirm' },
-  versionPrefix: { zh: '当前版本：', en: 'Version: ' }
+  versionPrefix: { zh: '当前版本：', en: 'Version: ' },
+  roomLabel: { zh: '房间号:', en: 'Room:' },
+  settlementBtn: { zh: '结算', en: 'Settle' },
+  dealerTip: { zh: '打赏 50', en: 'Tip 50' },
+  settlementSubtitle: { zh: '当前玩家输赢如下', en: 'Current win/loss below' },
+  settlementColPlayer: { zh: '玩家', en: 'Player' },
+  settlementColChange: { zh: '本局输赢', en: 'Net' },
+  settlementColChips: { zh: '当前筹码', en: 'Chips' },
+  settlementLogSummary: { zh: '本局操作记录', en: 'Action log' },
+  resumeGame: { zh: '恢复游戏', en: 'Resume' },
+  leave: { zh: '离开', en: 'Leave' },
+  settlementTitlePaused: { zh: '%s暂停游戏', en: '%s paused' },
+  settlementTitleEnded: { zh: '游戏已结束', en: 'Game over' },
+  someonePaused: { zh: '有人', en: 'Someone' },
+  tipMinChips: { zh: '最少携带500筹码才可入座', en: 'Need at least 500 chips to join' },
+  joining: { zh: '加入中...', en: 'Joining...' },
+  fold: { zh: '弃牌', en: 'Fold' },
+  check: { zh: '过牌', en: 'Check' },
+  call: { zh: '跟注', en: 'Call' },
+  raise: { zh: '加注', en: 'Raise' },
+  allIn: { zh: '全下', en: 'All in' },
+  startGame: { zh: '开始游戏', en: 'Start game' }
 };
 
 function getCurrentLang() {
@@ -124,6 +144,7 @@ function applyLang() {
     var sha = versionEl.getAttribute('data-version-sha') || '';
     versionEl.textContent = (I18N.versionPrefix && I18N.versionPrefix[lang] ? I18N.versionPrefix[lang] : '当前版本：') + sha;
   }
+  setSettlementModalTitle();
 }
 
 // 玩家数据结构
@@ -358,10 +379,14 @@ function setupEventListeners() {
     });
   }
 
-  // 加入房间按钮
+  // 加入房间按钮：点击时先判定筹码是否至少 500
   if (joinRoomBtn) {
     joinRoomBtn.addEventListener('click', function() {
-      console.log('Join room clicked');
+      if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
+        var lang = getCurrentLang();
+        alert((I18N.tipMinChips && I18N.tipMinChips[lang]) || '最少携带500筹码才可入座');
+        return;
+      }
       joinForm.classList.remove('hidden');
     });
   }
@@ -386,22 +411,23 @@ function setupEventListeners() {
         alert('请输入5位房间号');
         return;
       }
+      var lang = getCurrentLang();
       if ((playerStats.chips || 0) < MIN_SEAT_CHIPS) {
-        alert(TIP_MIN_CHIPS);
+        alert((I18N.tipMinChips && I18N.tipMinChips[lang]) || '最少携带500筹码才可入座');
         return;
       }
       saveNickname(nickname);
       confirmJoinBtn.disabled = true;
-      confirmJoinBtn.textContent = '加入中...';
+      confirmJoinBtn.textContent = (I18N.joining && I18N.joining[lang]) || '加入中...';
       var timeout = setTimeout(function() {
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = '确认加入';
+        confirmJoinBtn.textContent = (I18N.confirmJoin && I18N.confirmJoin[lang]) || '确认加入';
         alert('请求超时，请检查房间号与网络后重试');
       }, 15000);
       socket.emit('joinRoom', roomCode, { nickname: nickname, chips: playerStats.chips }, function(response) {
         clearTimeout(timeout);
         confirmJoinBtn.disabled = false;
-        confirmJoinBtn.textContent = '确认加入';
+        confirmJoinBtn.textContent = (I18N.confirmJoin && I18N.confirmJoin[lang]) || '确认加入';
         if (response && response.success) {
           mySocketId = socket.id;
           mySeat = response.player.seat;
@@ -576,9 +602,8 @@ socket.on('connect', function() {
 socket.on('disconnect', function(reason) {
   console.log('Disconnected:', reason);
   if (createRoomBtn) createRoomBtn.disabled = false;
-  if (createRoomBtn) createRoomBtn.textContent = '创建房间';
   if (confirmJoinBtn) confirmJoinBtn.disabled = false;
-  if (confirmJoinBtn) confirmJoinBtn.textContent = '确认加入';
+  applyLang();
 });
 socket.on('connect_error', function(err) {
   console.log('Connect error:', err.message);
@@ -691,18 +716,21 @@ function renderSettlementList(results) {
   });
 }
 
-/** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题，并控制「恢复游戏」按钮显隐（仅暂停时显示） */
+/** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题，并控制「恢复游戏」按钮显隐（仅暂停时显示）。使用当前语言。 */
 function setSettlementModalTitle() {
+  var lang = getCurrentLang();
   var titleEl = document.getElementById('settlementModalTitle');
   var subEl = document.getElementById('settlementModalSubtitle');
   if (titleEl) {
     if (_settlementReason === 'paused') {
-      titleEl.textContent = (_pausedByNickname ? _pausedByNickname : '有人') + '暂停游戏';
+      var who = _pausedByNickname || (I18N.someonePaused && I18N.someonePaused[lang]) || '有人';
+      var tpl = (I18N.settlementTitlePaused && I18N.settlementTitlePaused[lang]) || '%s暂停游戏';
+      titleEl.textContent = tpl.replace('%s', who);
     } else {
-      titleEl.textContent = '游戏已结束';
+      titleEl.textContent = (I18N.settlementTitleEnded && I18N.settlementTitleEnded[lang]) || '游戏已结束';
     }
   }
-  if (subEl) subEl.textContent = '当前玩家输赢如下';
+  if (subEl && I18N.settlementSubtitle && I18N.settlementSubtitle[lang]) subEl.textContent = I18N.settlementSubtitle[lang];
   if (resumeGameBtn) resumeGameBtn.style.display = _settlementReason === 'paused' ? '' : 'none';
 }
 

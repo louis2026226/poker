@@ -62,9 +62,9 @@ if ($gitVersion) {
     Write-Host "已同步版本标识: $gitVersion" -ForegroundColor Cyan
 }
 
-# 若服务器端是 git 仓库，拉取 origin/main 使 .git 与代码一致（便于在服务器上看到正确版本）
-Write-Host "远程更新并重启 ..." -ForegroundColor Yellow
-ssh $Server "cd $RemotePath && (git fetch origin 2>/dev/null && git reset --hard origin/main 2>/dev/null); pm2 restart $Pm2Name"
+# 不再在服务器上执行 git reset，避免未 push 时用旧代码覆盖刚 scp 上去的新代码。仅重启应用即可。
+Write-Host "远程重启应用 ..." -ForegroundColor Yellow
+ssh $Server "cd $RemotePath && pm2 restart $Pm2Name"
 
 Write-Host "Done." -ForegroundColor Green
 

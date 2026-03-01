@@ -71,16 +71,18 @@
   <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
     <div class="game-header" role="banner" aria-label="游戏头部信息">
       <div class="game-header-left">
-        <button id="settlementBtn" class="btn btn-success btn-tiny" 
-                tabindex="12" aria-label="结算本局">结算</button>
         <div class="room-info">
-          <span class="room-label" id="roomLabel">房间号:</span>
+          <span class="room-label" id="roomLabel" data-i18n="roomLabel">房间号:</span>
           <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
                 title="点击复制房间号" style="cursor: pointer;" 
                 role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
         </div>
       </div>
       <div class="game-status always-hidden" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
+      <div class="game-header-right">
+        <button id="settlementBtn" class="btn btn-success btn-tiny" 
+                tabindex="12" aria-label="结算" data-i18n="settlementBtn">结算</button>
+      </div>
     </div>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">
@@ -90,7 +92,7 @@
           <img src="/girl.png" alt="荷官" onerror="this.style.display='none'; var s=this.nextElementSibling; if(s) s.style.display='flex';">
           <span class="dealer-placeholder">👩</span>
         </div>
-        <button type="button" class="dealer-tip-btn" id="dealerTipBtn" disabled aria-label="打赏荷官">打赏 50</button>
+        <button type="button" class="dealer-tip-btn" id="dealerTipBtn" disabled aria-label="打赏" data-i18n="dealerTip">打赏 50</button>
         <div class="dealer-speech" id="dealerSpeech" aria-live="polite"></div>
       </div>
       <!-- 底池在白色筹码区域上方 15px，筹码飞入落点区隐藏线框 -->
@@ -173,7 +175,7 @@
       <!-- 开始游戏按钮：牌桌正中间，仅等待开局时显示 -->
       <div class="start-game-wrap" id="startGameWrap">
         <button id="startGameBtn" class="btn btn-primary btn-small start-game-btn" 
-                tabindex="12" aria-label="开始游戏">开始游戏</button>
+                tabindex="12" aria-label="开始游戏" data-i18n="startGame">开始游戏</button>
       </div>
 
       <!-- 公共牌区 -->
@@ -205,11 +207,11 @@
         <span id="raiseAmountDisplay" aria-live="polite">20</span>
       </div>
       <div class="action-buttons" role="group" aria-label="操作按钮">
-        <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20">弃牌</button>
-        <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21">过牌</button>
-        <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22">跟注</button>
-        <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23">加注</button>
-        <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24">全下</button>
+        <button class="btn btn-danger" id="foldBtn" disabled aria-label="弃牌" tabindex="20" data-i18n="fold">弃牌</button>
+        <button class="btn btn-secondary" id="checkBtn" disabled aria-label="过牌" tabindex="21" data-i18n="check">过牌</button>
+        <button class="btn btn-primary" id="callBtn" disabled aria-label="跟注" tabindex="22" data-i18n="call">跟注</button>
+        <button class="btn btn-warning" id="raiseBtn" disabled aria-label="加注" tabindex="23" data-i18n="raise">加注</button>
+        <button class="btn btn-success" id="allInBtn" disabled aria-label="全下" tabindex="24" data-i18n="allIn">全下</button>
         <button id="ai-assist-btn" disabled aria-label="添加机器人" tabindex="25">AI+1</button>
       </div>
     </div>
@@ -222,26 +224,26 @@
   <div id="gameOverModal" class="modal hidden">
     <div class="modal-content settlement-modal">
       <h2 class="settlement-title" id="settlementModalTitle">本局结算</h2>
-      <p class="settlement-subtitle" id="settlementModalSubtitle">当前玩家输赢如下</p>
+      <p class="settlement-subtitle" id="settlementModalSubtitle" data-i18n="settlementSubtitle">当前玩家输赢如下</p>
       <div class="settlement-table-wrap">
         <table class="settlement-table" aria-label="玩家输赢">
           <thead>
             <tr>
-              <th>玩家</th>
-              <th>本局输赢</th>
-              <th>当前筹码</th>
+              <th data-i18n="settlementColPlayer">玩家</th>
+              <th data-i18n="settlementColChange">本局输赢</th>
+              <th data-i18n="settlementColChips">当前筹码</th>
             </tr>
           </thead>
           <tbody id="settlementList"></tbody>
         </table>
       </div>
       <details class="settlement-log-wrap">
-        <summary>本局操作记录</summary>
+        <summary data-i18n="settlementLogSummary">本局操作记录</summary>
         <div id="settlementLog" class="settlement-log"></div>
       </details>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="resumeGameBtn" aria-label="恢复游戏">恢复游戏</button>
-        <button class="btn btn-danger btn-small" id="leaveRoomFromModalBtn">离开</button>
+        <button class="btn btn-primary" id="resumeGameBtn" aria-label="恢复游戏" data-i18n="resumeGame">恢复游戏</button>
+        <button class="btn btn-danger btn-small" id="leaveRoomFromModalBtn" data-i18n="leave">离开</button>
       </div>
     </div>
   </div>

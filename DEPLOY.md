@@ -2,8 +2,11 @@
 
 **重要：** 本地/仓库的修改**不会自动**更新到服务器或 Railway，需要您自己执行部署（见下方「一键同步」或 Git push / Railway 自动部署）。部署后主页版本标签会显示 `package.json` 的 `version`（如 1.0.2）；若仍显示 `742f26e` 等 commit 短码，说明线上仍是旧代码，请重新部署。
 
-**为什么 Cursor 里执行 `git push` 会失败？**  
-推送用的是 SSH（`git@github.com:...`）。在 Cursor 自动化/代理终端里执行命令时，用的是**该环境的 Shell**，通常**拿不到你本机已登录的 SSH 密钥**（或 ssh-agent），所以连 GitHub 时会在 22 端口被关闭，报 `Connection closed by ... port 22`。你本机 PowerShell/CMD 里「Railway 和 GitHub 都正常连接」是因为那里才加载了你的密钥。因此 **Railway 部署需要你在本机终端执行一次 `git push origin main`**；阿里云部署可由 Cursor 执行 `deploy_backup.ps1`（脚本里用的是你本机配置的到阿里云的 SSH）。
+**为什么 Railway 不能像阿里云一样自动更新？**  
+- **阿里云**：部署脚本用 **scp + ssh** 把你本机文件拷到服务器并重启，用的是你本机到阿里云的 SSH，在 Cursor 里执行**可以成功**，所以每次我跑完脚本，阿里云就会是你**当前本机**的最新代码。  
+- **Railway**：部署依赖 **git push 到 GitHub**，推送用的是 **SSH 连 GitHub**（`git@github.com:...`）。在 Cursor 的自动化终端里没有你本机的 GitHub SSH 密钥，所以一执行 `git push` 就会报 `Connection closed by ... port 22`，**无法自动推送**。只有在你**本机**打开 PowerShell/CMD 执行同一条 `git push origin main` 时才会成功。  
+
+所以：**阿里云可以每次自动更新（我跑脚本即可），Railway 需要你在本机执行一次 `git push origin main`**。
 
 ### 部署到 Railway（请在本机终端执行）
 
