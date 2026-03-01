@@ -1217,6 +1217,14 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   color: #e74c3c;
 }
 
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
 /* 响应式 - 手机端 */
 @media (max-width: 768px) {
   .lobby-container {

@@ -350,15 +350,31 @@ function setupEventListeners() {
     });
   }
 
-  // 离开房间：先向服务端请求当前筹码，写回主界面金币总额后再刷新
+  function doLeaveRoom() {
+    socket.emit('leaveRoom', function(res) {
+      var chips = (res && res.success && typeof res.finalChips === 'number')
+        ? res.finalChips
+        : (function() {
+            if (currentGameState && currentGameState.players) {
+              var me = currentGameState.players.find(function(p) { return p.socketId === mySocketId; });
+              if (me && typeof me.chips === 'number') return me.chips;
+            }
+            return null;
+          })();
+      if (typeof chips === 'number') updatePlayerChips(chips);
+      location.reload();
+    });
+  }
+
   if (leaveRoomBtn) {
-    leaveRoomBtn.addEventListener('click', function() {
-      socket.emit('leaveRoom', function(res) {
-        if (res && res.success && typeof res.finalChips === 'number') {
-          updatePlayerChips(res.finalChips);
-        }
-        location.reload();
-      });
+    leaveRoomBtn.addEventListener('click', doLeaveRoom);
+  }
+
+  var leaveRoomFromModalBtn = document.getElementById('leaveRoomFromModalBtn');
+  if (leaveRoomFromModalBtn) {
+    leaveRoomFromModalBtn.addEventListener('click', function() {
+      gameOverModal.classList.add('hidden');
+      doLeaveRoom();
     });
   }
   
@@ -490,6 +506,13 @@ socket.on('gameState', function(gameState) {
     setTimeout(function() {
       _isNewDealPreflop = true;
       currentGameState = gameState;
+      if (gameState.players) {
+        var me = gameState.players.find(function(p) { return p.socketId === mySocketId; });
+        if (me && typeof me.chips === 'number') {
+          playerStats.chips = me.chips;
+          try { localStorage.setItem(STATS_KEY, JSON.stringify(playerStats)); } catch (e) {}
+        }
+      }
       updateGameState(gameState);
       _lastGameStateForPot = gameState;
       updateLocalStatsOnGameEnd(prevState, gameState);
@@ -499,6 +522,13 @@ socket.on('gameState', function(gameState) {
 
   _isNewDealPreflop = isNewDeal;
   currentGameState = gameState;
+  if (gameState.players) {
+    var me = gameState.players.find(function(p) { return p.socketId === mySocketId; });
+    if (me && typeof me.chips === 'number') {
+      playerStats.chips = me.chips;
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(playerStats)); } catch (e) {}
+    }
+  }
   updateGameState(gameState);
   _lastGameStateForPot = gameState;
   updateLocalStatsOnGameEnd(prevState, gameState);
@@ -543,7 +573,9 @@ socket.on('gameOver', function(data) {
       item.classList.add('loser');
     }
     
-    if (result.nickname === playerStats.nickname) {
+    var myNick = (playerStats.nickname || '').trim();
+    var resNick = (result.nickname || '').trim();
+    if (resNick && myNick && resNick === myNick) {
       finishGame(result.netChange > 0, result.finalChips);
     }
     
@@ -734,10 +766,39 @@ function updateLocalStatsOnGameEnd(prevState, nextState) {
   }
 }
 
+// 底池数字滚动动画（增加时从旧值滚到新值）
+function animatePotAmount(fromVal, toVal) {
+  if (!potAmount) return;
+  var start = typeof fromVal === 'number' ? fromVal : (parseInt(potAmount.textContent, 10) || 0);
+  var end = typeof toVal === 'number' ? toVal : start;
+  if (start === end) {
+    potAmount.textContent = end;
+    return;
+  }
+  var duration = 280;
+  var startTime = null;
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    var elapsed = timestamp - startTime;
+    var t = Math.min(1, elapsed / duration);
+    t = 1 - Math.pow(1 - t, 2);
+    var current = Math.round(start + (end - start) * t);
+    potAmount.textContent = current;
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 // ============ 游戏逻辑 ============
 function updateGameState(gameState) {
   updateGameStatus(gameState);
-  potAmount.textContent = gameState.pot;
+  var prevPot = parseInt(potAmount.textContent, 10) || 0;
+  var newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
+  if (newPot > prevPot) {
+    animatePotAmount(prevPot, newPot);
+  } else {
+    potAmount.textContent = newPot;
+  }
   
   if (gameState.currentBet > 0) {
     currentBetDisplay.textContent = '当前下注: ' + gameState.currentBet;
