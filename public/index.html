@@ -70,19 +70,17 @@
   <!-- 游戏房间页面 -->
   <div id="gameRoom" class="page hidden" role="main" aria-label="游戏房间">
     <div class="game-header" role="banner" aria-label="游戏头部信息">
-      <div class="room-info">
-        <span class="room-label" id="roomLabel">房间号:</span>
-        <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
-              title="点击复制房间号" style="cursor: pointer;" 
-              role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
+      <div class="game-header-left">
+        <button id="settlementBtn" class="btn btn-success btn-tiny" 
+                tabindex="12" aria-label="结算本局">结算</button>
+        <div class="room-info">
+          <span class="room-label" id="roomLabel">房间号:</span>
+          <span id="displayRoomCode" class="room-code" onclick="copyRoomCode()" 
+                title="点击复制房间号" style="cursor: pointer;" 
+                role="button" tabindex="10" aria-label="房间号，点击复制">-----</span>
+        </div>
       </div>
       <div class="game-status always-hidden" id="gameStatus" role="status" aria-live="polite">等待玩家加入...</div>
-      <div class="game-header-buttons">
-        <button id="settlementBtn" class="btn btn-success btn-small" 
-                tabindex="12" aria-label="结算本局">结算</button>
-        <button id="leaveRoomBtn" class="btn btn-danger btn-small" 
-                tabindex="13" aria-label="离开当前房间">离开</button>
-      </div>
     </div>
 
     <div class="poker-table" role="region" aria-label="扑克牌桌">

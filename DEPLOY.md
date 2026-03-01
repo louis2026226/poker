@@ -2,6 +2,20 @@
 
 **重要：** 本地/仓库的修改**不会自动**更新到服务器或 Railway，需要您自己执行部署（见下方「一键同步」或 Git push / Railway 自动部署）。部署后主页版本标签会显示 `package.json` 的 `version`（如 1.0.2）；若仍显示 `742f26e` 等 commit 短码，说明线上仍是旧代码，请重新部署。
 
+**为什么 Cursor 里执行 `git push` 会失败？**  
+推送用的是 SSH（`git@github.com:...`）。在 Cursor 自动化/代理终端里执行命令时，用的是**该环境的 Shell**，通常**拿不到你本机已登录的 SSH 密钥**（或 ssh-agent），所以连 GitHub 时会在 22 端口被关闭，报 `Connection closed by ... port 22`。你本机 PowerShell/CMD 里「Railway 和 GitHub 都正常连接」是因为那里才加载了你的密钥。因此 **Railway 部署需要你在本机终端执行一次 `git push origin main`**；阿里云部署可由 Cursor 执行 `deploy_backup.ps1`（脚本里用的是你本机配置的到阿里云的 SSH）。
+
+### 部署到 Railway（请在本机终端执行）
+
+在**您自己的** PowerShell 或 CMD 中（不要在 Cursor 的自动化终端里）执行：
+
+```powershell
+cd C:\Users\Administrator\.cursor\worktrees\louis-poker-git\poker-repo
+git push origin main
+```
+
+推送成功后，Railway 会自动从 GitHub 拉取并部署。若仓库绑定的分支不是 `main`，把 `main` 改成对应分支名。
+
 ---
 
 ## 一、推荐：配置 SSH 密钥（一次性，之后不用输密码）

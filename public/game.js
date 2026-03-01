@@ -691,7 +691,7 @@ function renderSettlementList(results) {
   });
 }
 
-/** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题 */
+/** 根据 _settlementReason 与 _pausedByNickname 设置结算弹窗标题与副标题，并控制「恢复游戏」按钮显隐（仅暂停时显示） */
 function setSettlementModalTitle() {
   var titleEl = document.getElementById('settlementModalTitle');
   var subEl = document.getElementById('settlementModalSubtitle');
@@ -703,6 +703,7 @@ function setSettlementModalTitle() {
     }
   }
   if (subEl) subEl.textContent = '当前玩家输赢如下';
+  if (resumeGameBtn) resumeGameBtn.style.display = _settlementReason === 'paused' ? '' : 'none';
 }
 
 /** 渲染结算弹窗内的操作记录区域 */
@@ -780,6 +781,7 @@ socket.on('gameOver', function(data) {
   setSettlementModalTitle();
   renderSettlementList(results);
   renderSettlementLog(actions, meta);
+  if (resumeGameBtn) resumeGameBtn.style.display = 'none';
 
   playSound('over');
   try {
@@ -1724,10 +1726,20 @@ function startActionTimer(gameState) {
   actionTimer = setInterval(function() {
     actionTimeLeft -= 0.02;
     var ratio = Math.max(0, Math.min(1, actionTimeLeft / 12));
+    var urgent = actionTimeLeft <= 5 && actionTimeLeft > 0;
 
     if (countdownInfoEl) {
       var deg = Math.floor(ratio * 360);
       countdownInfoEl.style.setProperty('--timer-deg', deg + 'deg');
+    }
+    if (countdownSeatEl) {
+      if (urgent) countdownSeatEl.classList.add('timer-urgent');
+      else countdownSeatEl.classList.remove('timer-urgent');
+    }
+    var timerEl = document.getElementById('actionTimer');
+    if (timerEl) {
+      if (urgent) timerEl.classList.add('timer-urgent');
+      else timerEl.classList.remove('timer-urgent');
     }
     if (timerTextEl) timerTextEl.textContent = Math.ceil(Math.max(0, actionTimeLeft));
     if (progressCircle) {
@@ -1775,8 +1787,10 @@ function stopActionTimer() {
     actionTimer = null;
   }
   if (countdownSeatEl) {
-    countdownSeatEl.classList.remove('countdown-active');
+    countdownSeatEl.classList.remove('countdown-active', 'timer-urgent');
   }
+  var timerEl = document.getElementById('actionTimer');
+  if (timerEl) timerEl.classList.remove('timer-urgent');
   if (countdownInfoEl) {
     countdownInfoEl.style.removeProperty('--timer-deg');
   }

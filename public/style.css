@@ -214,6 +214,11 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   font-size: 12px;
 }
 
+.btn-tiny {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
 /* 版本信息标签：固定屏幕底部居中（与上一定义一致） */
 .version-label {
   bottom: calc(6px + env(safe-area-inset-bottom, 0));
@@ -274,14 +279,13 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   display: none !important;
 }
 
-.game-header-buttons {
+.game-header-left {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.game-header #leaveRoomBtn,
 .game-header #settlementBtn {
   flex-shrink: 0;
 }
@@ -891,6 +895,17 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   opacity: 1;
 }
 
+/* 座位倒计时最后 5 秒：变粗、由黄变红 */
+.seat.countdown-active.timer-urgent .player-info .seat-timer-ring {
+  padding: 5px;
+  inset: -5px;
+  background: conic-gradient(#e74c3c var(--timer-deg, 0deg), rgba(231, 76, 60, 0.2) 0deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.9), 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
 /* 结算面板下方的行为记录：默认显示 5 行，超出可滚动 */
 .settlement-log {
   margin-top: 10px;
@@ -981,6 +996,16 @@ body:has(#gameRoom:not(.hidden)) .lang-toggle-btn {
   font-size: 12px;
   font-weight: bold;
   color: #ffd700;
+}
+
+/* 倒计时最后 5 秒：变粗、由黄变红 */
+.action-timer.timer-urgent .timer-progress {
+  stroke: #e74c3c;
+  stroke-width: 5;
+}
+.action-timer.timer-urgent .timer-text {
+  color: #e74c3c;
+  font-weight: 800;
 }
 
 /* 下注飞筹码动画 */

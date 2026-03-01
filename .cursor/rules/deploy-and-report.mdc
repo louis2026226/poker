@@ -16,9 +16,10 @@ alwaysApply: true
    - 若有未提交改动，先 `git add` 并 `git commit`，再继续。  
    - 若用户明确说「先不要提交」或「只改不部署」，则跳过部署步骤，仅说明「未部署，当前无新版本标签」。
 
-2. **同步到 Railway**  
-   - 执行：`git push`（推送到 main，由 Railway 自动部署）。  
-   - 若 push 失败，在汇报中写明错误信息并标记 Railway 未成功。
+2. **同步到 Railway（用户要求每次自动执行）**  
+   - 在项目根目录执行：`git push origin main`。  
+   - 由 Railway 从 GitHub 自动部署。  
+   - 若 push 失败（如 Connection closed port 22），在汇报中写明并提示用户在本机终端执行同一条命令。
 
 3. **同步到阿里云**  
    - 在项目根目录执行：`powershell -ExecutionPolicy Bypass -File .\deploy_backup.ps1`。  
