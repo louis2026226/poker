@@ -67,6 +67,7 @@ function getButtonSoundUrl() {
 }
 
 function playButtonSound() {
+  if (soundMuted) return;
   try {
     initAudio();
     var tpl = audioCache.button;
@@ -91,6 +92,7 @@ function playButtonSound() {
 }
 
 function playSound(type) {
+  if (soundMuted) return;
   try {
     initAudio();
     if (type === 'button') {
@@ -108,9 +110,15 @@ function playSound(type) {
   }
 }
 
+// 全局静音：结算界面喇叭按钮切换，关闭所有按键音效与 BGM
+var soundMuted = false;
+try {
+  soundMuted = localStorage.getItem('poker_sound_muted') === '1';
+} catch (e) {}
+
 // BGM 背景音乐：音量 30%，进入房间播放，暂停或离开房间停止
 var bgmAudio = null;
-var BGM_VOLUME = 0.3;
+var BGM_VOLUME = 0.15;
 
 function getBgmUrl() {
   try {
@@ -122,6 +130,7 @@ function getBgmUrl() {
 }
 
 function startBGM() {
+  if (soundMuted) return;
   try {
     if (!bgmAudio) {
       bgmAudio = new Audio(getBgmUrl());
@@ -233,7 +242,9 @@ var I18N = {
   aiAnalyzing: { zh: '分析中...', en: 'Analyzing...' },
   aiAnalyzingBoard: { zh: 'AI正在分析牌面...', en: 'AI analyzing board...' },
   aiSuggest: { zh: 'AI建议', en: 'AI suggest' },
-  meLabel: { zh: ' (我)', en: ' (me)' }
+  meLabel: { zh: ' (我)', en: ' (me)' },
+  soundOn: { zh: '打开音效', en: 'Sound on' },
+  soundOff: { zh: '关闭音效', en: 'Sound off' }
 };
 
 function getCurrentLang() {
@@ -633,6 +644,17 @@ function setupEventListeners() {
       doLeaveRoom();
     });
   }
+
+  var soundToggleBtn = document.getElementById('soundToggleBtn');
+  if (soundToggleBtn) {
+    updateSoundToggleIcon();
+    soundToggleBtn.addEventListener('click', function() {
+      soundMuted = !soundMuted;
+      try { localStorage.setItem('poker_sound_muted', soundMuted ? '1' : '0'); } catch (e) {}
+      updateSoundToggleIcon();
+      if (soundMuted) stopBGM();
+    });
+  }
   
   // 恢复游戏：若为暂停则恢复当前局，若为结束则开始下一局
   if (resumeGameBtn) {
@@ -881,6 +903,15 @@ function setSettlementModalTitle() {
   }
   if (subEl) subEl.textContent = i18n('settlementSubtitle');
   if (resumeGameBtn) resumeGameBtn.style.display = _settlementReason === 'paused' ? '' : 'none';
+  updateSoundToggleIcon();
+}
+
+function updateSoundToggleIcon() {
+  var btn = document.getElementById('soundToggleBtn');
+  if (!btn) return;
+  btn.textContent = soundMuted ? '\u{1F507}' : '\u{1F50A}';
+  btn.setAttribute('aria-label', soundMuted ? i18n('soundOn') : i18n('soundOff'));
+  btn.title = soundMuted ? i18n('soundOn') : i18n('soundOff');
 }
 
 /** 渲染结算弹窗内的操作记录区域 */
@@ -1133,7 +1164,16 @@ function updateGameState(gameState) {
     currentBetDisplay.textContent = '';
   }
   
-  renderCommunityCards(gameState.communityCards);
+  // 模拟真实发牌节奏：下注/过牌后停顿 0.8 秒再发下一街的公共牌
+  var newCardsLen = (gameState.communityCards && gameState.communityCards.length) || 0;
+  var prevCardsLen = _lastCommunityCardsLength;
+  if (newCardsLen > prevCardsLen) {
+    setTimeout(function() {
+      renderCommunityCards(gameState.communityCards);
+    }, 800);
+  } else {
+    renderCommunityCards(gameState.communityCards);
+  }
   renderSeats(gameState);
   showBigHandBadges(gameState);
   updateActionPanel(gameState);

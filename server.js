@@ -763,6 +763,41 @@ class PokerRoom {
     Object.values(this.players).forEach(p => p.bet = 0);
   }
 
+  /**
+   * 按每档下注额拆成边池。返回 [{ amount, eligible: [player] }]，eligible 为该档中有资格参与该池的玩家（下注>=该档）
+   */
+  buildSidePots() {
+    const activePlayers = Object.values(this.players).filter(p => !p.folded);
+    if (activePlayers.length === 0) return [];
+    const levels = [...new Set(activePlayers.map(p => p.bet))].filter(b => b > 0).sort((a, b) => a - b);
+    const pots = [];
+    let prevLevel = 0;
+    for (const level of levels) {
+      const eligible = activePlayers.filter(p => p.bet >= level);
+      const amount = (level - prevLevel) * eligible.length;
+      if (amount > 0) pots.push({ amount, eligible });
+      prevLevel = level;
+    }
+    return pots;
+  }
+
+  /** 在 eligible 玩家中按牌力选出赢家（可并列），返回 [player, ...] */
+  getWinnersForEligible(eligiblePlayers) {
+    if (eligiblePlayers.length === 0) return [];
+    if (eligiblePlayers.length === 1) return eligiblePlayers;
+    const withHands = eligiblePlayers.map(p => ({
+      player: p,
+      hand: evaluateHand(p.hand, this.communityCards)
+    })).sort((a, b) => compareHands(b.hand, a.hand));
+    const winners = [withHands[0].player];
+    for (let i = 1; i < withHands.length; i++) {
+      if (compareHands(withHands[i].hand, withHands[0].hand) === 0) {
+        winners.push(withHands[i].player);
+      }
+    }
+    return winners;
+  }
+
   determineWinner() {
     const activePlayers = Object.values(this.players).filter(p => !p.folded);
     if (activePlayers.length === 1) {
@@ -771,39 +806,29 @@ class PokerRoom {
       return;
     }
 
-    const playersWithHands = activePlayers.map(p => ({
-      player: p,
-      hand: evaluateHand(p.hand, this.communityCards)
-    })).sort((a, b) => compareHands(b.hand, a.hand));
-
-    const winners = [playersWithHands[0]];
-    for (let i = 1; i < playersWithHands.length; i++) {
-      if (compareHands(playersWithHands[i].hand, winners[0].hand) === 0) {
-        winners.push(playersWithHands[i]);
-      }
+    const sidePots = this.buildSidePots();
+    if (sidePots.length === 0) {
+      this.endHand();
+      return;
     }
 
-    this.awardPot(winners.map(w => w.player));
-  }
-
-  awardPot(winners) {
-    // 底池：每次下注已在 playerBet() 中累加到 this.pot，不再加 playerBets 避免重复
-    const totalPot = this.pot;
-    if (winners.length === 1) {
-      winners[0].chips += totalPot;
-    } else {
-      const winAmount = Math.floor(totalPot / winners.length);
-      const remainder = totalPot % winners.length;
-      winners.forEach((winner, index) => {
-        winner.chips += winAmount + (index < remainder ? 1 : 0);
-      });
+    for (const { amount, eligible } of sidePots) {
+      const winners = this.getWinnersForEligible(eligible);
+      if (winners.length === 1) {
+        winners[0].chips += amount;
+      } else {
+        const winAmount = Math.floor(amount / winners.length);
+        const remainder = amount % winners.length;
+        winners.forEach((winner, index) => {
+          winner.chips += winAmount + (index < remainder ? 1 : 0);
+        });
+      }
     }
 
     this.gameState = 'ended';
     io.to(this.roomCode).emit('gameState', this.getGameState());
     const hadBust = this.emitGameOverIfBust();
 
-    // 有人破产时不再自动开新局，由 emitGameOver 清退房间；无人破产时 1.5 秒后开新局
     if (this._manualSettlement) {
       this.emitGameOver([]);
       this._manualSettlement = false;
@@ -811,8 +836,8 @@ class PokerRoom {
     }
     if (!hadBust) {
       setTimeout(() => {
-        const activePlayers = Object.values(this.players).filter(p => p.chips > 0);
-        if (activePlayers.length >= 2) {
+        const playersWithChips = Object.values(this.players).filter(p => p.chips > 0);
+        if (playersWithChips.length >= 2) {
           this.startNewHand();
         }
       }, 1500);

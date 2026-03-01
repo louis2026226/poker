@@ -223,7 +223,10 @@
   <!-- 结算弹窗（游戏暂停，显示当前玩家输赢） -->
   <div id="gameOverModal" class="modal hidden">
     <div class="modal-content settlement-modal">
-      <h2 class="settlement-title" id="settlementModalTitle">本局结算</h2>
+      <div class="settlement-modal-header">
+        <h2 class="settlement-title" id="settlementModalTitle">本局结算</h2>
+        <button type="button" id="soundToggleBtn" class="sound-toggle-btn" aria-label="关闭音效" title="关闭音效">🔊</button>
+      </div>
       <p class="settlement-subtitle" id="settlementModalSubtitle" data-i18n="settlementSubtitle">当前玩家输赢如下</p>
       <div class="settlement-table-wrap">
         <table class="settlement-table" aria-label="玩家输赢">
