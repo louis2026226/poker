@@ -1283,17 +1283,14 @@ function updateGameState(gameState) {
   updateGameStatus(gameState);
   var newPot = typeof gameState.pot === 'number' ? gameState.pot : 0;
   var prevPot = _lastPotValue;
+  var isResetPhase = gameState.gameState === 'ended' || gameState.gameState === 'preflop' || gameState.gameState === 'waiting';
   if (newPot > prevPot) {
     animatePotAmount(prevPot, newPot);
-  } else if (newPot < prevPot) {
-    /* 仅在新局或结束时的变小才更新，避免乱序的旧 state 用较小底池覆盖当前显示 */
-    if (gameState.gameState === 'ended' || gameState.gameState === 'preflop' || gameState.gameState === 'waiting') {
-      _lastPotValue = newPot;
-      potAmount.textContent = formatChips(newPot);
-    }
+  } else if (newPot < prevPot && !isResetPhase) {
+    /* 牌局进行中收到更小的底池视为乱序旧包，不覆盖 */
   } else {
     _lastPotValue = newPot;
-    potAmount.textContent = formatChips(newPot);
+    if (potAmount) potAmount.textContent = formatChips(newPot);
   }
   
   if (gameState.currentBet > 0) {

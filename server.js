@@ -1223,12 +1223,18 @@ class PokerRoom {
   }
 
   getGameState() {
+    const potFromBets = Object.values(this.players).reduce((sum, p) => sum + (p.bet || 0), 0);
+    const pot = (typeof this.pot === 'number' && this.pot >= 0) ? this.pot : 0;
+    if (pot !== potFromBets && this.gameState !== 'waiting') {
+      console.warn('[room %s] pot mismatch: this.pot=%s sum(bets)=%s, using sum(bets)', this.roomCode, this.pot, potFromBets);
+    }
+    const potToSend = (this.gameState === 'waiting' || this.gameState === 'ended') ? 0 : potFromBets;
     return {
       roomCode: this.roomCode,
       hostId: this.hostId,
       gameState: this.gameState,
       paused: this.paused,
-      pot: this.pot,
+      pot: potToSend,
       currentBet: this.currentBet,
       communityCards: this.communityCards,
       dealerSeat: this.dealerSeat,
